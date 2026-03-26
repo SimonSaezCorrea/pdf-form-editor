@@ -15,7 +15,9 @@
       "Bash(netstat:*)",
       "Bash(tasklist:*)",
       "Bash(true:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(find /c/Pawer/PDF_Web/pdf-form-editor/client -name *.test.* -o -name setup.ts)",
+      "Bash(npm test:*)"
     ]
   }
 }

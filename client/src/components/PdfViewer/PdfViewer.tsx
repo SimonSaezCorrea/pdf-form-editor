@@ -9,6 +9,7 @@ import {
 import type { FormField } from 'pdf-form-editor-shared';
 import type { PdfRenderer } from '../../hooks/usePdfRenderer';
 import { DraggableField } from '../FieldOverlay/DraggableField';
+import { PageNavigator } from '../PageNavigator/PageNavigator';
 import { canvasToPdf, pdfToCanvas } from '../../utils/coordinates';
 
 interface PdfViewerProps {
@@ -128,26 +129,12 @@ export function PdfViewer({
         </div>
       </DndContext>
 
-      {/* Page navigation */}
-      {totalPages > 1 && (
-        <div className="page-nav">
-          <button
-            onClick={() => setCurrentPage(currentPage - 1)}
-            disabled={currentPage <= 1}
-          >
-            ← Prev
-          </button>
-          <span>
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            onClick={() => setCurrentPage(currentPage + 1)}
-            disabled={currentPage >= totalPages}
-          >
-            Next →
-          </button>
-        </div>
-      )}
+      <PageNavigator
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPrev={() => setCurrentPage(currentPage - 1)}
+        onNext={() => setCurrentPage(currentPage + 1)}
+      />
     </div>
   );
 }

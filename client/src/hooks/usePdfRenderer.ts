@@ -11,10 +11,15 @@ export interface PageDimensions {
 
 export interface PdfRenderer {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  /** The loaded pdfjs document — null until a PDF is loaded. Needed by ThumbnailStrip. */
+  pdfDoc: PDFDocumentProxy | null;
   totalPages: number;
   currentPage: number;
   setCurrentPage: (page: number) => void;
+  /** Current page dimensions (alias for pageDimensionsMap[currentPage]) */
   pageDimensions: PageDimensions | null;
+  /** Dimensions for all pages at scale 1. Populated eagerly on document load. */
+  pageDimensionsMap: Record<number, PageDimensions>;
   renderScale: number;
   isLoading: boolean;
   error: string | null;
@@ -29,6 +34,7 @@ export function usePdfRenderer(
   const [totalPages, setTotalPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageDimensions, setPageDimensions] = useState<PageDimensions | null>(null);
+  const [pageDimensionsMap, setPageDimensionsMap] = useState<Record<number, PageDimensions>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const renderTaskRef = useRef<RenderTask | null>(null);
@@ -40,6 +46,7 @@ export function usePdfRenderer(
       setTotalPages(0);
       setCurrentPage(1);
       setPageDimensions(null);
+      setPageDimensionsMap({});
       setError(null);
       return;
     }
@@ -56,8 +63,9 @@ export function usePdfRenderer(
         setTotalPages(doc.numPages);
         setCurrentPage(1);
       })
-      .catch(() => {
+      .catch((err) => {
         if (!cancelled) {
+          console.error('[usePdfRenderer] Failed to load PDF document:', err);
           setError(
             'Failed to load PDF. The file may be corrupted or password-protected.',
           );
@@ -69,6 +77,30 @@ export function usePdfRenderer(
 
     return () => { cancelled = true; };
   }, [pdfBytes]);
+
+  // Populate per-page dimension map when document loads (cheap: no pixel rendering)
+  useEffect(() => {
+    if (!pdfDoc) {
+      setPageDimensionsMap({});
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadAllDimensions = async () => {
+      const map: Record<number, PageDimensions> = {};
+      for (let i = 1; i <= pdfDoc.numPages; i++) {
+        if (cancelled) return;
+        const page = await pdfDoc.getPage(i);
+        const vp = page.getViewport({ scale: 1 });
+        map[i] = { width: vp.width, height: vp.height };
+      }
+      if (!cancelled) setPageDimensionsMap(map);
+    };
+
+    loadAllDimensions();
+    return () => { cancelled = true; };
+  }, [pdfDoc]);
 
   // Render current page whenever doc, page, or scale changes
   useEffect(() => {
@@ -123,10 +155,12 @@ export function usePdfRenderer(
 
   return {
     canvasRef,
+    pdfDoc,
     totalPages,
     currentPage,
     setCurrentPage,
     pageDimensions,
+    pageDimensionsMap,
     renderScale,
     isLoading,
     error,

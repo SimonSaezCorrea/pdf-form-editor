@@ -1,8 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { PdfUploader } from './components/PdfUploader/PdfUploader';
 import { PdfViewer } from './components/PdfViewer/PdfViewer';
 import { FieldList } from './components/FieldList/FieldList';
 import { PropertiesPanel } from './components/PropertiesPanel/PropertiesPanel';
+import { ThumbnailStrip } from './components/ThumbnailStrip/ThumbnailStrip';
 import { usePdfRenderer } from './hooks/usePdfRenderer';
 import { useFieldStore } from './hooks/useFieldStore';
 import { exportPdf } from './utils/export';
@@ -46,6 +47,7 @@ export default function App() {
     setIsExporting(true);
     setExportError(null);
     try {
+      // store.fields contains all fields across all pages — server routes each to its page
       await exportPdf(pdfBytes, store.fields);
     } catch (err) {
       setExportError(err instanceof Error ? err.message : 'Export failed');
@@ -54,10 +56,27 @@ export default function App() {
     }
   };
 
+  // Keyboard navigation: ArrowLeft/ArrowRight navigate pages when not in a text input
+  useEffect(() => {
+    if (!pdfBytes) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === 'ArrowLeft' && pdfRenderer.currentPage > 1) {
+        pdfRenderer.setCurrentPage(pdfRenderer.currentPage - 1);
+      } else if (e.key === 'ArrowRight' && pdfRenderer.currentPage < pdfRenderer.totalPages) {
+        pdfRenderer.setCurrentPage(pdfRenderer.currentPage + 1);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [pdfBytes, pdfRenderer.currentPage, pdfRenderer.totalPages, pdfRenderer.setCurrentPage]);
+
   // Fields on the currently visible page
   const currentPageFields = store.fields.filter(
     (f) => f.page === pdfRenderer.currentPage,
   );
+
+  const showThumbnails = !!pdfRenderer.pdfDoc && pdfRenderer.totalPages > 1;
 
   return (
     <div className="app">
@@ -118,6 +137,15 @@ export default function App() {
               onDelete={store.deleteField}
             />
           </aside>
+
+          {showThumbnails && (
+            <ThumbnailStrip
+              pdfDoc={pdfRenderer.pdfDoc!}
+              totalPages={pdfRenderer.totalPages}
+              currentPage={pdfRenderer.currentPage}
+              onPageSelect={pdfRenderer.setCurrentPage}
+            />
+          )}
 
           <main className="viewer-area">
             {pdfRenderer.error ? (
