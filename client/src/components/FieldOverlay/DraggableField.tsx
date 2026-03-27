@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import type { FormField } from 'pdf-form-editor-shared';
+import type { InteractionMode } from '../../hooks/useInteractionMode';
 import { pdfToCanvas } from '../../utils/coordinates';
 import { useFieldResize } from '../../hooks/useFieldResize';
 import { ResizeHandles } from './ResizeHandles';
@@ -17,7 +18,11 @@ interface DraggableFieldProps {
   pdfPageHeight: number;
   renderScale: number;
   isSelected: boolean;
-  onSelect: (id: string) => void;
+  isSingleSelection: boolean;
+  mode: InteractionMode;
+  groupDragDelta?: { activeId: string; x: number; y: number } | null;
+  onSelectSingle: (id: string) => void;
+  onToggleSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onDuplicate?: () => void;
   onUpdate?: (id: string, partial: Partial<Omit<FormField, 'id'>>) => void;
@@ -28,7 +33,11 @@ export function DraggableField({
   pdfPageHeight,
   renderScale,
   isSelected,
-  onSelect,
+  isSingleSelection,
+  mode,
+  groupDragDelta,
+  onSelectSingle,
+  onToggleSelect,
   onDelete,
   onDuplicate,
   onUpdate,
@@ -76,18 +85,32 @@ export function DraggableField({
     pdfPageHeight,
   );
 
+  // Apply group drag delta to all selected non-active fields
+  const isGroupFollower =
+    !!groupDragDelta &&
+    groupDragDelta.activeId !== field.id &&
+    isSelected;
+
+  const fieldTransform = isGroupFollower
+    ? `translate(${groupDragDelta!.x}px, ${groupDragDelta!.y}px)`
+    : CSS.Translate.toString(transform);
+
   const style: React.CSSProperties = {
     left: canvasPos.left,
     top: canvasPos.top,
     width: canvasPos.width,
     height: canvasPos.height,
-    transform: CSS.Translate.toString(transform),
-    zIndex: isDragging ? 50 : isSelected ? 10 : 1,
+    transform: fieldTransform,
+    zIndex: isDragging || isGroupFollower ? 50 : isSelected ? 10 : 1,
   };
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onSelect(field.id);
+    if (e.shiftKey) {
+      onToggleSelect(field.id);
+    } else {
+      onSelectSingle(field.id);
+    }
   };
 
   const handleDelete = (e: React.MouseEvent) => {
@@ -97,7 +120,7 @@ export function DraggableField({
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
-    onSelect(field.id);
+    onSelectSingle(field.id);
     setContextMenu({ visible: true, x: e.clientX, y: e.clientY });
   };
 
@@ -130,7 +153,7 @@ export function DraggableField({
         >
           ✕
         </button>
-        {isSelected && (
+        {isSelected && isSingleSelection && (
           <ResizeHandles
             field={field}
             renderScale={renderScale}

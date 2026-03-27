@@ -20,7 +20,10 @@
       "Bash(npm test:*)",
       "Bash(npm run:*)",
       "Bash(npx tsc:*)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(where pwsh:*)",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Program Files \\(x86\\)/**)"
     ]
   }
 }
