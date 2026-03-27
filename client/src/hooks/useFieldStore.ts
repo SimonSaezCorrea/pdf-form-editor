@@ -7,6 +7,9 @@ let fieldCounter = 0;
 
 export interface FieldStore {
   fields: FormField[];
+  /** Full selection set — may contain 0, 1 or many IDs */
+  selectionIds: ReadonlySet<string>;
+  /** Derived single-selection compat: the selected ID when exactly 1 is selected, else null */
   selectedFieldId: string | null;
   addField: (
     pageNum: number,
@@ -16,8 +19,19 @@ export interface FieldStore {
     renderScale: number,
   ) => FormField;
   updateField: (id: string, partial: Partial<Omit<FormField, 'id'>>) => void;
+  /** Bulk-update multiple fields with the same partial */
+  updateFields: (ids: string[], partial: Partial<Omit<FormField, 'id'>>) => void;
   deleteField: (id: string) => void;
-  selectField: (id: string | null) => void;
+  /** Select exactly one field, clearing all others */
+  selectSingle: (id: string) => void;
+  /** Clear the entire selection */
+  clearSelection: () => void;
+  /** Toggle a field in/out of the current selection (Shift+click) */
+  toggleSelect: (id: string) => void;
+  /** Select all fields on the given page */
+  selectAll: (page: number) => void;
+  /** Replace the entire selection set (rubber band result) */
+  setSelection: (ids: string[]) => void;
   resetFields: () => void;
   /**
    * Duplicate a field, auto-naming it with a unique suffix.
@@ -42,7 +56,11 @@ const DEFAULT_HEIGHT_PT = 20;
 
 export function useFieldStore(): FieldStore {
   const [fields, setFields] = useState<FormField[]>([]);
-  const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
+  const [selectionIds, setSelectionIds] = useState<ReadonlySet<string>>(new Set());
+
+  // Derived single-selection compat getter
+  const selectedFieldId: string | null =
+    selectionIds.size === 1 ? [...selectionIds][0] : null;
 
   const addField = useCallback(
     (
@@ -76,7 +94,7 @@ export function useFieldStore(): FieldStore {
       };
 
       setFields((prev) => [...prev, newField]);
-      setSelectedFieldId(newField.id);
+      setSelectionIds(new Set([newField.id]));
       return newField;
     },
     [],
@@ -91,18 +109,60 @@ export function useFieldStore(): FieldStore {
     [],
   );
 
+  const updateFields = useCallback(
+    (ids: string[], partial: Partial<Omit<FormField, 'id'>>) => {
+      const idSet = new Set(ids);
+      setFields((prev) =>
+        prev.map((f) => (idSet.has(f.id) ? { ...f, ...partial } : f)),
+      );
+    },
+    [],
+  );
+
   const deleteField = useCallback((id: string) => {
     setFields((prev) => prev.filter((f) => f.id !== id));
-    setSelectedFieldId((prev) => (prev === id ? null : prev));
+    setSelectionIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
   }, []);
 
-  const selectField = useCallback((id: string | null) => {
-    setSelectedFieldId(id);
+  const selectSingle = useCallback((id: string) => {
+    setSelectionIds(new Set([id]));
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectionIds(new Set());
+  }, []);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const selectAll = useCallback(
+    (page: number) => {
+      setSelectionIds(new Set(fields.filter((f) => f.page === page).map((f) => f.id)));
+    },
+    [fields],
+  );
+
+  const setSelection = useCallback((ids: string[]) => {
+    setSelectionIds(new Set(ids));
   }, []);
 
   const resetFields = useCallback(() => {
     setFields([]);
-    setSelectedFieldId(null);
+    setSelectionIds(new Set());
   }, []);
 
   const duplicateField = useCallback(
@@ -128,7 +188,7 @@ export function useFieldStore(): FieldStore {
       };
 
       setFields((prev) => [...prev, newField]);
-      setSelectedFieldId(newField.id);
+      setSelectionIds(new Set([newField.id]));
       return newField;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -143,7 +203,7 @@ export function useFieldStore(): FieldStore {
           return { ...f, id: `field-${Date.now()}-${fieldCounter}` };
         });
         setFields(regenerated);
-        setSelectedFieldId(null);
+        setSelectionIds(new Set());
       } else {
         setFields((prev) => {
           const existingNames = new Set(prev.map((f) => f.name));
@@ -163,5 +223,21 @@ export function useFieldStore(): FieldStore {
     [],
   );
 
-  return { fields, selectedFieldId, addField, updateField, deleteField, selectField, resetFields, duplicateField, loadTemplateFields };
+  return {
+    fields,
+    selectionIds,
+    selectedFieldId,
+    addField,
+    updateField,
+    updateFields,
+    deleteField,
+    selectSingle,
+    clearSelection,
+    toggleSelect,
+    selectAll,
+    setSelection,
+    resetFields,
+    duplicateField,
+    loadTemplateFields,
+  };
 }

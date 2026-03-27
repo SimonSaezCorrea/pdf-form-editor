@@ -9,6 +9,7 @@ Auto-generated from all feature plans. Last updated: 2026-03-26
 - No new dependencies (003-field-duplicate-resize)
 - No new dependencies (004-field-templates)
 - No new dependencies (005-field-default-value)
+- No new dependencies (006-canvas-toolbar-modes)
 
 ## Project Structure
 
@@ -51,6 +52,21 @@ TypeScript: Follow standard conventions
 - Field name uniqueness is global across all pages (AcroForm constraint)
 - Thumbnails: render at scale 0.2 via pdfjs-dist → JPEG dataURL; lazy (IntersectionObserver) for >20 pages
 
+## Key Notes (006-canvas-toolbar-modes)
+
+- NO server or shared-types changes — entirely client-side
+- `InteractionMode = 'select' | 'insert' | 'move' | 'pan'` lives in `useInteractionMode` hook (NOT in useFieldStore)
+- `selectedFieldId: string | null` in useFieldStore is REPLACED by `selectionIds: ReadonlySet<string>` + derived `selectedFieldId` getter (size===1 ? id : null)
+- `selectField()` is removed; replaced by `selectSingle(id)`, `clearSelection()`, `toggleSelect(id)`, `selectAll(page)`, `setSelection(ids[])`
+- `updateFields(ids[], partial)` is new bulk-update method for multi-selection properties panel
+- Rubber band uses native `onPointerDown` on the `.field-overlay` div (NOT @dnd-kit); fires only when no `[data-field-id]` ancestor is hit
+- `intersectsRect(a, b): boolean` is an exported pure function in `useRubberBand.ts`, unit tested
+- Group move: `handleDragEnd` in PdfViewer checks `selectionIds.has(draggedId)` → if true, applies same delta to all selected fields via `updateFields`
+- Resize handles render only when `selectionIds.size === 1`; DraggableField receives `isSingleSelection: boolean` prop
+- @dnd-kit `disabled` prop = `mode === 'pan'`; rubber band and pan mode use native pointer events
+- Pan mode: `setPointerCapture` + `scrollLeft`/`scrollTop` on the `.viewer-area` scroll container
+- Keyboard shortcuts in App.tsx `keydown` handler: S/I/M/H switch mode; Escape → select; Ctrl+A → selectAll(currentPage)
+
 ## Key Notes (005-field-default-value)
 
 - `value?: string` is optional in FormField — old templates/requests without it remain valid
@@ -90,6 +106,7 @@ TypeScript: Follow standard conventions
 - 003-field-duplicate-resize: field duplication (Ctrl+D + context menu) + 8 resize handles
 - 004-field-templates: TemplatePanel (save/load/rename/delete/export/import); useTemplateStore (localStorage); templateSchema.ts parse/serialize/validate; Import+Export modals in navbar
 - 005-field-default-value: `value?: string` in FormField; PropertiesPanel "Valor predeterminado" input; canvas overlay shows value; server calls textField.setText() before updateAppearances(); extractFields.ts extracts existing AcroForm text fields from uploaded PDFs and loads them as editable canvas overlays
+- 006-canvas-toolbar-modes: ToolbarModes (S/I/M/H/Escape); useInteractionMode + useRubberBand hooks; selectionIds replaces selectedFieldId; multi-select via Shift+click/rubber band/Ctrl+A; group move; multi-select PropertiesPanel; pan mode scroll; intersectsRect unit tested
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
