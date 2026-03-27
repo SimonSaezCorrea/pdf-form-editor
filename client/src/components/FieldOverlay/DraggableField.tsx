@@ -119,7 +119,9 @@ export function DraggableField({
         {...listeners}
         {...attributes}
       >
-        <span className="field-label">{field.name}</span>
+        <span className={`field-label${field.value ? ' field-label--has-value' : ''}`}>
+          {field.value || field.name}
+        </span>
         <button
           className="field-delete-btn"
           onClick={handleDelete}

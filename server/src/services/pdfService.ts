@@ -74,6 +74,10 @@ export async function generatePdf(
 
     textField.setFontSize(fieldDef.fontSize);
 
+    if (fieldDef.value) {
+      textField.setText(fieldDef.value);
+    }
+
     // updateAppearances is mandatory — omitting it leaves fields invisible in most readers
     textField.updateAppearances(font);
   }

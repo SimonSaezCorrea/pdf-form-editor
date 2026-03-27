@@ -27,6 +27,13 @@ export interface FieldStore {
    * @returns the new FormField, or null if the source id is not found
    */
   duplicateField: (id: string, offsetX: number, offsetY: number) => FormField | null;
+  /**
+   * Load template fields onto the canvas.
+   * - 'replace': clears canvas, loads template fields (IDs regenerated).
+   * - 'append': adds template fields alongside existing ones (IDs regenerated,
+   *             name conflicts resolved via duplicatedName).
+   */
+  loadTemplateFields: (fields: FormField[], mode: 'replace' | 'append') => void;
 }
 
 /** Default field size in PDF points */
@@ -65,6 +72,7 @@ export function useFieldStore(): FieldStore {
         height,
         fontSize: 12,
         fontFamily: 'Helvetica',
+        value: '',
       };
 
       setFields((prev) => [...prev, newField]);
@@ -127,5 +135,33 @@ export function useFieldStore(): FieldStore {
     [fields],
   );
 
-  return { fields, selectedFieldId, addField, updateField, deleteField, selectField, resetFields, duplicateField };
+  const loadTemplateFields = useCallback(
+    (imported: FormField[], mode: 'replace' | 'append') => {
+      if (mode === 'replace') {
+        const regenerated = imported.map((f) => {
+          fieldCounter += 1;
+          return { ...f, id: `field-${Date.now()}-${fieldCounter}` };
+        });
+        setFields(regenerated);
+        setSelectedFieldId(null);
+      } else {
+        setFields((prev) => {
+          const existingNames = new Set(prev.map((f) => f.name));
+          const resolved: FormField[] = [];
+          for (const f of imported) {
+            fieldCounter += 1;
+            const newName = existingNames.has(f.name)
+              ? duplicatedName(f.name, existingNames)
+              : f.name;
+            existingNames.add(newName);
+            resolved.push({ ...f, id: `field-${Date.now()}-${fieldCounter}`, name: newName });
+          }
+          return [...prev, ...resolved];
+        });
+      }
+    },
+    [],
+  );
+
+  return { fields, selectedFieldId, addField, updateField, deleteField, selectField, resetFields, duplicateField, loadTemplateFields };
 }

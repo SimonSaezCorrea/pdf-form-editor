@@ -18,4 +18,6 @@ export interface FormField {
   /** Font size in points (6–72) */
   fontSize: number;
   fontFamily: FontFamily;
+  /** Default text value pre-filled in the exported PDF field. Empty string = no pre-fill. */
+  value?: string;
 }

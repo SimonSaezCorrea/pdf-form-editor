@@ -136,6 +136,17 @@ export function PropertiesPanel({
         />
       </div>
 
+      <div className="prop-group">
+        <label htmlFor="prop-value">Valor predeterminado</label>
+        <input
+          id="prop-value"
+          type="text"
+          value={field.value ?? ''}
+          placeholder="Texto que aparecerá en el PDF…"
+          onChange={(e) => update('value', e.target.value)}
+        />
+      </div>
+
       <button
         className="btn btn-danger"
         onClick={() => onDelete(field.id)}

@@ -4,8 +4,11 @@ import { PdfViewer } from './components/PdfViewer/PdfViewer';
 import { FieldList } from './components/FieldList/FieldList';
 import { PropertiesPanel } from './components/PropertiesPanel/PropertiesPanel';
 import { ThumbnailStrip } from './components/ThumbnailStrip/ThumbnailStrip';
+import { ExportModal } from './components/ImportExportModal/ExportModal';
+import { ImportModal } from './components/ImportExportModal/ImportModal';
 import { usePdfRenderer } from './hooks/usePdfRenderer';
 import { useFieldStore } from './hooks/useFieldStore';
+import { extractFieldsFromPdf } from './utils/extractFields';
 import { exportPdf } from './utils/export';
 
 const RENDER_SCALE = 1.5;
@@ -15,6 +18,8 @@ export default function App() {
   const [pdfFilename, setPdfFilename] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const pdfRenderer = usePdfRenderer(pdfBytes, RENDER_SCALE);
   const store = useFieldStore();
@@ -55,6 +60,19 @@ export default function App() {
       setIsExporting(false);
     }
   };
+
+  // When a PDF with existing AcroForm fields is loaded, extract and show them on canvas
+  useEffect(() => {
+    if (!pdfRenderer.pdfDoc) return;
+    let cancelled = false;
+    extractFieldsFromPdf(pdfRenderer.pdfDoc).then((extracted) => {
+      if (!cancelled && extracted.length > 0) {
+        store.loadTemplateFields(extracted, 'replace');
+      }
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pdfRenderer.pdfDoc]);
 
   const handleDuplicate = useCallback(
     (id: string) => {
@@ -106,6 +124,18 @@ export default function App() {
             <span className="filename" title={pdfFilename}>
               {pdfFilename}
             </span>
+            <button
+              className="btn btn-secondary"
+              onClick={() => setShowImportModal(true)}
+            >
+              Importar
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => setShowExportModal(true)}
+            >
+              Exportar
+            </button>
             <button
               className="btn btn-secondary"
               onClick={() => {
@@ -183,6 +213,17 @@ export default function App() {
             )}
           </main>
         </div>
+      )}
+      {showExportModal && (
+        <ExportModal fields={store.fields} onClose={() => setShowExportModal(false)} />
+      )}
+
+      {showImportModal && (
+        <ImportModal
+          existingFieldCount={store.fields.length}
+          onImport={store.loadTemplateFields}
+          onClose={() => setShowImportModal(false)}
+        />
       )}
     </div>
   );

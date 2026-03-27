@@ -22,6 +22,20 @@ Version change: 1.0.1 → 1.0.2  [PATCH, 2026-03-27]
     handleOverlayClick — position:fixed is visual only, DOM parentage is unchanged).
   Bump rationale: clarification of existing event-propagation rule → PATCH.
   Files also updated: CLAUDE.md Key Notes (003), specs/003-field-duplicate-resize/research.md §5.
+
+Version change: 1.0.2 → 1.0.3  [PATCH, 2026-03-26]
+1.0.3 changes:
+  - Principle IV amended: clarified that `textField.setText(value)` MUST be called
+    before `textField.updateAppearances(font)` when a default value is present.
+    Calling setText after updateAppearances silently drops the text from the
+    rendered appearance stream.
+  - Principle II clarified: `value?: string` added to `FormField` in shared/types.ts
+    as an optional field (backward-compatible). Server `isValidField` guards MUST
+    accept `undefined` for optional fields to avoid breaking requests from older
+    clients that omit the field.
+  Bump rationale: clarification of call-order rule and optional-field validation
+  pattern → PATCH.
+  Files also updated: CLAUDE.md Key Notes (005), specs/005-field-default-value/spec.md.
 -->
 
 # PDF Form Editor Constitution
@@ -66,6 +80,10 @@ All exported PDFs MUST embed fields as **standard AcroForm text fields** using p
 Omitting `updateAppearances` is a known defect (fields invisible in most PDF readers) and
 MUST NOT be introduced. Supported fonts are limited to PDF standard fonts: Helvetica,
 TimesRoman, Courier. No custom font embedding.
+
+When a field carries a default value, `textField.setText(value)` MUST be called **before**
+`textField.updateAppearances(font)`. Reversing this order silently drops the text from the
+rendered appearance stream — the field is saved but appears blank in PDF readers.
 
 **Rationale**: Compatibility with Adobe Acrobat, Preview, and all AcroForm-aware readers is the
 primary output requirement. Standard fonts guarantee zero-dependency embedding.
@@ -228,4 +246,4 @@ section that gates Phase 0 research. Re-check is required after Phase 1 design a
 are produced. Any violation MUST be either resolved or explicitly justified in the plan's
 "Complexity Tracking" table.
 
-**Version**: 1.0.2 | **Ratified**: 2026-03-26 | **Last Amended**: 2026-03-27
+**Version**: 1.0.3 | **Ratified**: 2026-03-26 | **Last Amended**: 2026-03-26

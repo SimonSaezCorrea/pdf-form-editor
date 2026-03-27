@@ -35,7 +35,8 @@ function isValidField(f: unknown): f is FormField {
     Number.isInteger(field.fontSize) &&
     field.fontSize >= 6 &&
     field.fontSize <= 72 &&
-    VALID_FONT_FAMILIES.includes(field.fontFamily as FontFamily)
+    VALID_FONT_FAMILIES.includes(field.fontFamily as FontFamily) &&
+    (field.value === undefined || typeof field.value === 'string')
   );
 }
 

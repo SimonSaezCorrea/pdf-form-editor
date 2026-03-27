@@ -7,6 +7,8 @@ Auto-generated from all feature plans. Last updated: 2026-03-26
 - TypeScript 5.x + React 18, Vite 5, Express 4, pdf-lib, pdfjs-dist, @dnd-kit/core (001-pdf-form-editor)
 - No new dependencies (002-multipage-pdf-navigation)
 - No new dependencies (003-field-duplicate-resize)
+- No new dependencies (004-field-templates)
+- No new dependencies (005-field-default-value)
 
 ## Project Structure
 
@@ -49,6 +51,15 @@ TypeScript: Follow standard conventions
 - Field name uniqueness is global across all pages (AcroForm constraint)
 - Thumbnails: render at scale 0.2 via pdfjs-dist → JPEG dataURL; lazy (IntersectionObserver) for >20 pages
 
+## Key Notes (005-field-default-value)
+
+- `value?: string` is optional in FormField — old templates/requests without it remain valid
+- `isValidField` guards (both server route AND client templateSchema) MUST accept `value === undefined`
+- `textField.setText(value)` MUST be called BEFORE `textField.updateAppearances(font)` — reversing silently drops text from appearance stream (constitution §IV)
+- Canvas overlay: when value is non-empty shows value text (dark `#1f2937`); falls back to field name (indigo) when empty
+- `extractFieldsFromPdf(pdfDoc)`: reads `page.getAnnotations()` for all pages, filters `subtype='Widget' + fieldType='Tx'`; rect [x1,y1,x2,y2] maps directly to FormField (PDF bottom-left coords — no conversion needed); font names mapped via prefix table (Helv→Helvetica, TiRo→TimesRoman, Cour→Courier); defaults to Helvetica/12pt when info absent
+- App.tsx useEffect on `pdfRenderer.pdfDoc`: runs extraction after each PDF load; only loads if extracted.length > 0 (PDFs without fields keep empty canvas)
+
 ## Key Notes (003-field-duplicate-resize)
 
 - NO server changes — duplication and resize are client-side only
@@ -65,6 +76,8 @@ TypeScript: Follow standard conventions
 - 001-pdf-form-editor: Added TypeScript + React 18, Vite 5, Express 4, pdf-lib, pdfjs-dist, @dnd-kit/core
 - 002-multipage-pdf-navigation: PageNavigator + ThumbnailStrip UI; pageDimensionsMap in usePdfRenderer; BF-001 (concurrent pdfjs renders)
 - 003-field-duplicate-resize: field duplication (Ctrl+D + context menu) + 8 resize handles
+- 004-field-templates: TemplatePanel (save/load/rename/delete/export/import); useTemplateStore (localStorage); templateSchema.ts parse/serialize/validate; Import+Export modals in navbar
+- 005-field-default-value: `value?: string` in FormField; PropertiesPanel "Valor predeterminado" input; canvas overlay shows value; server calls textField.setText() before updateAppearances(); extractFields.ts extracts existing AcroForm text fields from uploaded PDFs and loads them as editable canvas overlays
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
