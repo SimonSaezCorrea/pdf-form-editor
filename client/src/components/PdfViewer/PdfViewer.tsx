@@ -175,7 +175,7 @@ export function PdfViewer({
           className="pdf-canvas-container"
           style={{ width: canvasWidth, height: canvasHeight }}
         >
-          <canvas ref={canvasRef} />
+          <canvas ref={canvasRef as React.RefObject<HTMLCanvasElement>} />
           {isLoading && <div className="loading-overlay">Rendering…</div>}
           {/* Field overlay — mode-aware click and drag behaviour */}
           <div
