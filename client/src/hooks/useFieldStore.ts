@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { FormField } from 'pdf-form-editor-shared';
 import { canvasToPdf } from '../utils/coordinates';
+import { duplicatedName } from '../utils/fieldName';
 
 let fieldCounter = 0;
 
@@ -18,6 +19,14 @@ export interface FieldStore {
   deleteField: (id: string) => void;
   selectField: (id: string | null) => void;
   resetFields: () => void;
+  /**
+   * Duplicate a field, auto-naming it with a unique suffix.
+   * @param id - ID of the source field
+   * @param offsetX - X offset for the duplicate in PDF points
+   * @param offsetY - Y offset for the duplicate in PDF points
+   * @returns the new FormField, or null if the source id is not found
+   */
+  duplicateField: (id: string, offsetX: number, offsetY: number) => FormField | null;
 }
 
 /** Default field size in PDF points */
@@ -88,5 +97,35 @@ export function useFieldStore(): FieldStore {
     setSelectedFieldId(null);
   }, []);
 
-  return { fields, selectedFieldId, addField, updateField, deleteField, selectField, resetFields };
+  const duplicateField = useCallback(
+    (id: string, offsetX: number, offsetY: number): FormField | null => {
+      const source = fields.find((f) => f.id === id);
+      if (!source) return null;
+
+      fieldCounter += 1;
+      const newName = duplicatedName(
+        source.name,
+        new Set(fields.map((f) => f.name)),
+      );
+      const newField: FormField = {
+        id: `field-${Date.now()}-${fieldCounter}`,
+        name: newName,
+        page: source.page,
+        x: Math.max(0, source.x + offsetX),
+        y: Math.max(0, source.y + offsetY),
+        width: source.width,
+        height: source.height,
+        fontSize: source.fontSize,
+        fontFamily: source.fontFamily,
+      };
+
+      setFields((prev) => [...prev, newField]);
+      setSelectedFieldId(newField.id);
+      return newField;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [fields],
+  );
+
+  return { fields, selectedFieldId, addField, updateField, deleteField, selectField, resetFields, duplicateField };
 }

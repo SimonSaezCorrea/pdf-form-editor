@@ -386,7 +386,6 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0 4px;
-  overflow: hidden;
   transition: border-color 0.1s, background 0.1s;
 }
 
@@ -523,4 +522,53 @@ body {
   font-size: 10px;
   color: #6b7280;
   line-height: 1;
+}
+
+/* ── Resize Handles ── */
+.resize-handle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #4f46e5;
+  border: 1px solid #fff;
+  border-radius: 2px;
+  z-index: 20;
+  pointer-events: all;
+}
+
+.resize-handle-n  { top: -4px; left: calc(50% - 4px); cursor: n-resize; }
+.resize-handle-ne { top: -4px; right: -4px; cursor: ne-resize; }
+.resize-handle-e  { top: calc(50% - 4px); right: -4px; cursor: e-resize; }
+.resize-handle-se { bottom: -4px; right: -4px; cursor: se-resize; }
+.resize-handle-s  { bottom: -4px; left: calc(50% - 4px); cursor: s-resize; }
+.resize-handle-sw { bottom: -4px; left: -4px; cursor: sw-resize; }
+.resize-handle-w  { top: calc(50% - 4px); left: -4px; cursor: w-resize; }
+.resize-handle-nw { top: -4px; left: -4px; cursor: nw-resize; }
+
+/* ── Context Menu ── */
+.context-menu {
+  position: fixed;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  z-index: 1000;
+  min-width: 140px;
+  padding: 4px 0;
+}
+
+.context-menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: #1f2937;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.context-menu-item:hover {
+  background: #f3f4f6;
 }
