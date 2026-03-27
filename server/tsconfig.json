@@ -11,10 +11,10 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "paths": {
-      "pdf-form-editor-shared": ["../shared/types.ts"]
+      "pdf-form-editor-shared": ["../shared/types.d.ts"]
     }
   },
-  "include": ["src", "tests"],
+  "include": ["src"],
   "ts-node": {
     "paths": true
   }

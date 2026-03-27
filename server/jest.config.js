@@ -4,6 +4,6 @@ module.exports = {
   testEnvironment: 'node',
   testMatch: ['**/tests/**/*.test.ts'],
   moduleNameMapper: {
-    '^pdf-form-editor-shared$': '<rootDir>/../shared/types.ts',
+    '^pdf-form-editor-shared$': '<rootDir>/../shared/types.d.ts',
   },
 };
