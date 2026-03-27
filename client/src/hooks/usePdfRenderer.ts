@@ -129,7 +129,9 @@ export function usePdfRenderer(
         const natural = page.getViewport({ scale: 1 });
         setPageDimensions({ width: natural.width, height: natural.height });
 
-        const task = page.render({ canvasContext: ctx, viewport });
+        // annotationMode: 2 = ENABLE_FORMS — hides native widget annotations
+        // (form fields) from the canvas so only our interactive overlay shows
+        const task = page.render({ canvasContext: ctx, viewport, annotationMode: 2 });
         renderTaskRef.current = task;
         await task.promise;
       } catch (err: unknown) {

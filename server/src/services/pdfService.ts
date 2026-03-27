@@ -49,6 +49,12 @@ export async function generatePdf(
 
   const form = pdfDoc.getForm();
 
+  // Remove all existing AcroForm fields before adding ours so that
+  // re-exporting a previously-exported PDF does not duplicate fields
+  for (const existingField of form.getFields()) {
+    form.removeField(existingField);
+  }
+
   // Embed all required fonts up-front (deduplicated by fontFamily)
   const usedFamilies = [...new Set(fields.map((f) => f.fontFamily))];
   const embeddedFonts: Partial<Record<FontFamily, Awaited<ReturnType<PDFDocument['embedFont']>>>> = {};

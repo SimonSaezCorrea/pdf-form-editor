@@ -71,6 +71,18 @@ TypeScript: Follow standard conventions
 - Shift+corner = proportional resize using aspect ratio at drag start
 - Context menu: position:fixed at cursor; dismissed on mousedown outside or Escape; all action handlers MUST call e.stopPropagation() — position:fixed is visual only, the DOM node is still inside field-overlay so clicks bubble to handleOverlayClick (BF-003-02)
 
+## Key Notes (pdfService - field deduplication on export)
+
+- `generatePdf()` MUST call `form.removeField()` on all existing fields before adding new ones
+- Without this, re-exporting a previously-exported PDF duplicates all AcroForm fields (BF-005-02)
+- Pattern: `for (const f of form.getFields()) form.removeField(f);` runs before `form.createTextField()`
+
+## Key Notes (usePdfRenderer - annotationMode)
+
+- `page.render()` must pass `annotationMode: 2` (ENABLE_FORMS) so pdfjs does NOT draw AcroForm widget boxes on the canvas
+- Without this, existing PDF form fields appear as a gray native widget box behind the interactive overlay (BF-005-01)
+- AnnotationMode values in pdfjs-dist: DISABLE=0, ENABLE=1, ENABLE_FORMS=2, ENABLE_STORAGE=3
+
 ## Recent Changes
 
 - 001-pdf-form-editor: Added TypeScript + React 18, Vite 5, Express 4, pdf-lib, pdfjs-dist, @dnd-kit/core
