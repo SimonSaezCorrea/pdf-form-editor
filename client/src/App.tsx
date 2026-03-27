@@ -56,7 +56,16 @@ export default function App() {
     }
   };
 
-  // Keyboard navigation: ArrowLeft/ArrowRight navigate pages when not in a text input
+  const handleDuplicate = useCallback(
+    (id: string) => {
+      // offset +10 canvas px in X (right), -10 canvas px in Y (down on screen = negative PDF Y)
+      store.duplicateField(id, 10 / pdfRenderer.renderScale, -(10 / pdfRenderer.renderScale));
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [store.duplicateField, pdfRenderer.renderScale],
+  );
+
+  // Keyboard navigation: ArrowLeft/ArrowRight navigate pages; Ctrl+D duplicates selected field
   useEffect(() => {
     if (!pdfBytes) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -65,11 +74,21 @@ export default function App() {
         pdfRenderer.setCurrentPage(pdfRenderer.currentPage - 1);
       } else if (e.key === 'ArrowRight' && pdfRenderer.currentPage < pdfRenderer.totalPages) {
         pdfRenderer.setCurrentPage(pdfRenderer.currentPage + 1);
+      } else if ((e.key === 'd' || e.key === 'D') && (e.ctrlKey || e.metaKey) && store.selectedFieldId) {
+        e.preventDefault();
+        handleDuplicate(store.selectedFieldId);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [pdfBytes, pdfRenderer.currentPage, pdfRenderer.totalPages, pdfRenderer.setCurrentPage]);
+  }, [
+    pdfBytes,
+    pdfRenderer.currentPage,
+    pdfRenderer.totalPages,
+    pdfRenderer.setCurrentPage,
+    store.selectedFieldId,
+    handleDuplicate,
+  ]);
 
   // Fields on the currently visible page
   const currentPageFields = store.fields.filter(
@@ -159,6 +178,7 @@ export default function App() {
                 onFieldUpdate={store.updateField}
                 onFieldSelect={store.selectField}
                 onFieldDelete={store.deleteField}
+                onFieldDuplicate={handleDuplicate}
               />
             )}
           </main>

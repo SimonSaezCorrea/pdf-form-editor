@@ -27,6 +27,7 @@ interface PdfViewerProps {
   onFieldUpdate: (id: string, partial: Partial<Omit<FormField, 'id'>>) => void;
   onFieldSelect: (id: string | null) => void;
   onFieldDelete: (id: string) => void;
+  onFieldDuplicate: (id: string) => void;
 }
 
 export function PdfViewer({
@@ -37,6 +38,7 @@ export function PdfViewer({
   onFieldUpdate,
   onFieldSelect,
   onFieldDelete,
+  onFieldDuplicate,
 }: PdfViewerProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const { canvasRef, totalPages, currentPage, setCurrentPage, pageDimensions, renderScale, isLoading } =
@@ -123,6 +125,8 @@ export function PdfViewer({
                 isSelected={field.id === selectedFieldId}
                 onSelect={onFieldSelect}
                 onDelete={onFieldDelete}
+                onDuplicate={() => onFieldDuplicate(field.id)}
+                onUpdate={onFieldUpdate}
               />
             ))}
           </div>
