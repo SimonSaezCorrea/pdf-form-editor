@@ -1,6 +1,35 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 2.0.2 → 2.1.0  [MINOR, 2026-03-28]
+
+Rationale for MINOR bump:
+  - Principle XXIII added: Mandatory Dark Mode — new governance constraint covering
+    theme implementation strategy; no existing principle removed or redefined.
+
+Added principles:
+  - XXIII. Mandatory Dark Mode
+
+Modified principles: none
+
+Removed principles: none
+
+Templates requiring updates:
+  ✅ .specify/memory/constitution.md  — this file
+  ⚠  .specify/templates/plan-template.md — no dark-mode task category yet; add
+     "Theme/Accessibility" task type when next plan is generated.
+  ⚠  src/styles/tokens.css — MUST be extended with dark-mode variants for every
+     color token under @media (prefers-color-scheme: dark) and [data-theme="dark"].
+     This is an implementation TODO, not a constitution TODO.
+
+Follow-up TODOs:
+  - tokens.css does not yet define dark-mode color variants. First feature that
+    adds a themed component MUST also introduce the dark-mode token block.
+
+---
+
+Prior history preserved below for traceability.
+
 Version change: 1.0.3 → 2.0.0  [MAJOR, 2026-03-27]
 
 Rationale for MAJOR bump:
@@ -380,6 +409,43 @@ the canonical deletion paths. The hover button would clutter the selection state
 common workflow of selecting → editing properties → confirming. Restricting it to hover-only
 on unselected fields keeps it discoverable without being intrusive.
 
+### XXIII. Mandatory Dark Mode
+
+All components and features MUST support dark mode from the point of implementation.
+Retrofitting light-mode-only components is PROHIBITED — dark support is a precondition
+for merging any new UI code, not a follow-up task.
+
+Dark mode is implemented **exclusively** through CSS custom properties in
+`src/styles/tokens.css` using two complementary mechanisms:
+
+1. `@media (prefers-color-scheme: dark)` — automatic, OS-level detection with no
+   JavaScript required.
+2. `[data-theme="dark"]` on the root `<html>` element — manual toggle override that
+   takes precedence over the media query when present.
+
+**Token rules**:
+- Every color token in `tokens.css` MUST declare both a light and a dark value.
+  A token defined only for one mode is a constitution violation.
+- Hardcoding a color (hex, `rgb()`, named) in any component CSS file is PROHIBITED
+  regardless of mode (this is already covered by Principle XII; XXIII strengthens
+  the rationale by adding the per-mode requirement).
+
+**Component rules**:
+- Components MUST NOT detect the active theme directly. Using `window.matchMedia`,
+  a React context, or any JavaScript variable to branch on the current mode is
+  PROHIBITED. Components consume CSS custom properties only; the CSS layer is
+  solely responsible for mode switching.
+- No component may import or depend on a "theme provider" wrapping component.
+  The `data-theme` attribute is set on the root element by a single, top-level
+  toggle mechanism (e.g., a button in the app header); it is not propagated
+  through React context.
+
+**Rationale**: Dark mode implemented per-component produces inconsistent results and
+requires every future component to repeat the same conditional logic. Centralising the
+switch in `tokens.css` means a single selector change flips the entire UI atomically.
+Mandating it from implementation start (not as a retrofit) prevents the accumulation
+of hardcoded light-only colors that are expensive to change later.
+
 ### XVII. No Independent Server
 
 No `/server` folder, no Express process, no standalone HTTP server of any kind exists
@@ -496,4 +562,4 @@ Check" section that gates Phase 0 research. Re-check is required after Phase 1 d
 artifacts are produced. Any violation MUST be either resolved or explicitly justified
 in the plan's "Complexity Tracking" table.
 
-**Version**: 2.0.0 | **Ratified**: 2026-03-26 | **Last Amended**: 2026-03-27
+**Version**: 2.1.0 | **Ratified**: 2026-03-26 | **Last Amended**: 2026-03-28
