@@ -32,3 +32,7 @@ coverage/
 
 # Vite
 .vite/
+
+# Next.js
+.next/
+out/

@@ -1,0 +1,51 @@
+.wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tip {
+  position: absolute;
+  z-index: var(--z-tooltip);
+  background: var(--color-dark-800);
+  color: var(--color-white);
+  font-size: var(--font-size-xs);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  /* hide instantly, show after 700 ms hold */
+  transition: opacity 0.15s 0s;
+}
+
+.wrapper:hover .tip {
+  opacity: 1;
+  transition-delay: 0.7s;
+}
+
+/* Positions */
+.top {
+  bottom: calc(100% + var(--space-1));
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.bottom {
+  top: calc(100% + var(--space-1));
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.left {
+  right: calc(100% + var(--space-1));
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.right {
+  left: calc(100% + var(--space-1));
+  top: 50%;
+  transform: translateY(-50%);
+}

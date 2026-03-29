@@ -1,0 +1,27 @@
+.toolbar-modes {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.toolbar-modes .mode-btn {
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-dark-700);
+  color: var(--color-neutral-300);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  font-family: var(--font-family-base);
+  transition: background 0.15s, color 0.15s;
+}
+.toolbar-modes .mode-btn:hover:not(.active) {
+  background: var(--color-dark-800);
+  color: var(--color-white);
+}
+
+.toolbar-modes .active {
+  background: var(--color-primary);
+  color: var(--color-white);
+  border-color: var(--color-primary);
+}

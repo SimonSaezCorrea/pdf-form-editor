@@ -1,0 +1,32 @@
+.page-navigator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-dark-700);
+}
+
+.page-label {
+  min-width: 80px;
+  text-align: center;
+}
+
+.nav-btn {
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-white);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-sm);
+  color: var(--color-dark-800);
+  transition: background 0.1s;
+}
+.nav-btn:hover:not(:disabled) {
+  background: var(--color-neutral-100);
+}
+.nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

@@ -1,0 +1,90 @@
+.shortcuts-panel {
+  position: fixed;
+  bottom: var(--space-16);
+  right: var(--space-4);
+  width: 320px;
+  background: var(--color-dark-800);
+  color: var(--color-neutral-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-toolbar);
+  overflow: hidden;
+}
+
+.shortcuts-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-dark-900);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-base);
+}
+
+.shortcuts-panel__close {
+  background: none;
+  border: none;
+  color: var(--color-neutral-400);
+  cursor: pointer;
+  font-size: var(--font-size-md);
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  line-height: 1;
+}
+.shortcuts-panel__close:hover {
+  color: var(--color-white);
+}
+
+.shortcuts-panel__body {
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.shortcuts-group__title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-neutral-400);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 var(--space-1);
+}
+
+.shortcut-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-1) 0;
+  font-size: var(--font-size-sm);
+}
+
+.shortcut-desc {
+  color: var(--color-neutral-300);
+}
+
+.shortcut-keys {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px var(--space-1);
+  background: var(--color-dark-700);
+  border: 1px solid var(--color-neutral-600);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-xs);
+  color: var(--color-neutral-200);
+}
+
+.kbd-sep {
+  color: var(--color-neutral-500);
+  font-size: var(--font-size-xs);
+  padding: 0 1px;
+}

@@ -1,9 +1,0 @@
-/** @type {import('ts-jest').JestConfigWithTsJest} */
-module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
-  testMatch: ['**/tests/**/*.test.ts'],
-  moduleNameMapper: {
-    '^pdf-form-editor-shared$': '<rootDir>/../shared/types.d.ts',
-  },
-};

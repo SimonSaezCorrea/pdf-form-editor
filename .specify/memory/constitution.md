@@ -29,6 +29,18 @@ Prior PATCH history preserved in this header for traceability.
   - Principle II clarified: `value?: string` on FormField is optional; isValidField
     MUST accept undefined.
 
+2.0.2 changes:
+  - Principle XX added: Canvas Zoom — zoom state lives in App.tsx; renderScale = BASE_SCALE * zoom
+  - Principle XXI added: ThumbnailStrip is leftmost panel, white background, collapsible
+  - Principle XXII added: Field delete button hidden when field is selected (hover only on unselected)
+  - Copy/paste bug fixed: pasted fields now carry page: currentPage instead of source page
+
+2.0.1 changes:
+  - Principle XVIII added: App Shell Layout (two-panel: left=FieldList, right=PropertiesPanel)
+  - Principle XIX added: Mode-Aware Cursor Feedback (cursor reflects active interaction mode)
+  - next.config.ts devIndicators: false — hides Next.js development overlay badge
+  - ThumbnailStrip: img elements require explicit width + object-fit:contain
+
 2.0.0 changes:
   Modified principles:
     - Principle I  → amended: server/ + Express replaced by src/app/api/ (API Routes)
@@ -282,6 +294,91 @@ API MUST NOT be re-exported from the barrel.
 **Rationale**: Barrel files create a stable import surface. Renaming or splitting an
 internal file does not break external consumers as long as the public export name is
 preserved in `index.ts`.
+
+### XVIII. App Shell Layout
+
+The app shell uses a **three-column editor layout** when a PDF is loaded:
+`[FieldList sidebar] [ThumbnailStrip?] [PDF viewer] [PropertiesPanel sidebar]`.
+
+- **Left sidebar** (`src/App.module.css` `.sidebar`): field list only — navigation of all
+  fields across pages.
+- **Center**: scrollable PDF canvas with DnD field overlay.
+- **ThumbnailStrip**: optional dark column between left sidebar and center, visible only
+  for multi-page PDFs.
+- **Right sidebar** (`.properties-panel`): field properties only — shown when one or more
+  fields are selected. Never mixed into the left sidebar.
+
+This separation is intentional: the left panel is an index (always visible), the right
+panel is a context-sensitive editor (visible when relevant). Merging them into a single
+panel is PROHIBITED.
+
+**Rationale**: Two-panel separation keeps the field index always accessible while
+editing properties, matching common PDF editor conventions (similar to Figma/InDesign).
+
+### XIX. Mode-Aware Cursor Feedback
+
+The field overlay div MUST expose the current interaction mode as `data-mode={mode}`
+and `PdfViewer.module.css` MUST define cursor rules per mode:
+- `select` → `cursor: default`
+- `insert` → `cursor: crosshair`
+- `move`   → `cursor: grab`
+- `pan`    → `cursor: grab`
+
+No hardcoded `cursor:` value is permitted on `.field-overlay` — the cursor MUST always
+derive from the active mode token. This pattern uses the `data-mode` attribute selector
+(e.g., `[data-mode='insert'] { cursor: crosshair; }`) to keep cursor logic in CSS only,
+with no JavaScript conditional required.
+
+**Rationale**: Visual cursor feedback is the primary affordance that tells the user which
+interaction mode is active. Hardcoding a single cursor ignores mode state and misleads
+the user about what a click will do.
+
+### XX. Canvas Zoom
+
+Zoom is a multiplier stored as `zoom: number` state in `App.tsx`. The effective render
+scale passed to `usePdfRenderer` is always `BASE_SCALE * zoom` (where `BASE_SCALE = 1.5`).
+Allowed zoom levels are discrete steps: `[0.5, 0.75, 1, 1.25, 1.5, 2]`.
+Zoom controls (−, %, +) render inside `.header-toolbar-center` alongside `ToolbarModes`.
+
+The zoom multiplier MUST NOT be stored inside `usePdfRenderer` or `useFieldStore` — it is
+view-only state owned by the App shell. Field coordinates in PDF points are zoom-independent;
+`renderScale` is the only value that changes.
+
+**Rationale**: Zoom is a display concern, not a data concern. Separating it keeps field
+coordinate math unaffected by zoom changes.
+
+### XXI. ThumbnailStrip Position and Appearance
+
+The `ThumbnailStrip` MUST be the leftmost element in the `editor-layout` flex row — to the
+left of the `FieldList` sidebar. Its background is `var(--color-white)` (not dark). Width is
+110 px; thumbnail images are 90 px wide with `object-fit: contain`.
+
+Visibility is controlled by a `thumbnailsVisible` boolean in `App.tsx`, toggled by a
+"Ver páginas / Ocultar páginas" button in the header that appears only when `totalPages > 1`.
+The computed flag `hasThumbnails = !!pdfDoc && totalPages > 1` guards both the toggle button
+and the strip render.
+
+**Rationale**: A dark thumbnail strip conflicts with the white panel aesthetic established
+by the FieldList and PropertiesPanel. Leftmost position mirrors conventional page-panel
+placement (e.g., PDF viewers, Figma).
+
+### XXII. Field Delete Button Visibility
+
+The delete (✕) button on a `DraggableField` MUST only appear on hover when the field is
+**not** selected. The CSS rule is:
+
+```css
+.draggable-field:not(.selected):hover .field-delete-btn { display: flex; }
+```
+
+The rule `.selected .field-delete-btn { display: flex; }` is PROHIBITED. When a field is
+selected, the PropertiesPanel delete action and the Delete/Backspace keyboard shortcut are
+the canonical deletion paths. The hover button would clutter the selection state UI
+(resize handles, red border) and invite accidental deletion.
+
+**Rationale**: Showing the delete button on selected fields creates visual noise during the
+common workflow of selecting → editing properties → confirming. Restricting it to hover-only
+on unselected fields keeps it discoverable without being intrusive.
 
 ### XVII. No Independent Server
 

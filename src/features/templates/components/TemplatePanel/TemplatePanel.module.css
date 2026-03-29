@@ -1,0 +1,202 @@
+.template-panel {
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.template-error-banner {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+}
+
+.template-save-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-end;
+}
+
+.template-name-input {
+  flex: 1;
+}
+
+.btn,
+.template-save-btn {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family-base);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.template-inline-confirm {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  background: var(--color-neutral-100);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+}
+
+.template-inline-confirm--full {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.template-confirm-btn {
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-danger);
+  color: var(--color-white);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+}
+
+.template-cancel-btn {
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-neutral-200);
+  color: var(--color-dark-800);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+}
+
+.template-list-empty {
+  color: var(--color-neutral-500);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.template-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.template-list-item {
+  padding: var(--space-2);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--color-white);
+}
+
+.template-rename-input {
+  width: 100%;
+}
+
+.template-item-name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-dark-800);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.template-item-actions {
+  display: flex;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.template-action-btn {
+  padding: 2px var(--space-2);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-family-base);
+  background: var(--color-neutral-100);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--color-dark-800);
+}
+.template-action-btn:hover {
+  background: var(--color-neutral-200);
+}
+
+.template-action-btn--danger {
+  color: var(--color-danger);
+  border-color: var(--color-danger-border);
+}
+.template-action-btn--danger:hover {
+  background: var(--color-danger-bg);
+}
+
+.template-export-section,
+.template-import-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.template-export-btn {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-neutral-100);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family-base);
+  color: var(--color-dark-800);
+  text-align: left;
+}
+.template-export-btn:hover {
+  background: var(--color-neutral-200);
+}
+
+.template-copied-feedback {
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+}
+
+.template-clipboard-error {
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+}
+
+.template-import-file-btn {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-primary);
+  color: var(--color-white);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  display: inline-block;
+  text-align: center;
+}
+
+.template-import-textarea {
+  width: 100%;
+  padding: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-family: monospace;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+  min-height: 80px;
+  box-sizing: border-box;
+}
