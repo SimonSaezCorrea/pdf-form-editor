@@ -1,6 +1,6 @@
 # pdf-form-editor Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-03-26
+Auto-generated from all feature plans. Last updated: 2026-03-28
 
 ## Active Technologies
 
@@ -10,36 +10,48 @@ Auto-generated from all feature plans. Last updated: 2026-03-26
 - No new dependencies (004-field-templates)
 - No new dependencies (005-field-default-value)
 - No new dependencies (006-canvas-toolbar-modes)
+- Next.js 15.x (App Router) replaces React+Vite+Express monorepo; Vitest unified (removes Jest+supertest); CSS Modules + tokens.css (007-nextjs-migration)
 
 ## Project Structure
 
 ```text
-client/
-  src/
-    components/
-      PageNavigator/   # NEW (002): prev/next buttons + page indicator
-      ThumbnailStrip/  # NEW (002, P3): clickable thumbnail panel
-      FieldOverlay/
-        DraggableField.tsx  # MODIFIED (003): ResizeHandles + context menu
-        ResizeHandles.tsx   # NEW (003): 8 handle divs with directional cursors
-    hooks/
-      usePdfRenderer.ts   # MODIFIED (002): pageDimensionsMap added
-      useFieldStore.ts    # MODIFIED (003): duplicateField() added
-      useFieldResize.ts   # NEW (003): mouse drag logic for resize
-    utils/
-      fieldName.ts        # NEW (003): duplicatedName() pure utility + MIN constants
-    App.tsx               # MODIFIED (003): Ctrl+D shortcut
-server/                   # UNCHANGED
-shared/                   # UNCHANGED
+src/
+  app/
+    api/generate-pdf/
+      route.ts          # Next.js Route Handler (replaces Express server)
+      pdfService.ts     # PDF generation logic (pdf-lib)
+    layout.tsx          # Root layout: imports tokens.css + reset.css
+    page.tsx            # Entry point: dynamic import of App
+  components/
+    ui/                 # Reusable primitives: Button, Modal, Input, Select, Tooltip, IconButton
+  features/
+    canvas/             # PdfViewer, ThumbnailStrip, usePdfRenderer, useRubberBand
+    toolbar/            # ToolbarModes, ShortcutsPanel, useInteractionMode (re-export)
+    fields/             # FieldOverlay, DraggableField, ResizeHandles, FieldList,
+                        # PropertiesPanel, PageNavigator, useFieldResize
+    templates/          # TemplatePanel, ExportModal, ImportModal, useTemplateStore
+    pdf/                # PdfUploader + utils (coordinates, export, extractFields,
+                        #   fieldName, templateSchema, thumbnails)
+  hooks/
+    useFieldStore.ts    # Global (5 feature consumers)
+    useInteractionMode.ts # Global (canvas + toolbar)
+  styles/
+    tokens.css          # Design tokens (colors, typography, spacing, borders, shadows, z-index)
+    reset.css           # Global reset
+  types/
+    shared.ts           # FormField, FontFamily
+  App.tsx               # Root component (keyboard shortcuts, layout)
 tests/
-  unit/
-    fieldName.test.ts     # NEW (003)
-    ResizeHandles.test.tsx # NEW (003)
+  unit/                 # Vitest tests mirroring src/ structure
+next.config.ts          # serverExternalPackages: ['pdf-lib']
+tsconfig.json           # strict, moduleResolution: bundler, paths: @/*
+package.json            # Single unified package (no workspaces)
+vitest.config.ts        # jsdom, globals, @/ alias
 ```
 
 ## Commands
 
-npm test; npm run lint
+npm test; npm run typecheck; npm run build; npm run dev
 
 ## Code Style
 
@@ -107,6 +119,7 @@ TypeScript: Follow standard conventions
 - 004-field-templates: TemplatePanel (save/load/rename/delete/export/import); useTemplateStore (localStorage); templateSchema.ts parse/serialize/validate; Import+Export modals in navbar
 - 005-field-default-value: `value?: string` in FormField; PropertiesPanel "Valor predeterminado" input; canvas overlay shows value; server calls textField.setText() before updateAppearances(); extractFields.ts extracts existing AcroForm text fields from uploaded PDFs and loads them as editable canvas overlays
 - 006-canvas-toolbar-modes: ToolbarModes (S/I/M/H/Escape); useInteractionMode + useRubberBand hooks; selectionIds replaces selectedFieldId; multi-select via Shift+click/rubber band/Ctrl+A; group move; multi-select PropertiesPanel; pan mode scroll; intersectsRect unit tested
+- 007-nextjs-migration: React+Vite+Express monorepo → single Next.js 15 App Router project; Express → Route Handler at src/app/api/generate-pdf/route.ts; Jest+supertest → Vitest unified; src/features/ domain architecture; src/components/ui/ primitives (Button, Modal, Input, Select, Tooltip, IconButton); src/styles/tokens.css + CSS Modules per component; no functional regression
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

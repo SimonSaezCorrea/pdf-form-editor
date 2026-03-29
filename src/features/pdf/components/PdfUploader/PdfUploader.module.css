@@ -1,0 +1,30 @@
+.uploader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-12);
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.uploader:hover,
+.uploader:focus-within {
+  border-color: var(--color-primary);
+  background: rgba(79, 70, 229, 0.03);
+}
+
+.uploader-hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.uploader-error {
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
