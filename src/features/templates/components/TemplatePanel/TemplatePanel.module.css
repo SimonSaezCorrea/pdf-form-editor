@@ -74,7 +74,7 @@
 .template-cancel-btn {
   padding: var(--space-1) var(--space-2);
   background: var(--color-neutral-200);
-  color: var(--color-dark-800);
+  color: var(--color-text);
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -100,7 +100,7 @@
   padding: var(--space-2);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  background: var(--color-white);
+  background: var(--color-panel-bg);
 }
 
 .template-rename-input {
@@ -110,7 +110,7 @@
 .template-item-name {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  color: var(--color-dark-800);
+  color: var(--color-text);
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -132,7 +132,7 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  color: var(--color-dark-800);
+  color: var(--color-text);
 }
 .template-action-btn:hover {
   background: var(--color-neutral-200);
@@ -161,7 +161,7 @@
   cursor: pointer;
   font-size: var(--font-size-sm);
   font-family: var(--font-family-base);
-  color: var(--color-dark-800);
+  color: var(--color-text);
   text-align: left;
 }
 .template-export-btn:hover {

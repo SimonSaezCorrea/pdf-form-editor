@@ -12,34 +12,34 @@ describe('ToolbarModes', () => {
   });
 
   it('marks the active mode button with the active class', () => {
-    const { getByTitle } = render(
+    const { getByText } = render(
       <ToolbarModes mode="insert" onModeChange={vi.fn()} />,
     );
-    expect(getByTitle('Insertar (I)')).toHaveClass('active');
-    expect(getByTitle('Seleccionar (S)')).not.toHaveClass('active');
+    expect(getByText('Insertar')).toHaveClass('active');
+    expect(getByText('Seleccionar')).not.toHaveClass('active');
   });
 
   it('calls onModeChange with the correct mode when a button is clicked', () => {
     const onModeChange = vi.fn();
-    const { getByTitle } = render(
+    const { getByText } = render(
       <ToolbarModes mode="select" onModeChange={onModeChange} />,
     );
-    fireEvent.click(getByTitle('Mover (M)'));
+    fireEvent.click(getByText('Mover'));
     expect(onModeChange).toHaveBeenCalledWith('move');
   });
 
   it('calls onModeChange for each button with its correct mode', () => {
     const onModeChange = vi.fn();
-    const { getByTitle } = render(
+    const { getByText } = render(
       <ToolbarModes mode="select" onModeChange={onModeChange} />,
     );
     const cases: Array<[string, InteractionMode]> = [
-      ['Seleccionar (S)', 'select'],
-      ['Insertar (I)', 'insert'],
-      ['Mover (M)', 'move'],
+      ['Seleccionar', 'select'],
+      ['Insertar', 'insert'],
+      ['Mover', 'move'],
     ];
-    for (const [title, expectedMode] of cases) {
-      fireEvent.click(getByTitle(title));
+    for (const [label, expectedMode] of cases) {
+      fireEvent.click(getByText(label));
       expect(onModeChange).toHaveBeenCalledWith(expectedMode);
     }
   });

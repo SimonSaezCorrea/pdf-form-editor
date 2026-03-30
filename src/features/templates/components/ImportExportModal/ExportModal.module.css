@@ -9,7 +9,7 @@
 }
 
 .modal-box {
-  background: var(--color-white);
+  background: var(--color-panel-bg);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   max-width: 560px;
@@ -31,7 +31,7 @@
 .modal-title {
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-dark-900);
+  color: var(--color-text);
   margin: 0;
 }
 
@@ -92,7 +92,7 @@
 .btn-modal-secondary {
   padding: var(--space-2) var(--space-4);
   background: var(--color-neutral-100);
-  color: var(--color-dark-800);
+  color: var(--color-text);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   cursor: pointer;

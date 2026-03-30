@@ -1,6 +1,23 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 2.1.1 → 2.1.2  [PATCH, 2026-03-29]
+
+Rationale: Dark mode palette revised — reduced saturation on panel/input layers and
+differentiated navbar. Layer hierarchy table added to Principle XII.
+
+---
+
+Version change: 2.1.0 → 2.1.1  [PATCH, 2026-03-29]
+
+Rationale: Principle XII expanded with the official Teal/Aqua colour palette table.
+No structural principle changes.
+
+Modified principles: XII (Design Tokens) — palette table added.
+Added principles: none. Removed principles: none.
+
+---
+
 Version change: 2.0.2 → 2.1.0  [MINOR, 2026-03-28]
 
 Rationale for MINOR bump:
@@ -274,6 +291,25 @@ A single file `src/styles/tokens.css` defines **all** CSS custom properties for 
 project: colors, typography scale, shadows, border radii, spacing scale, and z-index
 layers. No component may hardcode a color hex, a pixel size that belongs to the
 spacing scale, or a z-index integer — all MUST reference a token from `tokens.css`.
+
+**Official colour palette** (adopted 2026-03-29 — Teal/Aqua design system):
+
+| Role | Light | Dark |
+|------|-------|------|
+| Background (`--color-surface`) | `#F4F7F8` | `#091214` |
+| Surface/Cards (`--color-panel-bg`) | `#C4DFE6` | `#0d2028` |
+| Input bg (`--color-input-bg`) | `#ffffff` | `#132c38` |
+| Body text (`--color-text`) | `#151E20` | `#E8EDEF` |
+| Secondary text (`--color-text-muted`) | `#003B46` | `#7ab5bd` |
+| Primary (`--color-primary`) | `#07575B` | `#66A5AD` |
+| Accent (`--color-accent`) | `#E76F51` | `#F4A261` |
+| Navbar bg (`--color-navbar-bg`) | `#07575B` | `#051519` |
+
+**Dark mode layer hierarchy**: navbar (`#051519`) → surface (`#091214`) → panel (`#0d2028`) → input (`#132c38`). Each elevation is distinct and readable.
+
+All foreground/background pairs MUST meet WCAG AA (4.5:1 contrast ratio) for normal text.
+The danger palette (`--color-danger`, `--color-danger-bg`, `--color-danger-border`) is
+unchanged from its accessibility-compliant red values.
 
 **Rationale**: A single source of truth for visual constants enables global theming
 changes in one file and prevents the gradual accumulation of one-off magic values
@@ -562,4 +598,4 @@ Check" section that gates Phase 0 research. Re-check is required after Phase 1 d
 artifacts are produced. Any violation MUST be either resolved or explicitly justified
 in the plan's "Complexity Tracking" table.
 
-**Version**: 2.1.0 | **Ratified**: 2026-03-26 | **Last Amended**: 2026-03-28
+**Version**: 2.1.2 | **Ratified**: 2026-03-26 | **Last Amended**: 2026-03-29

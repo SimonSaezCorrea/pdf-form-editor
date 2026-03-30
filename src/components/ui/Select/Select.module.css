@@ -7,7 +7,7 @@
 .label {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  color: var(--color-dark-700);
+  color: var(--color-text-muted);
 }
 
 .selectWrapper {
@@ -23,8 +23,8 @@
   font-family: var(--font-family-base);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  color: var(--color-dark-900);
-  background: var(--color-white);
+  color: var(--color-text);
+  background: var(--color-input-bg);
   appearance: none;
   outline: none;
   cursor: pointer;
