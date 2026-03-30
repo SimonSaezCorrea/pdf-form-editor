@@ -1,6 +1,30 @@
 'use client';
 
 import { useRef, useState, useEffect } from 'react';
+
+// Canvas-space font-size approximation for live preview (mirrors pdfService logic).
+// Uses a fixed avg-char-width ratio since we don't have AFM metrics in the browser.
+function computeCanvasFitFontSize(
+  text: string,
+  widthPx: number,
+  heightPx: number,
+  basePx: number,
+  multiline: boolean,
+): number {
+  const PADDING = 4;
+  const available = widthPx - PADDING;
+  const ratio = 0.58; // conservative Helvetica average
+  if (!multiline) {
+    const textWidth = text.length * ratio * basePx;
+    if (textWidth <= available) return basePx;
+    return Math.max(8, (available / textWidth) * basePx);
+  }
+  const charsPerLine = Math.max(1, Math.floor(available / (ratio * basePx)));
+  const numLines = Math.ceil(text.length / charsPerLine);
+  const heightNeeded = numLines * basePx * 1.4;
+  if (heightNeeded <= heightPx) return basePx;
+  return Math.max(8, (heightPx / heightNeeded) * basePx);
+}
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import type { FormField } from '@/types/shared';
@@ -147,7 +171,18 @@ export function DraggableField({
         {...attributes}
       >
         <div className={styles['field-bg']} />
-        <span className={[styles['field-label'], field.value ? styles['field-label--has-value'] : ''].filter(Boolean).join(' ')}>
+        <span
+          className={[
+            styles['field-label'],
+            field.value ? styles['field-label--has-value'] : '',
+            field.value && field.multiline ? styles['field-label--multiline'] : '',
+          ].filter(Boolean).join(' ')}
+          style={field.value ? {
+            fontSize: field.autoFitFont
+              ? `${computeCanvasFitFontSize(field.value, canvasPos.width, canvasPos.height, field.fontSize * renderScale, field.multiline ?? false)}px`
+              : `${field.fontSize * renderScale}px`,
+          } : undefined}
+        >
           {field.value || field.name}
         </span>
         <IconButton

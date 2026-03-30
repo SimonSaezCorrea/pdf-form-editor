@@ -197,6 +197,33 @@ export function PropertiesPanel({
         className={styles['prop-group']}
       />
 
+      <label className={styles['prop-checkbox']}>
+        <input
+          type="checkbox"
+          checked={field.showBorder ?? false}
+          onChange={(e) => update('showBorder', e.target.checked)}
+        />
+        Mostrar borde en PDF
+      </label>
+
+      <label className={styles['prop-checkbox']}>
+        <input
+          type="checkbox"
+          checked={field.autoFitFont ?? false}
+          onChange={(e) => update('autoFitFont', e.target.checked)}
+        />
+        Ajustar fuente al contenido
+      </label>
+
+      <label className={styles['prop-checkbox']}>
+        <input
+          type="checkbox"
+          checked={field.multiline ?? false}
+          onChange={(e) => update('multiline', e.target.checked)}
+        />
+        Texto multi-línea
+      </label>
+
       <Button
         variant="danger"
         onClick={() => onDelete(field.id)}
