@@ -11,8 +11,8 @@
 .app-header {
   display: flex;
   flex-direction: column;
-  background: var(--color-dark-900);
-  color: var(--color-white);
+  background: var(--color-navbar-bg);
+  color: var(--color-navbar-text);
   flex-shrink: 0;
   box-shadow: var(--shadow-md);
   z-index: var(--z-toolbar);
@@ -31,7 +31,7 @@
 .app-header h1 {
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-white);
+  color: var(--color-navbar-text);
   margin: 0;
   white-space: nowrap;
   flex-shrink: 0;
@@ -88,7 +88,8 @@
 
 .zoom-label {
   font-size: var(--font-size-sm);
-  color: var(--color-neutral-300);
+  color: var(--color-navbar-text);
+  opacity: 0.75;
   min-width: 36px;
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -128,7 +129,7 @@
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--border-color);
-  background: var(--color-white);
+  background: var(--color-panel-bg);
   overflow: hidden;
 }
 
@@ -138,7 +139,7 @@
   display: flex;
   flex-direction: column;
   border-left: 1px solid var(--border-color);
-  background: var(--color-white);
+  background: var(--color-panel-bg);
   overflow-y: auto;
 }
 
@@ -149,7 +150,7 @@
   align-items: flex-start;
   justify-content: center;
   padding: var(--space-4);
-  background: var(--color-surface);
+  background: var(--color-viewer-bg);
 }
 
 .error-msg {

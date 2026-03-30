@@ -18,6 +18,7 @@ import { exportPdf } from '@/features/pdf/utils/export';
 import type { FormField } from '@/types/shared';
 import { canvasToPdf } from '@/features/pdf/utils/coordinates';
 import { Button, IconButton } from '@/components/ui';
+import { ThemeToggle } from '@/features/toolbar/components/ThemeToggle/ThemeToggle';
 import styles from './App.module.css';
 
 const BASE_SCALE = 1.5;
@@ -232,21 +233,24 @@ export default function App() {
           {pdfBytes && (
             <span className={styles.filename} title={pdfFilename}>{pdfFilename}</span>
           )}
-          {pdfBytes && (
-            <div className={styles['header-top-actions']}>
-              <Button variant="secondary" onClick={() => setShowImportModal(true)}>Importar</Button>
-              <Button variant="secondary" onClick={() => setShowExportModal(true)}>Exportar</Button>
-              <Button
-                variant="primary"
-                onClick={handleExport}
-                disabled={!canExport}
-                loading={isExporting}
-                title={exportButtonTitle}
-              >
-                {isExporting ? 'Exportando…' : 'Exportar PDF'}
-              </Button>
-            </div>
-          )}
+          <div className={styles['header-top-actions']}>
+            {pdfBytes && (
+              <>
+                <Button variant="navbar" onClick={() => setShowImportModal(true)}>Importar</Button>
+                <Button variant="navbar" onClick={() => setShowExportModal(true)}>Exportar</Button>
+                <Button
+                  variant="navbar"
+                  onClick={handleExport}
+                  disabled={!canExport}
+                  loading={isExporting}
+                  title={exportButtonTitle}
+                >
+                  {isExporting ? 'Exportando…' : 'Exportar PDF'}
+                </Button>
+              </>
+            )}
+            <ThemeToggle />
+          </div>
         </div>
 
         {/* Row 2: canvas toolbar */}
@@ -263,12 +267,12 @@ export default function App() {
             </div>
             <div className={styles['header-toolbar-actions']}>
               {hasThumbnails && (
-                <Button variant="secondary" onClick={() => setThumbnailsVisible((v) => !v)}>
+                <Button variant="navbar" onClick={() => setThumbnailsVisible((v) => !v)}>
                   {thumbnailsVisible ? 'Ocultar páginas' : 'Ver páginas'}
                 </Button>
               )}
               <Button
-                variant="secondary"
+                variant="navbar"
                 onClick={() => {
                   setPdfBytes(null);
                   setPdfFilename('');

@@ -9,6 +9,15 @@
   overflow: visible;
 }
 
+/* White fill so dark-mode tokens never bleed into PDF canvas field fills (FR-008) */
+.field-bg {
+  position: absolute;
+  inset: 0;
+  background-color: #fff !important;
+  border-radius: 1px;
+  pointer-events: none;
+}
+
 .selected {
   border-color: var(--color-danger);
   background: rgba(220, 38, 38, 0.07);
@@ -62,7 +71,7 @@
 
 .context-menu {
   position: fixed;
-  background: var(--color-white);
+  background: var(--color-panel-bg);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
@@ -80,7 +89,7 @@
   border: none;
   cursor: pointer;
   font-size: var(--font-size-sm);
-  color: var(--color-dark-800);
+  color: var(--color-text);
   font-family: var(--font-family-base);
 }
 .context-menu-item:hover {

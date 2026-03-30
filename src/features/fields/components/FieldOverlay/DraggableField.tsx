@@ -146,6 +146,7 @@ export function DraggableField({
         {...listeners}
         {...attributes}
       >
+        <div className={styles['field-bg']} />
         <span className={[styles['field-label'], field.value ? styles['field-label--has-value'] : ''].filter(Boolean).join(' ')}>
           {field.value || field.name}
         </span>

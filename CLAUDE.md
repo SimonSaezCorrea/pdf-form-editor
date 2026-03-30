@@ -11,6 +11,7 @@ Auto-generated from all feature plans. Last updated: 2026-03-28
 - No new dependencies (005-field-default-value)
 - No new dependencies (006-canvas-toolbar-modes)
 - Next.js 15.x (App Router) replaces React+Vite+Express monorepo; Vitest unified (removes Jest+supertest); CSS Modules + tokens.css (007-nextjs-migration)
+- No new dependencies; CSS custom properties dark mode + useTheme hook + inline anti-FOUC script (008-dark-mode-toggle)
 
 ## Project Structure
 
@@ -41,6 +42,12 @@ src/
   types/
     shared.ts           # FormField, FontFamily
   App.tsx               # Root component (keyboard shortcuts, layout)
+  hooks/
+    useTheme.ts         # Theme read/write/reset; localStorage key 'pdf-editor-theme'
+  features/
+    toolbar/
+      components/
+        ThemeToggle/    # Sun/moon toggle button; consumes useTheme
 tests/
   unit/                 # Vitest tests mirroring src/ structure
 next.config.ts          # serverExternalPackages: ['pdf-lib']
@@ -111,6 +118,16 @@ TypeScript: Follow standard conventions
 - Without this, existing PDF form fields appear as a gray native widget box behind the interactive overlay (BF-005-01)
 - AnnotationMode values in pdfjs-dist: DISABLE=0, ENABLE=1, ENABLE_FORMS=2, ENABLE_STORAGE=3
 
+## Key Notes (008-dark-mode-toggle)
+
+- `useTheme()` in `src/hooks/useTheme.ts` is the ONLY consumer of `localStorage['pdf-editor-theme']` — no component may read/write this key directly (FR-009)
+- Anti-FOUC: inline `<script dangerouslySetInnerHTML>` in `<head>` of `layout.tsx` reads localStorage + matchMedia and sets `document.documentElement.dataset.theme` before first paint (FR-005)
+- Dark-mode CSS in `tokens.css`: two blocks — `@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { … } }` + `[data-theme="dark"] { … }`. Manual preference wins because `[data-theme="dark"]` has higher specificity than the media query block.
+- New semantic tokens added: `--color-panel-bg`, `--color-input-bg`, `--color-text`, `--color-text-muted` (light defaults in `:root`, dark overrides in dark blocks)
+- Form field overlays (`DraggableField .field-bg`): `background-color: #fff !important` — dark tokens MUST NOT bleed into PDF canvas field fill (FR-008)
+- OS change listener in `useTheme`: only fires when `preference === null` (no stored manual pref); ignored when manual preference is active (FR-004)
+- `resetTheme()`: removes localStorage key + dataset.theme attribute; reverts to OS detection — exposed on `useTheme` even if no UI exposes it in v1 (FR-010)
+
 ## Recent Changes
 
 - 001-pdf-form-editor: Added TypeScript + React 18, Vite 5, Express 4, pdf-lib, pdfjs-dist, @dnd-kit/core
@@ -120,6 +137,7 @@ TypeScript: Follow standard conventions
 - 005-field-default-value: `value?: string` in FormField; PropertiesPanel "Valor predeterminado" input; canvas overlay shows value; server calls textField.setText() before updateAppearances(); extractFields.ts extracts existing AcroForm text fields from uploaded PDFs and loads them as editable canvas overlays
 - 006-canvas-toolbar-modes: ToolbarModes (S/I/M/H/Escape); useInteractionMode + useRubberBand hooks; selectionIds replaces selectedFieldId; multi-select via Shift+click/rubber band/Ctrl+A; group move; multi-select PropertiesPanel; pan mode scroll; intersectsRect unit tested
 - 007-nextjs-migration: React+Vite+Express monorepo → single Next.js 15 App Router project; Express → Route Handler at src/app/api/generate-pdf/route.ts; Jest+supertest → Vitest unified; src/features/ domain architecture; src/components/ui/ primitives (Button, Modal, Input, Select, Tooltip, IconButton); src/styles/tokens.css + CSS Modules per component; no functional regression
+- 008-dark-mode-toggle: useTheme hook (src/hooks/useTheme.ts); ThemeToggle in toolbar; dark-mode CSS blocks in tokens.css; inline anti-FOUC script in layout.tsx <head>; DraggableField field-bg white !important
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

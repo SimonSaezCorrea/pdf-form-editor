@@ -1,21 +1,29 @@
 :root {
-  /* ── Colors ── */
-  --color-primary: #4f46e5;
-  --color-primary-hover: #4338ca;
+  /* ── Brand palette (fixed, theme-independent) ── */
+  --color-primary: #07575B;
+  --color-primary-hover: #004d52;
+  --color-accent: #E76F51;
+  --color-accent-hover: #d4593d;
   --color-danger: #dc2626;
   --color-danger-hover: #b91c1c;
   --color-danger-bg: #fee2e2;
   --color-danger-border: #fca5a5;
-  --color-dark-900: #111827;
-  --color-dark-800: #1f2937;
-  --color-dark-700: #374151;
-  --color-neutral-600: #4b5563;
-  --color-neutral-500: #6b7280;
-  --color-neutral-400: #9ca3af;
-  --color-neutral-300: #d1d5db;
-  --color-neutral-200: #e5e7eb;
-  --color-neutral-100: #f3f4f6;
-  --color-surface: #f9fafb;
+
+  /* ── Fixed dark palette (used by intentionally-dark surfaces like ShortcutsPanel) ── */
+  --color-dark-900: #003B46;
+  --color-dark-800: #07575B;
+  --color-dark-700: #0d6e75;
+
+  /* ── Neutral scale (teal-tinted, light-mode base) ── */
+  --color-neutral-600: #2a5a65;
+  --color-neutral-500: #3d7280;
+  --color-neutral-400: #66A5AD;
+  --color-neutral-300: #8ec4cc;
+  --color-neutral-200: #b2d7de;
+  --color-neutral-100: #d6eef2;
+
+  /* ── Base surface ── */
+  --color-surface: #F4F7F8;
   --color-white: #fff;
 
   /* ── Typography ── */
@@ -64,4 +72,57 @@
   --z-toolbar: 100;
   --z-modal: 200;
   --z-tooltip: 300;
+
+  /* ── Semantic tokens (theme-aware, light defaults) ── */
+  --color-panel-bg: #C4DFE6;
+  --color-input-bg: #fff;
+  --color-text: #151E20;
+  --color-text-muted: #003B46;
+  --color-navbar-bg: #07575B;
+  --color-navbar-text: #F4F7F8;
+  --color-viewer-bg: #dce8eb;
+}
+
+/* ── Dark mode: OS preference (no manual override) ── */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-surface: #091214;        /* base: near-black, teal-tinted          */
+    --color-panel-bg: #0d2028;       /* panel: dark teal-grey, low saturation  */
+    --color-input-bg: #132c38;       /* input: slightly lighter than panel     */
+    --color-text: #E8EDEF;           /* body text: soft off-white              */
+    --color-text-muted: #7ab5bd;     /* muted: teal-grey, clearly softer       */
+    --color-primary: #66A5AD;        /* wave: readable on dark bg              */
+    --color-primary-hover: #7bbdc5;
+    --color-accent: #F4A261;
+    --color-accent-hover: #e8904c;
+    --border-color: #1a3a45;         /* subtle border: dark teal               */
+    --color-neutral-100: #0d2028;    /* = panel-bg                             */
+    --color-neutral-200: #132c38;    /* = input-bg                             */
+    --color-danger-bg: #3b0f0f;
+    --color-danger-border: #7f1d1d;
+    --color-navbar-bg: #051519;      /* navbar: darkest layer, above surface   */
+    --color-navbar-text: #E8EDEF;
+    --color-viewer-bg: #0f1e25;      /* viewer: slightly lighter than surface  */
+  }
+}
+
+/* ── Dark mode: manual preference (wins by specificity) ── */
+[data-theme="dark"] {
+  --color-surface: #091214;
+  --color-panel-bg: #0d2028;
+  --color-input-bg: #132c38;
+  --color-text: #E8EDEF;
+  --color-text-muted: #7ab5bd;
+  --color-primary: #66A5AD;
+  --color-primary-hover: #7bbdc5;
+  --color-accent: #F4A261;
+  --color-accent-hover: #e8904c;
+  --border-color: #1a3a45;
+  --color-neutral-100: #0d2028;
+  --color-neutral-200: #132c38;
+  --color-danger-bg: #3b0f0f;
+  --color-danger-border: #7f1d1d;
+  --color-navbar-bg: #051519;
+  --color-navbar-text: #E8EDEF;
+  --color-viewer-bg: #0f1e25;
 }

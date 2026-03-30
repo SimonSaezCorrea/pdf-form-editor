@@ -37,7 +37,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--color-dark-800);
+  color: var(--color-text);
 }
 
 .item-page {

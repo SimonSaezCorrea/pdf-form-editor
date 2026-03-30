@@ -9,7 +9,7 @@
 }
 
 .dialog {
-  background: var(--color-white);
+  background: var(--color-panel-bg);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   max-width: 560px;
@@ -31,7 +31,7 @@
 .title {
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-dark-900);
+  color: var(--color-text);
 }
 
 .closeBtn {
