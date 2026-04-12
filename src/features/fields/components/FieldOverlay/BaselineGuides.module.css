@@ -1,0 +1,15 @@
+.guide-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: color-mix(in srgb, var(--color-primary, #4f46e5) 50%, transparent);
+  pointer-events: none;
+  z-index: 20;
+  transform: translateY(-50%);
+}
+
+.guide-line--active {
+  height: 2px;
+  background-color: var(--color-accent, #e76f51);
+}

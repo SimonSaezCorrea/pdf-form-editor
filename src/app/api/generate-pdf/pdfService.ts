@@ -1,5 +1,9 @@
-import { PDFDocument, PDFFont, StandardFonts, rgb } from 'pdf-lib';
+import { readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { PDFDocument, PDFFont, PDFName, PDFDict, PDFArray, StandardFonts, rgb } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
 import type { FormField, FontFamily } from '@/types/shared';
+import { FONT_CATALOG } from '@/features/pdf/config/fonts';
 
 const STANDARD_FONT_MAP: Record<FontFamily, (typeof StandardFonts)[keyof typeof StandardFonts]> = {
   Helvetica: StandardFonts.Helvetica,
@@ -61,16 +65,20 @@ function validateFields(fields: FormField[], totalPages: number): void {
   }
 }
 
-type EmbeddedFonts = Partial<Record<FontFamily, Awaited<ReturnType<PDFDocument['embedFont']>>>>;
+type EmbeddedFonts = Partial<Record<FontFamily, PDFFont>>;
+type EmbeddedTTFFonts = Record<string, PDFFont>;
 
 function addTextField(
   pdfDoc: PDFDocument,
   form: ReturnType<PDFDocument['getForm']>,
   fieldDef: FormField,
   embeddedFonts: EmbeddedFonts,
+  ttfFonts: EmbeddedTTFFonts,
 ): void {
   const page = pdfDoc.getPages()[fieldDef.page - 1];
-  const font = embeddedFonts[fieldDef.fontFamily]!;
+  const font =
+    (fieldDef.displayFont && ttfFonts[fieldDef.displayFont]) ||
+    embeddedFonts[fieldDef.fontFamily]!;
   const textField = form.createTextField(fieldDef.name);
 
   textField.addToPage(page, {
@@ -119,6 +127,7 @@ export async function generatePdf(
   fields: FormField[],
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: false });
+  pdfDoc.registerFontkit(fontkit);
 
   validateFields(fields, pdfDoc.getPageCount());
 
@@ -128,21 +137,43 @@ export async function generatePdf(
 
   const form = pdfDoc.getForm();
 
-  // Remove all existing AcroForm fields before adding ours so that
-  // re-exporting a previously-exported PDF does not duplicate fields
-  for (const existingField of form.getFields()) {
-    form.removeField(existingField);
+  // Clear all existing AcroForm fields and widget annotations directly via the PDF
+  // dictionary — form.removeField() throws on PDFs with malformed annotation structures
+  const acroForm = pdfDoc.catalog.lookupMaybe(PDFName.of('AcroForm'), PDFDict);
+  if (acroForm) {
+    acroForm.set(PDFName.of('Fields'), pdfDoc.context.obj([]));
+  }
+  for (const page of pdfDoc.getPages()) {
+    const annots = page.node.lookupMaybe(PDFName.of('Annots'), PDFArray);
+    if (annots) {
+      page.node.set(PDFName.of('Annots'), pdfDoc.context.obj([]));
+    }
   }
 
-  // Embed all required fonts up-front (deduplicated by fontFamily)
+  // Embed standard fonts up-front (deduplicated by fontFamily)
   const usedFamilies = [...new Set(fields.map((f) => f.fontFamily))];
   const embeddedFonts: EmbeddedFonts = {};
   for (const family of usedFamilies) {
     embeddedFonts[family] = await pdfDoc.embedFont(STANDARD_FONT_MAP[family]);
   }
 
+  // Embed TTF fonts for fields with displayFont (deduplicated by displayFont name)
+  const ttfFonts: EmbeddedTTFFonts = {};
+  const usedDisplayFonts = [
+    ...new Set(fields.map((f) => f.displayFont).filter((df): df is string => !!df)),
+  ];
+  for (const displayFontName of usedDisplayFonts) {
+    const entry = FONT_CATALOG.find((e) => e.name === displayFontName);
+    if (!entry) continue;
+    const ttfPath = join(process.cwd(), 'public', 'fonts', entry.ttfFilename);
+    if (!existsSync(ttfPath)) {
+      throw new Error(`Font asset not found: ${entry.ttfFilename}`);
+    }
+    ttfFonts[displayFontName] = await pdfDoc.embedFont(readFileSync(ttfPath));
+  }
+
   for (const fieldDef of fields) {
-    addTextField(pdfDoc, form, fieldDef, embeddedFonts);
+    addTextField(pdfDoc, form, fieldDef, embeddedFonts, ttfFonts);
   }
 
   return pdfDoc.save();

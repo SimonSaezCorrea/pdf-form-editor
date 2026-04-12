@@ -4,7 +4,18 @@
       "Bash(__NEW_LINE_12391584b315d300__ cat:*)",
       "Bash(grep -n \"className.*\\\\`\\\\|className={\\\\`\" \"n:/progra/Pawer/pdf-form-editor/src/features/templates/components/ImportExportModal/ImportModal.tsx\")",
       "Bash(grep -rn \"#[0-9a-fA-F]\\\\{3,6\\\\}\" src/ --include=\"*.tsx\" --include=\"*.ts\")",
-      "Bash(grep -rn \"#[0-9a-fA-F]\\\\{3,6\\\\}\" src/ --include=\"*.css\")"
+      "Bash(grep -rn \"#[0-9a-fA-F]\\\\{3,6\\\\}\" src/ --include=\"*.css\")",
+      "Read(//c/Users/nayxx/Downloads/fonts-main/fonts-main//**)",
+      "Bash([ -d \"/c/Users/nayxx/Downloads/fonts-main/fonts-main/ofl/$font/static\" ])",
+      "Bash(cp '/c/Users/nayxx/Downloads/fonts-main/fonts-main/ofl/roboto/Roboto[wdth,wght].ttf' /n/progra/Pawer/pdf-form-editor/public/fonts/roboto-regular.ttf)",
+      "Bash(cp '/c/Users/nayxx/Downloads/fonts-main/fonts-main/ofl/opensans/OpenSans[wdth,wght].ttf' /n/progra/Pawer/pdf-form-editor/public/fonts/open-sans-regular.ttf)",
+      "Bash(cp /c/Users/nayxx/Downloads/fonts-main/fonts-main/ofl/lato/Lato-Regular.ttf /n/progra/Pawer/pdf-form-editor/public/fonts/lato-regular.ttf)",
+      "Bash(cp '/c/Users/nayxx/Downloads/fonts-main/fonts-main/ofl/montserrat/Montserrat[wght].ttf' /n/progra/Pawer/pdf-form-editor/public/fonts/montserrat-regular.ttf)",
+      "Bash(cp '/c/Users/nayxx/Downloads/fonts-main/fonts-main/ofl/nunito/Nunito[wght].ttf' /n/progra/Pawer/pdf-form-editor/public/fonts/nunito-regular.ttf)",
+      "Bash(du -sh /n/progra/Pawer/pdf-form-editor/public/fonts/*.ttf)",
+      "Bash(cp /c/Users/nayxx/Downloads/fonts-main/fonts-main/ofl/shadowsintolight/ShadowsIntoLight.ttf /n/progra/Pawer/pdf-form-editor/public/fonts/shadowsintolight-regular.ttf)",
+      "Bash(cp /c/Users/nayxx/Downloads/fonts-main/fonts-main/ofl/ptmono/PTM55FT.ttf /n/progra/Pawer/pdf-form-editor/public/fonts/ptmono-regular.ttf)",
+      "Bash(cp /c/Users/nayxx/Downloads/fonts-main/fonts-main/ofl/gloriahallelujah/GloriaHallelujah.ttf /n/progra/Pawer/pdf-form-editor/public/fonts/gloriahallelujah-regular.ttf)"
     ]
   }
 }

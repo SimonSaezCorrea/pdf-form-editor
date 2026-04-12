@@ -177,11 +177,14 @@ export function DraggableField({
             field.value ? styles['field-label--has-value'] : '',
             field.value && field.multiline ? styles['field-label--multiline'] : '',
           ].filter(Boolean).join(' ')}
-          style={field.value ? {
-            fontSize: field.autoFitFont
-              ? `${computeCanvasFitFontSize(field.value, canvasPos.width, canvasPos.height, field.fontSize * renderScale, field.multiline ?? false)}px`
-              : `${field.fontSize * renderScale}px`,
-          } : undefined}
+          style={{
+            ...(field.displayFont ? { fontFamily: field.displayFont } : {}),
+            ...(field.value ? {
+              fontSize: field.autoFitFont
+                ? `${computeCanvasFitFontSize(field.value, canvasPos.width, canvasPos.height, field.fontSize * renderScale, field.multiline ?? false)}px`
+                : `${field.fontSize * renderScale}px`,
+            } : {}),
+          }}
         >
           {field.value || field.name}
         </span>

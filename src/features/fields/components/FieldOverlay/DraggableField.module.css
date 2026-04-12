@@ -6,7 +6,7 @@
   border-radius: 2px;
   background: rgba(79, 70, 229, 0.05);
   z-index: var(--z-field-overlay);
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* White fill so dark-mode tokens never bleed into PDF canvas field fills (FR-008) */

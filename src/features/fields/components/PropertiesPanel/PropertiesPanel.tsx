@@ -1,7 +1,8 @@
 'use client';
 
-import type { FormField, FontFamily } from '@/types/shared';
-import { Button, Input, Select } from '@/components/ui';
+import type { FormField } from '@/types/shared';
+import { FONT_CATALOG, FONT_CATEGORIES, loadFont, getFontByName } from '@/features/pdf/config/fonts';
+import { Button, Input } from '@/components/ui';
 import styles from './PropertiesPanel.module.css';
 
 interface PropertiesPanelProps {
@@ -12,12 +13,6 @@ interface PropertiesPanelProps {
   onUpdateFields: (ids: string[], partial: Partial<Omit<FormField, 'id'>>) => void;
   onDelete: (id: string) => void;
 }
-
-const FONT_OPTIONS: { value: FontFamily; label: string }[] = [
-  { value: 'Helvetica', label: 'Helvetica' },
-  { value: 'TimesRoman', label: 'Times Roman' },
-  { value: 'Courier', label: 'Courier' },
-];
 
 export function PropertiesPanel({
   fields,
@@ -32,9 +27,9 @@ export function PropertiesPanel({
     const selected = fields.filter((f) => selectionIds.has(f.id));
     const ids = selected.map((f) => f.id);
 
-    const firstFont = selected[0]?.fontFamily;
-    const mixedFont = selected.some((f) => f.fontFamily !== firstFont);
-    const sharedFont: FontFamily | '' = mixedFont ? '' : (firstFont ?? '');
+    const firstDisplayFont = selected[0]?.displayFont ?? '';
+    const mixedFont = selected.some((f) => (f.displayFont ?? '') !== firstDisplayFont);
+    const sharedDisplayFont = mixedFont ? '' : firstDisplayFont;
 
     const firstSize = selected[0]?.fontSize;
     const mixedSize = selected.some((f) => f.fontSize !== firstSize);
@@ -46,26 +41,34 @@ export function PropertiesPanel({
       onUpdateFields(ids, { fontSize: n });
     };
 
-    const fontOptions = [
-      ...(mixedFont ? [{ value: '', label: '—' }] : []),
-      ...FONT_OPTIONS,
-    ];
-
     return (
       <div className={styles['properties-panel']}>
         <h3>Propiedades ({selectionIds.size} campos)</h3>
 
-        <Select
-          id="multi-font"
-          label="Fuente"
-          value={sharedFont}
-          onChange={(e) => {
-            const val = e.target.value;
-            if (val) onUpdateFields(ids, { fontFamily: val as FontFamily });
-          }}
-          options={fontOptions}
-          className={styles['prop-group']}
-        />
+        <div className={styles['prop-group']}>
+          <label htmlFor="multi-font" className={styles['prop-label']}>Fuente</label>
+          <select
+            id="multi-font"
+            value={sharedDisplayFont}
+            onChange={(e) => {
+              const name = e.target.value;
+              const entry = getFontByName(name);
+              if (!entry) return;
+              loadFont(entry.name, entry.ttfFilename);
+              onUpdateFields(ids, { displayFont: name, fontFamily: entry.pdfFallback });
+            }}
+            className={styles['prop-select']}
+          >
+            {mixedFont && <option value="">—</option>}
+            {FONT_CATEGORIES.map((cat) => (
+              <optgroup key={cat} label={cat}>
+                {FONT_CATALOG.filter((f) => f.category === cat).map((f) => (
+                  <option key={f.name} value={f.name}>{f.name}</option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </div>
 
         <Input
           id="multi-size"
@@ -125,9 +128,9 @@ export function PropertiesPanel({
           id="prop-x"
           label="X (pt)"
           type="number"
-          value={String(Math.round(field.x))}
+          value={field.x.toFixed(2)}
           min={0}
-          step={1}
+          step={0.5}
           onChange={(e) => update('x', Number(e.target.value))}
           className={styles['prop-group']}
         />
@@ -135,9 +138,9 @@ export function PropertiesPanel({
           id="prop-y"
           label="Y (pt)"
           type="number"
-          value={String(Math.round(field.y))}
+          value={field.y.toFixed(2)}
           min={0}
-          step={1}
+          step={0.5}
           onChange={(e) => update('y', Number(e.target.value))}
           className={styles['prop-group']}
         />
@@ -148,9 +151,9 @@ export function PropertiesPanel({
           id="prop-w"
           label="Width (pt)"
           type="number"
-          value={String(Math.round(field.width))}
+          value={field.width.toFixed(2)}
           min={20}
-          step={1}
+          step={0.5}
           onChange={(e) => update('width', Number(e.target.value))}
           className={styles['prop-group']}
         />
@@ -158,22 +161,39 @@ export function PropertiesPanel({
           id="prop-h"
           label="Height (pt)"
           type="number"
-          value={String(Math.round(field.height))}
+          value={field.height.toFixed(2)}
           min={10}
-          step={1}
+          step={0.5}
           onChange={(e) => update('height', Number(e.target.value))}
           className={styles['prop-group']}
         />
       </div>
 
-      <Select
-        id="prop-font"
-        label="Font"
-        value={field.fontFamily}
-        onChange={(e) => update('fontFamily', e.target.value as FontFamily)}
-        options={FONT_OPTIONS}
-        className={styles['prop-group']}
-      />
+      <div className={styles['prop-group']}>
+        <label htmlFor="prop-font" className={styles['prop-label']}>Fuente</label>
+        <select
+          id="prop-font"
+          value={field.displayFont ?? ''}
+          onChange={(e) => {
+            const name = e.target.value;
+            const entry = getFontByName(name);
+            if (!entry) return;
+            loadFont(entry.name, entry.ttfFilename);
+            update('displayFont', name);
+            update('fontFamily', entry.pdfFallback);
+          }}
+          className={styles['prop-select']}
+        >
+          <option value="">Sin fuente personalizada</option>
+          {FONT_CATEGORIES.map((cat) => (
+            <optgroup key={cat} label={cat}>
+              {FONT_CATALOG.filter((f) => f.category === cat).map((f) => (
+                <option key={f.name} value={f.name}>{f.name}</option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      </div>
 
       <Input
         id="prop-size"

@@ -22,7 +22,9 @@ import { ThemeToggle } from '@/features/toolbar/components/ThemeToggle/ThemeTogg
 import styles from './App.module.css';
 
 const BASE_SCALE = 1.5;
-const ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 3.0;
+const ZOOM_STEP = 0.1;
 
 export default function App() {
   const [pdfBytes, setPdfBytes] = useState<ArrayBuffer | null>(null);
@@ -36,17 +38,16 @@ export default function App() {
   const [zoom, setZoom] = useState(1);
   const [thumbnailsVisible, setThumbnailsVisible] = useState(true);
   const mousePosRef = useRef({ clientX: 0, clientY: 0 });
+  const viewerAreaRef = useRef<HTMLElement>(null);
 
   const pdfRenderer = usePdfRenderer(pdfBytes, BASE_SCALE * zoom);
 
-  const zoomOut = () => {
-    const idx = ZOOM_STEPS.indexOf(zoom);
-    if (idx > 0) setZoom(ZOOM_STEPS[idx - 1]);
-  };
-  const zoomIn = () => {
-    const idx = ZOOM_STEPS.indexOf(zoom);
-    if (idx < ZOOM_STEPS.length - 1) setZoom(ZOOM_STEPS[idx + 1]);
-  };
+  const zoomOut = useCallback(() => {
+    setZoom((z) => Math.max(MIN_ZOOM, Math.round((z - ZOOM_STEP) * 100) / 100));
+  }, []);
+  const zoomIn = useCallback(() => {
+    setZoom((z) => Math.min(MAX_ZOOM, Math.round((z + ZOOM_STEP) * 100) / 100));
+  }, []);
   const store = useFieldStore();
   const { mode, setMode } = useInteractionMode();
 
@@ -111,6 +112,35 @@ export default function App() {
     [store.duplicateField, pdfRenderer.renderScale],
   );
 
+  // Scroll-based page navigation (Principle XXVI)
+  const handleViewerScroll = useCallback((e: React.UIEvent<HTMLElement>) => {
+    const el = e.currentTarget;
+    if (pdfRenderer.totalPages <= 1) return;
+    if (el.scrollTop === 0 && pdfRenderer.currentPage > 1) {
+      pdfRenderer.setCurrentPage(pdfRenderer.currentPage - 1);
+      requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
+    } else if (
+      el.scrollTop + el.clientHeight >= el.scrollHeight - 1 &&
+      pdfRenderer.currentPage < pdfRenderer.totalPages
+    ) {
+      pdfRenderer.setCurrentPage(pdfRenderer.currentPage + 1);
+      requestAnimationFrame(() => { el.scrollTop = 0; });
+    }
+  }, [pdfRenderer]);
+
+  // Ctrl+Scroll canvas zoom — non-passive listener to allow preventDefault (Principle XXV)
+  useEffect(() => {
+    const el = viewerAreaRef.current;
+    if (!el || !pdfBytes) return;
+    const handleWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      if (e.deltaY < 0) zoomIn(); else zoomOut();
+    };
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, [pdfBytes, zoomIn, zoomOut]);
+
   // Track mouse position for paste-at-cursor
   useEffect(() => {
     const onMouseMove = (e: MouseEvent) => {
@@ -125,6 +155,7 @@ export default function App() {
     if (!pdfBytes) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (showExportModal || showImportModal) return;
 
       // Page navigation (no modifier)
       if (!e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -204,6 +235,8 @@ export default function App() {
   }, [
     pdfBytes,
     clipboard,
+    showExportModal,
+    showImportModal,
     pdfRenderer.currentPage,
     pdfRenderer.totalPages,
     pdfRenderer.renderScale,
@@ -260,9 +293,9 @@ export default function App() {
             <div className={styles['header-toolbar-center']}>
               <ToolbarModes mode={mode} onModeChange={setMode} />
               <div className={styles['zoom-controls']}>
-                <IconButton icon="−" label="Alejar" onClick={zoomOut} disabled={zoom === ZOOM_STEPS[0]} />
+                <IconButton icon="−" label="Alejar" onClick={zoomOut} disabled={zoom <= MIN_ZOOM} />
                 <span className={styles['zoom-label']}>{Math.round(zoom * 100)}%</span>
-                <IconButton icon="+" label="Acercar" onClick={zoomIn} disabled={zoom === ZOOM_STEPS.at(-1)} />
+                <IconButton icon="+" label="Acercar" onClick={zoomIn} disabled={zoom >= MAX_ZOOM} />
               </div>
             </div>
             <div className={styles['header-toolbar-actions']}>
@@ -313,7 +346,11 @@ export default function App() {
             />
           </aside>
 
-          <main className={styles['viewer-area']}>
+          <main
+            ref={viewerAreaRef}
+            className={styles['viewer-area']}
+            onScroll={handleViewerScroll}
+          >
             {pdfRenderer.error ? (
               <p className={styles['error-msg']}>{pdfRenderer.error}</p>
             ) : (

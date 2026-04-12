@@ -1,6 +1,6 @@
 # pdf-form-editor Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-03-28
+Auto-generated from all feature plans. Last updated: 2026-04-11
 
 ## Active Technologies
 
@@ -12,6 +12,7 @@ Auto-generated from all feature plans. Last updated: 2026-03-28
 - No new dependencies (006-canvas-toolbar-modes)
 - Next.js 15.x (App Router) replaces React+Vite+Express monorepo; Vitest unified (removes Jest+supertest); CSS Modules + tokens.css (007-nextjs-migration)
 - No new dependencies; CSS custom properties dark mode + useTheme hook + inline anti-FOUC script (008-dark-mode-toggle)
+- No new npm dependencies; Google Fonts API via dynamic `<link>` injection (CDN only) (009-precision-ux-fixes)
 
 ## Project Structure
 
@@ -138,6 +139,20 @@ TypeScript: Follow standard conventions
 - 006-canvas-toolbar-modes: ToolbarModes (S/I/M/H/Escape); useInteractionMode + useRubberBand hooks; selectionIds replaces selectedFieldId; multi-select via Shift+click/rubber band/Ctrl+A; group move; multi-select PropertiesPanel; pan mode scroll; intersectsRect unit tested
 - 007-nextjs-migration: React+Vite+Express monorepo → single Next.js 15 App Router project; Express → Route Handler at src/app/api/generate-pdf/route.ts; Jest+supertest → Vitest unified; src/features/ domain architecture; src/components/ui/ primitives (Button, Modal, Input, Select, Tooltip, IconButton); src/styles/tokens.css + CSS Modules per component; no functional regression
 - 008-dark-mode-toggle: useTheme hook (src/hooks/useTheme.ts); ThemeToggle in toolbar; dark-mode CSS blocks in tokens.css; inline anti-FOUC script in layout.tsx <head>; DraggableField field-bg white !important
+- 009-precision-ux-fixes: overflow:visible on .draggable-field; decimal coords in PropertiesPanel (step 0.5, no Math.round); displayFont?: string in FormField; src/features/pdf/config/fonts.ts with 20 Google Fonts + lazy link injection; viewerAreaRef in App.tsx for scroll-page-nav + Ctrl+Scroll non-passive wheel zoom
+
+## Key Notes (009-precision-ux-fixes)
+
+- `DraggableField.module.css` `.draggable-field`: `overflow: hidden` → `overflow: visible` — fix for delete button clipping at field edges (BF-009-01)
+- `PropertiesPanel` x/y/width/height inputs: `step=0.5`, value = `parseFloat(field.x.toFixed(2))` — no `Math.round()` anywhere (BF-009-02; Principle XXIV)
+- `displayFont?: string` is optional in FormField — old fields without it render using `field.font` (FontFamily). `isValidField` MUST accept `displayFont === undefined`
+- `FONT_CATALOG` in `src/features/pdf/config/fonts.ts` is the SOLE source of Google Font names — no component may hardcode a font name (Principle XXVII)
+- `loadGoogleFont(googleFamily)` checks for existing `<link>` before injecting — idempotent; safe to call multiple times for the same font
+- PDF export (`pdfService.ts`) uses `field.font: FontFamily` exclusively — `displayFont` is IGNORED by the API route
+- `viewerAreaRef` in App.tsx refs the `<main className={viewer-area}>` scroll container; shared by BOTH the scroll-page-nav handler AND the Ctrl+Scroll useEffect
+- Ctrl+Scroll `useEffect` uses `{ passive: false }` — MUST use native `addEventListener`, NOT `onWheel` JSX (React makes wheel passive in React 17+, preventing `preventDefault`)
+- Scroll-page-nav: `requestAnimationFrame(() => { el.scrollTop = ... })` needed after `setCurrentPage` because setState is async; direct `el.scrollTop` assignment before re-render has no effect
+- `zoomIn`/`zoomOut` in Ctrl+Scroll `useEffect` deps array — wrap with `useCallback` if they cause infinite re-registration
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

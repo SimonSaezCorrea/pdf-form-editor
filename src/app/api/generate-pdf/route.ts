@@ -30,7 +30,8 @@ function isValidField(f: unknown): f is FormField {
     field.fontSize >= 6 &&
     field.fontSize <= 72 &&
     VALID_FONT_FAMILIES.includes(field.fontFamily as FontFamily) &&
-    (field.value === undefined || typeof field.value === 'string')
+    (field.value === undefined || typeof field.value === 'string') &&
+    (field.displayFont === undefined || typeof field.displayFont === 'string')
   );
 }
 
