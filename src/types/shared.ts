@@ -26,4 +26,6 @@ export interface FormField {
   autoFitFont?: boolean;
   /** Allow text to wrap across multiple lines within the field. */
   multiline?: boolean;
+  /** Google Font name for canvas preview only (e.g. "Montserrat"). Not used in PDF export. */
+  displayFont?: string;
 }

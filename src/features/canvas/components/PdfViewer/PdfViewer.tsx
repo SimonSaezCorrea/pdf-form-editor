@@ -13,7 +13,10 @@ import type { FormField } from '@/types/shared';
 import type { PdfRenderer } from '@/features/canvas/hooks/usePdfRenderer';
 import type { InteractionMode } from '@/hooks/useInteractionMode';
 import { useRubberBand } from '@/features/canvas/hooks/useRubberBand';
+import { useTextBaselines } from '@/features/canvas/hooks/useTextBaselines';
+import { useSnapToBaseline } from '@/features/canvas/hooks/useSnapToBaseline';
 import { DraggableField } from '@/features/fields/components/FieldOverlay/DraggableField';
+import { BaselineGuides } from '@/features/fields/components/FieldOverlay/BaselineGuides';
 import { PageNavigator } from '@/features/fields/components/PageNavigator/PageNavigator';
 import { canvasToPdf, pdfToCanvas } from '@/features/pdf/utils/coordinates';
 import styles from './PdfViewer.module.css';
@@ -61,6 +64,13 @@ export function PdfViewer({
     pdfRenderer;
 
   const [groupDragDelta, setGroupDragDelta] = useState<{ activeId: string; x: number; y: number } | null>(null);
+  const [snapState, setSnapState] = useState<{ dragPdfY: number | null; activeBaseline: number | null }>({
+    dragPdfY: null,
+    activeBaseline: null,
+  });
+
+  const { baselines } = useTextBaselines(pdfRenderer.pdfDoc, currentPage);
+  const computeSnap = useSnapToBaseline(baselines, renderScale);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -99,35 +109,33 @@ export function PdfViewer({
     const field = fields.find((f) => f.id === fieldId);
     if (!field) return;
 
-    // Group move: if the dragged field is in the selection and multiple are selected
+    // Group move: snap the primary field, propagate the snap delta to all selected fields
     if (selectionIds.has(fieldId) && selectionIds.size > 1) {
-      const updates: Array<{ id: string; partial: Partial<Omit<FormField, 'id'>> }> = [];
+      const primaryCanvasPos = pdfToCanvas(field.x, field.y, field.width, field.height, renderScale, pageDimensions.height);
+      const primaryNewCanvasY = Math.max(0, primaryCanvasPos.top + delta.y);
+      const primaryUpdated = canvasToPdf(Math.max(0, primaryCanvasPos.left + delta.x), primaryNewCanvasY, primaryCanvasPos.width, primaryCanvasPos.height, renderScale, pageDimensions.height);
+      const snapResult = computeSnap(primaryUpdated.y, field.height, field.fontSize);
+      const snapDeltaY = snapResult.snappedPdfY - primaryUpdated.y;
 
       for (const id of selectionIds) {
         const f = fields.find((ff) => ff.id === id);
         if (!f) continue;
-
         const canvasPos = pdfToCanvas(f.x, f.y, f.width, f.height, renderScale, pageDimensions.height);
         const newCanvasX = Math.max(0, canvasPos.left + delta.x);
         const newCanvasY = Math.max(0, canvasPos.top + delta.y);
         const updated = canvasToPdf(newCanvasX, newCanvasY, canvasPos.width, canvasPos.height, renderScale, pageDimensions.height);
-        updates.push({ id, partial: { x: updated.x, y: updated.y } });
+        onFieldUpdate(id, { x: updated.x, y: updated.y + snapDeltaY });
       }
 
-      // Apply each field update individually (updateFields only supports same partial for all)
-      for (const { id, partial } of updates) {
-        onFieldUpdate(id, partial);
-      }
+      setSnapState({ dragPdfY: null, activeBaseline: null });
       return;
     }
 
     // Single field move (also covers: dragging non-selected field in select/move mode)
     if (!selectionIds.has(fieldId)) {
-      // In select mode, dragging a non-selected field: select it first
       if (mode === 'select') {
         onFieldSelectSingle(fieldId);
       }
-      // In move mode, don't change selection
     }
 
     const canvasPos = pdfToCanvas(
@@ -148,7 +156,9 @@ export function PdfViewer({
       renderScale,
       pageDimensions.height,
     );
-    onFieldUpdate(fieldId, { x: updated.x, y: updated.y });
+    const snapResult = computeSnap(updated.y, field.height, field.fontSize);
+    onFieldUpdate(fieldId, { x: updated.x, y: snapResult.snappedPdfY });
+    setSnapState({ dragPdfY: null, activeBaseline: null });
   };
 
   const canvasWidth = pageDimensions
@@ -166,6 +176,17 @@ export function PdfViewer({
     }
   }, [selectionIds]);
 
+  const handleSnapMove = useCallback((activeId: string, delta: { x: number; y: number }) => {
+    if (!pageDimensions) return;
+    const field = fields.find((f) => f.id === activeId);
+    if (!field) return;
+    const canvasPos = pdfToCanvas(field.x, field.y, field.width, field.height, renderScale, pageDimensions.height);
+    const newCanvasY = Math.max(0, canvasPos.top + delta.y);
+    const candidatePdfY = pageDimensions.height - newCanvasY / renderScale - field.height;
+    const result = computeSnap(candidatePdfY, field.height, field.fontSize);
+    setSnapState({ dragPdfY: result.snappedPdfY, activeBaseline: result.activeBaseline });
+  }, [fields, pageDimensions, renderScale, computeSnap]);
+
   const handleGroupDragEnd = useCallback(() => {
     setGroupDragDelta(null);
   }, []);
@@ -173,7 +194,7 @@ export function PdfViewer({
   return (
     <div className={styles['pdf-viewer']}>
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-        <DragStateTracker onMove={handleGroupDragMove} onEnd={handleGroupDragEnd} />
+        <DragStateTracker onMove={handleGroupDragMove} onSnapMove={handleSnapMove} onEnd={handleGroupDragEnd} />
         <div
           className={styles['pdf-canvas-container']}
           style={{ width: canvasWidth, height: canvasHeight }}
@@ -192,6 +213,13 @@ export function PdfViewer({
             {rubberBand.isDrawing && (
               <div className={styles['rubber-band-rect']} style={rubberBand.rubberBandStyle} />
             )}
+            <BaselineGuides
+              baselines={baselines}
+              activeBaseline={snapState.activeBaseline}
+              renderScale={renderScale}
+              pageHeight={pageDimensions?.height ?? 792}
+              dragPdfY={snapState.dragPdfY}
+            />
             {fields.map((field) => (
               <DraggableField
                 key={field.id}
@@ -226,14 +254,17 @@ export function PdfViewer({
 /** Internal component — must be rendered inside DndContext to use useDndMonitor */
 function DragStateTracker({
   onMove,
+  onSnapMove,
   onEnd,
 }: {
   onMove: (activeId: string, delta: { x: number; y: number }) => void;
+  onSnapMove: (activeId: string, delta: { x: number; y: number }) => void;
   onEnd: () => void;
 }) {
   useDndMonitor({
     onDragMove(event) {
       onMove(event.active.id as string, event.delta);
+      onSnapMove(event.active.id as string, event.delta);
     },
     onDragEnd: onEnd,
     onDragCancel: onEnd,
