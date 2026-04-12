@@ -1,6 +1,6 @@
 # pdf-form-editor Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-04-11
+Auto-generated from all feature plans. Last updated: 2026-04-12
 
 ## Active Technologies
 
@@ -13,6 +13,7 @@ Auto-generated from all feature plans. Last updated: 2026-04-11
 - Next.js 15.x (App Router) replaces React+Vite+Express monorepo; Vitest unified (removes Jest+supertest); CSS Modules + tokens.css (007-nextjs-migration)
 - No new dependencies; CSS custom properties dark mode + useTheme hook + inline anti-FOUC script (008-dark-mode-toggle)
 - No new npm dependencies; Google Fonts API via dynamic `<link>` injection (CDN only) (009-precision-ux-fixes)
+- No new npm dependencies; pdfjs-dist (already present) for client field detection; pdf-lib (already present) for server-side fill + flatten (010-pdf-filler-mode)
 
 ## Project Structure
 
@@ -34,6 +35,8 @@ src/
     templates/          # TemplatePanel, ExportModal, ImportModal, useTemplateStore
     pdf/                # PdfUploader + utils (coordinates, export, extractFields,
                         #   fieldName, templateSchema, thumbnails)
+    filler/             # Filler mode (010): useFillerStore, useFieldDetection,
+                        #   FillerMode, PdfUploadScreen, FillerLayout, DynamicForm
   hooks/
     useFieldStore.ts    # Global (5 feature consumers)
     useInteractionMode.ts # Global (canvas + toolbar)
@@ -51,7 +54,7 @@ src/
         ThemeToggle/    # Sun/moon toggle button; consumes useTheme
 tests/
   unit/                 # Vitest tests mirroring src/ structure
-next.config.ts          # serverExternalPackages: ['pdf-lib']
+next.config.ts          # serverExternalPackages: ['pdf-lib', '@pdf-lib/fontkit']
 tsconfig.json           # strict, moduleResolution: bundler, paths: @/*
 package.json            # Single unified package (no workspaces)
 vitest.config.ts        # jsdom, globals, @/ alias
@@ -140,6 +143,20 @@ TypeScript: Follow standard conventions
 - 007-nextjs-migration: React+Vite+Express monorepo → single Next.js 15 App Router project; Express → Route Handler at src/app/api/generate-pdf/route.ts; Jest+supertest → Vitest unified; src/features/ domain architecture; src/components/ui/ primitives (Button, Modal, Input, Select, Tooltip, IconButton); src/styles/tokens.css + CSS Modules per component; no functional regression
 - 008-dark-mode-toggle: useTheme hook (src/hooks/useTheme.ts); ThemeToggle in toolbar; dark-mode CSS blocks in tokens.css; inline anti-FOUC script in layout.tsx <head>; DraggableField field-bg white !important
 - 009-precision-ux-fixes: overflow:visible on .draggable-field; decimal coords in PropertiesPanel (step 0.5, no Math.round); displayFont?: string in FormField; src/features/pdf/config/fonts.ts with 20 Google Fonts + lazy link injection; viewerAreaRef in App.tsx for scroll-page-nav + Ctrl+Scroll non-passive wheel zoom
+- 010-pdf-filler-mode: Filler mode under src/features/filler/ (own store, no cross-imports with fields/templates); POST /api/fill-pdf (multipart, fill+flatten); useFieldDetection hook (pdfjs getAnnotations); mode: AppMode state in App.tsx; navbar mode selector
+
+## Key Notes (010-pdf-filler-mode)
+
+- `src/features/filler/` is INDEPENDENT of `src/features/fields/` and `src/features/templates/` — NO cross-imports (Principle XXIX). Shared: `PdfViewer`, `usePdfRenderer` (canvas/), `PdfUploader` (pdf/)
+- `useFillerStore` uses `useState` local to `FillerMode` component — resets on unmount (filler state is ephemeral by design). NOT Zustand.
+- `mode: 'editor' | 'filler'` state lives in `App.tsx`. FillerMode is conditionally rendered — editor state (pdfBytes, useFieldStore) persists in App.tsx across mode switches.
+- `POST /api/fill-pdf` in `src/app/api/fill-pdf/route.ts` — separate from generate-pdf. Uses `request.formData()` natively (no parser library needed in Next.js 15).
+- `fillService.ts` fill order (Principle XXXI): `field.setText(value)` → `form.updateFieldAppearances(helvetica)` → `form.flatten()` → `pdfDoc.save()`. Do NOT reorder.
+- PDF validation: check first 4 bytes for `%PDF` magic (0x25 0x50 0x44 0x46) — extension/MIME type not trusted.
+- `FieldNotFoundError` in fillService — caught in route.ts to return 400 `{error:'FIELD_NOT_FOUND', field: name}` instead of 500.
+- `useFieldDetection.ts`: uses `page.getAnnotations()` from pdfjs, filters `subtype==='Widget' && fieldType==='Tx'`, deduplicates by `fieldName` across pages.
+- DynamicForm filters empty values before POST: only `Object.entries(values).filter(([,v]) => v !== '')` sent as `fields` JSON (FR-009).
+- `src/app/api/fill-pdf/README.md` MUST exist and stay in sync with any contract changes (Principle XXX).
 
 ## Key Notes (009-precision-ux-fixes)
 

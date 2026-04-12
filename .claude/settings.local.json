@@ -46,9 +46,6 @@
       "Bash(cd * && cat:*)",
       "Bash(cd * && grep:*)",
       "Bash(cd * && find:*)",
-      "Bash(cd /c/Pawer/PDF_Web/pdf-form-editor && npm run test -w client 2>&1)",
-      "Bash(cd /c/Pawer/PDF_Web/pdf-form-editor && npm run test -w server 2>&1)",
-      "Bash(cd /c/Pawer/PDF_Web/pdf-form-editor && npm test 2>&1)",
       "Read(//c/Program Files/**)",
       "Read(//c/Program Files \\(x86\\)/**)"
     ]
