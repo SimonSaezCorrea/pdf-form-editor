@@ -1,12 +1,5 @@
 import { useCallback } from 'react';
 
-/**
- * Fraction of fontSize that the text baseline sits above the field's bottom edge.
- * For standard AcroForm fields rendered by pdf-lib, ~0.2 gives a good match
- * for most fonts (e.g. for fontSize=12, baseline ≈ field.y + 2.4pt from bottom).
- */
-const BASELINE_FACTOR = 0.2;
-
 export interface SnapResult {
   /** New field.y (bottom edge, PDF pts) after snap is applied. */
   snappedPdfY: number;
@@ -30,13 +23,15 @@ export function useSnapToBaseline(
   snapThresholdPx = 8,
 ): (candidatePdfY: number, fieldHeightPt: number, fontSizePt: number) => SnapResult {
   return useCallback(
-    (candidatePdfY: number, _fieldHeightPt: number, fontSizePt: number): SnapResult => {
+    (candidatePdfY: number, fieldHeightPt: number, _fontSizePt: number): SnapResult => {
       if (baselines.length === 0) {
         return { snappedPdfY: candidatePdfY, activeBaseline: null };
       }
 
-      // The field's text baseline in PDF space
-      const candidateBaseline = candidatePdfY + fontSizePt * BASELINE_FACTOR;
+      // Baseline sits ~30% from the field bottom: text body fills the upper portion,
+      // baseline near the lower third (descenders + padding below, ascenders above).
+      const baselineOffset = fieldHeightPt * 0.3;
+      const candidateBaseline = candidatePdfY + baselineOffset;
       const thresholdPt = snapThresholdPx / renderScale;
 
       let closest: number | null = null;
@@ -52,7 +47,7 @@ export function useSnapToBaseline(
 
       if (closest !== null && closestDist <= thresholdPt) {
         return {
-          snappedPdfY: closest - fontSizePt * BASELINE_FACTOR,
+          snappedPdfY: closest - baselineOffset,
           activeBaseline: closest,
         };
       }

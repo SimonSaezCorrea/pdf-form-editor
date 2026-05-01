@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as pdfjs from 'pdfjs-dist';
-import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist';
+import type { PDFDocumentProxy } from 'pdfjs-dist';
 
 
 export interface PageDimensions {
@@ -13,7 +13,6 @@ export interface PageDimensions {
 }
 
 export interface PdfRenderer {
-  canvasRef: React.RefObject<HTMLCanvasElement | null>;
   /** The loaded pdfjs document — null until a PDF is loaded. Needed by ThumbnailStrip. */
   pdfDoc: PDFDocumentProxy | null;
   totalPages: number;
@@ -41,15 +40,12 @@ export function usePdfRenderer(
     ).toString();
   }
 
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
   const [totalPages, setTotalPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageDimensions, setPageDimensions] = useState<PageDimensions | null>(null);
   const [pageDimensionsMap, setPageDimensionsMap] = useState<Record<number, PageDimensions>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const renderTaskRef = useRef<RenderTask | null>(null);
 
   // Load PDF document when bytes change
   useEffect(() => {
@@ -57,7 +53,6 @@ export function usePdfRenderer(
       setPdfDoc(null);
       setTotalPages(0);
       setCurrentPage(1);
-      setPageDimensions(null);
       setPageDimensionsMap({});
       setError(null);
       return;
@@ -114,61 +109,9 @@ export function usePdfRenderer(
     return () => { cancelled = true; };
   }, [pdfDoc]);
 
-  // Render current page whenever doc, page, or scale changes
-  useEffect(() => {
-    if (!pdfDoc || !canvasRef.current) return;
-
-    // Cancel any in-progress render
-    renderTaskRef.current?.cancel();
-    renderTaskRef.current = null;
-
-    let cancelled = false;
-    setIsLoading(true);
-
-    const render = async () => {
-      try {
-        const page = await pdfDoc.getPage(currentPage);
-        if (cancelled) return;
-
-        const viewport = page.getViewport({ scale: renderScale });
-        const canvas = canvasRef.current!;
-        const ctx = canvas.getContext('2d')!;
-
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-
-        // Store natural (scale=1) dimensions for coordinate conversion
-        const natural = page.getViewport({ scale: 1 });
-        setPageDimensions({ width: natural.width, height: natural.height });
-
-        // annotationMode: 2 = ENABLE_FORMS — hides native widget annotations
-        // (form fields) from the canvas so only our interactive overlay shows
-        const task = page.render({ canvasContext: ctx, viewport, annotationMode: 2 });
-        renderTaskRef.current = task;
-        await task.promise;
-      } catch (err: unknown) {
-        // RenderingCancelledException is expected on cleanup
-        if ((err as { name?: string }).name === 'RenderingCancelledException') return;
-        if (!cancelled) {
-          setError('Failed to render page.');
-          console.error(err);
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    };
-
-    render();
-
-    return () => {
-      cancelled = true;
-      renderTaskRef.current?.cancel();
-      renderTaskRef.current = null;
-    };
-  }, [pdfDoc, currentPage, renderScale]);
+  const pageDimensions = pageDimensionsMap[currentPage] ?? null;
 
   return {
-    canvasRef,
     pdfDoc,
     totalPages,
     currentPage,

@@ -112,20 +112,25 @@ export default function App() {
     [store.duplicateField, pdfRenderer.renderScale],
   );
 
-  // Scroll-based page navigation (Principle XXVI)
-  const handleViewerScroll = useCallback((e: React.UIEvent<HTMLElement>) => {
-    const el = e.currentTarget;
-    if (pdfRenderer.totalPages <= 1) return;
-    if (el.scrollTop === 0 && pdfRenderer.currentPage > 1) {
-      pdfRenderer.setCurrentPage(pdfRenderer.currentPage - 1);
-      requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
-    } else if (
-      el.scrollTop + el.clientHeight >= el.scrollHeight - 1 &&
-      pdfRenderer.currentPage < pdfRenderer.totalPages
-    ) {
-      pdfRenderer.setCurrentPage(pdfRenderer.currentPage + 1);
-      requestAnimationFrame(() => { el.scrollTop = 0; });
+  // Track which page is most visible in cascade scroll view
+  const handleViewerScroll = useCallback(() => {
+    if (!pdfRenderer.totalPages || pdfRenderer.totalPages <= 1) return;
+    const container = viewerAreaRef.current;
+    if (!container) return;
+    const containerRect = container.getBoundingClientRect();
+    let bestPage = pdfRenderer.currentPage;
+    let bestOverlap = -1;
+    for (let p = 1; p <= pdfRenderer.totalPages; p++) {
+      const el = document.getElementById(`pdf-page-${p}`);
+      if (!el) continue;
+      const rect = el.getBoundingClientRect();
+      const overlap = Math.min(rect.bottom, containerRect.bottom) - Math.max(rect.top, containerRect.top);
+      if (overlap > bestOverlap) {
+        bestOverlap = overlap;
+        bestPage = p;
+      }
     }
+    if (bestPage !== pdfRenderer.currentPage) pdfRenderer.setCurrentPage(bestPage);
   }, [pdfRenderer]);
 
   // Ctrl+Scroll canvas zoom — non-passive listener to allow preventDefault (Principle XXV)
@@ -251,10 +256,6 @@ export default function App() {
     handleDuplicate,
   ]);
 
-  const currentPageFields = store.fields.filter(
-    (f) => f.page === pdfRenderer.currentPage,
-  );
-
   const hasThumbnails = !!pdfRenderer.pdfDoc && pdfRenderer.totalPages > 1;
 
   return (
@@ -356,7 +357,7 @@ export default function App() {
             ) : (
               <PdfViewer
                 pdfRenderer={pdfRenderer}
-                fields={currentPageFields}
+                allFields={store.fields}
                 selectionIds={store.selectionIds}
                 mode={mode}
                 onFieldAdd={store.addField}
