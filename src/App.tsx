@@ -19,7 +19,10 @@ import type { FormField } from '@/types/shared';
 import { canvasToPdf } from '@/features/pdf/utils/coordinates';
 import { Button, IconButton } from '@/components/ui';
 import { ThemeToggle } from '@/features/toolbar/components/ThemeToggle/ThemeToggle';
+import { FillerMode } from '@/features/filler';
 import styles from './App.module.css';
+
+type AppMode = 'editor' | 'filler';
 
 const BASE_SCALE = 1.5;
 const MIN_ZOOM = 0.25;
@@ -27,6 +30,7 @@ const MAX_ZOOM = 3.0;
 const ZOOM_STEP = 0.1;
 
 export default function App() {
+  const [appMode, setAppMode] = useState<AppMode>('editor');
   const [pdfBytes, setPdfBytes] = useState<ArrayBuffer | null>(null);
   const [pdfFilename, setPdfFilename] = useState('');
   const [isExporting, setIsExporting] = useState(false);
@@ -260,9 +264,25 @@ export default function App() {
   return (
     <div className={styles.app}>
       <header className={styles['app-header']}>
-        {/* Row 1: branding + file operations */}
+        {/* Row 1: branding + mode selector + file operations */}
         <div className={styles['header-top']}>
           <h1>PDF Form Editor</h1>
+          <nav className={styles['mode-nav']} aria-label="Modo de la aplicación">
+            <button
+              className={`${styles['mode-btn']} ${appMode === 'editor' ? styles['mode-btn--active'] : ''}`}
+              onClick={() => setAppMode('editor')}
+              aria-pressed={appMode === 'editor'}
+            >
+              Editor de plantilla
+            </button>
+            <button
+              className={`${styles['mode-btn']} ${appMode === 'filler' ? styles['mode-btn--active'] : ''}`}
+              onClick={() => setAppMode('filler')}
+              aria-pressed={appMode === 'filler'}
+            >
+              Rellenar PDF
+            </button>
+          </nav>
           {pdfBytes && (
             <span className={styles.filename} title={pdfFilename}>{pdfFilename}</span>
           )}
@@ -322,7 +342,9 @@ export default function App() {
 
       {exportError && <div className={styles['error-banner']}>Export failed: {exportError}</div>}
 
-      {!pdfBytes ? (
+      {appMode === 'filler' ? (
+        <FillerMode />
+      ) : !pdfBytes ? (
         <div className={styles['upload-area']}>
           <PdfUploader onPdfLoaded={handlePdfLoaded} />
         </div>

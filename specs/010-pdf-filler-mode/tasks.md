@@ -22,8 +22,8 @@
 
 **Purpose**: Scaffolding mínimo que ambas US1 y US2 necesitan.
 
-- [ ] T001 Create `src/features/filler/types.ts` with `interface AcroFormField { name: string; type: 'text'; page: number }` and `export type FillerStatus = 'idle' | 'loading' | 'ready' | 'no-fields' | 'generating' | 'error'`
-- [ ] T002 [P] Create `src/features/filler/index.ts` as empty barrel (will be updated in T021)
+- [x] T001 Create `src/features/filler/types.ts` with `interface AcroFormField { name: string; type: 'text'; page: number }` and `export type FillerStatus = 'idle' | 'loading' | 'ready' | 'no-fields' | 'generating' | 'error'`
+- [x] T002 [P] Create `src/features/filler/index.ts` as empty barrel (will be updated in T021)
 
 **Checkpoint**: Estructura base de `src/features/filler/` en su lugar.
 
@@ -45,7 +45,7 @@
 
 ### Tests para US2
 
-- [ ] T003 [P] [US2] Create `tests/integration/fill-pdf/route.test.ts` with 5 tests (write first, verify they fail):
+- [x] T003 [P] [US2] Create `tests/integration/fill-pdf/route.test.ts` with 5 tests (write first, verify they fail):
   - Test 1: POST PDF válido + campos existentes → 200, Content-Type `application/pdf`
   - Test 2: archivo no-PDF como `file` → 400 `{ error: 'INVALID_PDF' }`
   - Test 3: `fields=notjson` → 400 `{ error: 'INVALID_FIELDS' }`
@@ -54,7 +54,7 @@
 
 ### Implementación de US2
 
-- [ ] T004 [P] [US2] Create `src/app/api/fill-pdf/fillService.ts`:
+- [x] T004 [P] [US2] Create `src/app/api/fill-pdf/fillService.ts`:
   - `class FieldNotFoundError extends Error { constructor(public readonly field: string) }`
   - `function isPdf(bytes: Uint8Array): boolean` — verifica bytes `0x25 0x50 0x44 0x46` (`%PDF`)
   - `async function fillPdf(fileBytes: Uint8Array, fields: Record<string, string>): Promise<Uint8Array>`:
@@ -67,7 +67,7 @@
     7. `form.flatten()`
     8. `return pdfDoc.save()`
 
-- [ ] T005 [US2] Create `src/app/api/fill-pdf/route.ts` (depends T004):
+- [x] T005 [US2] Create `src/app/api/fill-pdf/route.ts` (depends T004):
   - `export async function POST(request: Request)`
   - `const formData = await request.formData()`
   - Get `file` (File) + `fields` (string); validar presencia
@@ -76,7 +76,7 @@
   - `await fillPdf(bytes, fields)` → catch `FieldNotFoundError` → 400 FIELD_NOT_FOUND; catch general → 500 PROCESSING_ERROR
   - Respuesta 200: `new Response(result, { headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="filled.pdf"' } })`
 
-- [ ] T006 [P] [US2] Create `src/app/api/fill-pdf/README.md` with:
+- [x] T006 [P] [US2] Create `src/app/api/fill-pdf/README.md` with:
   - Descripción del endpoint
   - Tabla de parámetros (`file`, `fields`)
   - Tabla de respuestas (200, 400×3, 500) con cuerpos de error exactos
@@ -94,14 +94,14 @@
 
 ### Tests para US1
 
-- [ ] T007 [P] [US1] Create `tests/unit/filler/useFieldDetection.test.ts` (write first, verify fail):
+- [x] T007 [P] [US1] Create `tests/unit/filler/useFieldDetection.test.ts` (write first, verify fail):
   - Test 1: `detectAcroFormFields` con PDF de 3 campos → devuelve array con 3 entradas con nombres correctos
   - Test 2: `detectAcroFormFields` con PDF sin campos → devuelve `[]`
   - Test 3: Campo que aparece en 2 páginas → 1 entrada (deduplicación por `fieldName`)
 
 ### Implementación de US1
 
-- [ ] T008 [P] [US1] Create `src/features/filler/hooks/useFieldDetection.ts`:
+- [x] T008 [P] [US1] Create `src/features/filler/hooks/useFieldDetection.ts`:
   - Función exportada pura: `async function detectAcroFormFields(pdfDoc: PDFDocumentProxy): Promise<AcroFormField[]>`
     - Iterar páginas 1..`pdfDoc.numPages`
     - `await page.getAnnotations()` → filtrar `a.subtype === 'Widget' && a.fieldType === 'Tx'`
@@ -111,7 +111,7 @@
     - `pdfjsLib.getDocument({ data: pdfBytes }).promise` → `detectAcroFormFields(doc)`
     - Reset al cambiar `pdfBytes`; cancelación via `cancelled` flag en cleanup del useEffect
 
-- [ ] T009 [US1] Create `src/features/filler/hooks/useFillerStore.ts` (depends T008):
+- [x] T009 [US1] Create `src/features/filler/hooks/useFillerStore.ts` (depends T008):
   ```typescript
   function useFillerStore() {
     // useState: status, pdfBytes, pdfFile, fields, values, error
@@ -128,7 +128,7 @@
   }
   ```
 
-- [ ] T010 [P] [US1] Create `src/features/filler/components/FillerMode/FillerMode.tsx` and `FillerMode.module.css`:
+- [x] T010 [P] [US1] Create `src/features/filler/components/FillerMode/FillerMode.tsx` and `FillerMode.module.css`:
   - Instancia `useFillerStore()`
   - Enruta por status:
     - `'idle' | 'loading' | 'error'` → render `<PdfUploadScreen>`
@@ -136,28 +136,28 @@
     - `'no-fields'` → render mensaje informativo (US4 — ver T018)
   - `FillerMode.module.css`: `.filler-mode { display: flex; flex-direction: column; height: 100%; background: var(--color-surface) }`
 
-- [ ] T011 [P] [US1] Create `src/features/filler/components/PdfUploadScreen/PdfUploadScreen.tsx` and `PdfUploadScreen.module.css`:
+- [x] T011 [P] [US1] Create `src/features/filler/components/PdfUploadScreen/PdfUploadScreen.tsx` and `PdfUploadScreen.module.css`:
   - Props: `onFileSelected(file: File): void`, `loading: boolean`, `error: string | null`
   - Reutiliza `<PdfUploader>` de `src/features/pdf/` con callback `onPdfLoaded` → llama `onFileSelected`
   - Muestra spinner/overlay cuando `loading === true`
   - Muestra alerta de error cuando `error !== null`
   - CSS: contenedor centrado, `background: var(--color-surface)`, texto `var(--color-text)`
 
-- [ ] T012 [US1] Create `src/features/filler/components/DynamicForm/DynamicForm.tsx` and `DynamicForm.module.css` (depends T009):
+- [x] T012 [US1] Create `src/features/filler/components/DynamicForm/DynamicForm.tsx` and `DynamicForm.module.css` (depends T009):
   - Props: `fields: AcroFormField[]`, `values: Record<string, string>`, `onValueChange(name, value): void`, `onSubmit(): void`, `generating: boolean`
   - Para cada `field`: `<label>` con `field.name` + `<Input>` de `src/components/ui/` con `value={values[field.name] ?? ''}` y `onChange`
   - Botón "Generar PDF" (`<Button>` de `src/components/ui/`): `disabled={generating}`, texto "Generando..." cuando `generating`
   - `overflow-y: auto` para PDFs con >50 campos
   - CSS: `var(--color-input-bg)` para inputs, `var(--color-text-muted)` para labels, `var(--color-text)` para valores
 
-- [ ] T013 [US1] Create `src/features/filler/components/FillerLayout/FillerLayout.tsx` and `FillerLayout.module.css` (depends T009, T012):
+- [x] T013 [US1] Create `src/features/filler/components/FillerLayout/FillerLayout.tsx` and `FillerLayout.module.css` (depends T009, T012):
   - Props: recibe todo desde `useFillerStore()` pasado por FillerMode
   - Panel izquierdo: `<PdfViewer>` de `src/features/canvas/` con `pdfBytes={store.pdfBytes}`; incluye controles de página si multipage
   - Panel derecho: `<DynamicForm>` con props del store
   - Cabecera: botón "Subir otro PDF" que llama `store.reset()`
   - CSS: `display: flex; gap: var(--spacing-4)` — paneles `flex: 1`; panel izquierdo `min-width: 0`
 
-- [ ] T014 [US1] Update `src/features/filler/index.ts` barrel:
+- [x] T014 [US1] Update `src/features/filler/index.ts` barrel:
   ```typescript
   export { FillerMode } from './components/FillerMode/FillerMode';
   export type { AcroFormField } from './types';
@@ -175,13 +175,13 @@
 
 ### Implementación de US4
 
-- [ ] T015 [US4] Add `'no-fields'` status branch to `src/features/filler/components/FillerMode/FillerMode.tsx` (depends T010):
+- [x] T015 [US4] Add `'no-fields'` status branch to `src/features/filler/components/FillerMode/FillerMode.tsx` (depends T010):
   - Cuando `status === 'no-fields'`: render `<div className={styles['no-fields-msg']}>` con mensaje:
     "Este PDF no contiene campos rellenables. Sube un PDF con campos AcroForm."
   - Incluir botón "Subir otro PDF" que llama `store.reset()` → vuelve a `idle`
   - Sin botón "Generar PDF" ni formulario
 
-- [ ] T016 [US4] Add `.no-fields-msg` styles to `src/features/filler/components/FillerMode/FillerMode.module.css` (depends T015):
+- [x] T016 [US4] Add `.no-fields-msg` styles to `src/features/filler/components/FillerMode/FillerMode.module.css` (depends T015):
   - Centrado vertical y horizontal
   - `color: var(--color-text-muted)`, `background: var(--color-surface)`
   - Compatible dark mode (tokens únicamente)
@@ -198,14 +198,14 @@
 
 ### Implementación de US3
 
-- [ ] T017 [P] [US3] Add `AppMode` type and `mode` state to `src/App.tsx` (depends T014 — FillerMode exported):
+- [x] T017 [P] [US3] Add `AppMode` type and `mode` state to `src/App.tsx` (depends T014 — FillerMode exported):
   ```typescript
   type AppMode = 'editor' | 'filler';
   const [mode, setMode] = useState<AppMode>('editor');
   ```
   Import `FillerMode` from `@/features/filler`.
 
-- [ ] T018 [P] [US3] Add mode selector nav to navbar JSX in `src/App.tsx` (depends T017):
+- [x] T018 [P] [US3] Add mode selector nav to navbar JSX in `src/App.tsx` (depends T017):
   ```tsx
   <nav className={styles['mode-nav']}>
     <button
@@ -223,14 +223,14 @@
   </nav>
   ```
 
-- [ ] T019 [P] [US3] Add `.mode-nav`, `.mode-btn`, `.mode-btn--active` to `src/App.module.css` (depends T017):
+- [x] T019 [P] [US3] Add `.mode-nav`, `.mode-btn`, `.mode-btn--active` to `src/App.module.css` (depends T017):
   - `.mode-nav`: `display: flex; gap: var(--spacing-2); align-items: center`
   - `.mode-btn`: `background: transparent; border: none; color: var(--color-navbar-text, #fff); cursor: pointer; padding: var(--spacing-1) var(--spacing-3); border-radius: var(--radius-sm)`
   - `.mode-btn--active`: `border-bottom: 2px solid var(--color-accent); font-weight: 600`
   - Hover state: `background: var(--color-primary-hover, rgba(255,255,255,0.1))`
   - Sin colores hex hardcodeados — todo vía tokens
 
-- [ ] T020 [US3] Add conditional body rendering to `src/App.tsx` (depends T017, T018):
+- [x] T020 [US3] Add conditional body rendering to `src/App.tsx` (depends T017, T018):
   ```tsx
   {mode === 'filler' ? (
     <FillerMode />
@@ -248,7 +248,7 @@
 
 **Purpose**: Calidad transversal — typecheck, tests, build, dark mode, validación manual completa.
 
-- [ ] T021 [P] Run `npm run typecheck` — resolve all TypeScript errors in new files; verify `src/app/api/fill-pdf/route.ts`, `fillService.ts`, and all filler components have no type errors
+- [x] T021 [P] Run `npm run typecheck` — resolve all TypeScript errors in new files; verify `src/app/api/fill-pdf/route.ts`, `fillService.ts`, and all filler components have no type errors
 - [ ] T022 Run `npm test` — verify all pre-existing tests still pass AND new unit/integration tests pass (useFieldDetection × 3, fill-pdf route × 5)
 - [ ] T023 Run `npm run build` — confirm Next.js production build completes without errors or warnings
 - [ ] T024 Run quickstart.md validation 1 (navegación modos) — manual verification

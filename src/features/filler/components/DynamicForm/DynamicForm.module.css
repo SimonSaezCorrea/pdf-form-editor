@@ -1,0 +1,23 @@
+.dynamic-form {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--color-panel-bg);
+}
+
+.form-fields {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.form-footer {
+  padding: var(--spacing-4);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-panel-bg);
+  display: flex;
+  justify-content: flex-end;
+}
