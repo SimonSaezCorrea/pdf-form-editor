@@ -19,7 +19,29 @@ export async function detectAcroFormFields(
       if (a.subtype === 'Widget' && a.fieldType === 'Tx' && a.fieldName) {
         if (!seen.has(a.fieldName)) {
           seen.add(a.fieldName);
-          fields.push({ name: a.fieldName, type: 'text', page: pageNum });
+
+          // pdfjs v4 exposes defaultAppearanceData with fontSize already parsed.
+          // Fall back to parsing the raw DA string for older PDFs.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const dad = (a as any).defaultAppearanceData as
+            | { fontSize?: number }
+            | undefined;
+          let fontSize = dad?.fontSize ?? 0;
+
+          if (!fontSize) {
+            // Raw DA string fallback, e.g. "/Helv 10 Tf 0 g"
+            const daMatch = (a.defaultAppearance as string | undefined)
+              ?.match(/(\d+(?:\.\d+)?)\s+Tf/);
+            fontSize = daMatch ? parseFloat(daMatch[1]) : 0;
+          }
+
+          fields.push({
+            name: a.fieldName,
+            type: 'text',
+            page: pageNum,
+            rect: a.rect as [number, number, number, number],
+            fontSize,
+          });
         }
       }
     }
