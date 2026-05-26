@@ -64,9 +64,9 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  let fields: unknown;
+  let parsed: unknown;
   try {
-    fields = JSON.parse(rawFields);
+    parsed = JSON.parse(rawFields);
   } catch {
     return Response.json(
       { error: 'Invalid JSON in fields parameter.' },
@@ -74,9 +74,21 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  if (!Array.isArray(fields)) {
+  // Accept either a bare FormField[] array OR a TemplateFile object
+  // (the shape returned by POST /api/pdf-fields), extracting its fields array.
+  let fields: unknown[];
+  if (Array.isArray(parsed)) {
+    fields = parsed;
+  } else if (
+    typeof parsed === 'object' &&
+    parsed !== null &&
+    'fields' in parsed &&
+    Array.isArray((parsed as Record<string, unknown>).fields)
+  ) {
+    fields = (parsed as Record<string, unknown>).fields as unknown[];
+  } else {
     return Response.json(
-      { error: 'fields must be a JSON array.' },
+      { error: 'fields must be a JSON array or a TemplateFile object with a fields array.' },
       { status: 400 },
     );
   }

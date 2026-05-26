@@ -1,6 +1,41 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 2.3.0 → 2.4.0  [MINOR, 2026-04-12]
+
+Note: user requested bump to 2.3.0 but that version was already current.
+Correct target under semantic versioning (3 new principles added) is 2.4.0.
+
+Rationale for MINOR bump:
+  - Principle XXIX added: Dos Modos de Operación — new governance constraint
+    defining Editor mode and Filler mode as distinct application modes.
+  - Principle XXX added: API Pública de Relleno PDF — contract for POST /api/fill-pdf.
+  - Principle XXXI added: Aplanado de Formularios — form.flatten() requirement on
+    fill-pdf output.
+
+Added principles:
+  - XXIX.  Dos Modos de Operación
+  - XXX.   API Pública de Relleno PDF
+  - XXXI.  Aplanado de Formularios
+
+Modified principles: none
+Removed principles: none
+
+Templates requiring updates:
+  ✅ .specify/memory/constitution.md        — this file
+  ✅ .specify/templates/plan-template.md    — Constitution Check is generic; no edits needed
+  ✅ .specify/templates/spec-template.md    — no principle-specific references; no edits needed
+  ✅ .specify/templates/tasks-template.md   — no principle-specific references; no edits needed
+
+Follow-up TODOs:
+  - Principle XXIX requires implementing the Filler mode as a new feature under
+    src/features/filler/ with its own store and components. This is future work.
+  - Principle XXX requires creating src/app/api/fill-pdf/route.ts and
+    src/app/api/fill-pdf/README.md. This is future work.
+  - Principle XXXI requires form.flatten() in the fill-pdf service. This is future work.
+
+---
+
 Version change: 2.2.0 → 2.3.0  [MINOR, 2026-04-12]
 
 Rationale for MINOR bump:
@@ -657,6 +692,82 @@ single source of truth for both canvas preview (Google Fonts `<link>`) and PDF e
 time removes the runtime dependency on Google Fonts CDN for PDF generation, making export
 reliable and deterministic regardless of network connectivity.
 
+### XXIX. Dos Modos de Operación
+
+La aplicación expone **dos modos de operación distintos** con navegación separada en el
+navbar principal:
+
+- **Modo Editor**: diseñar plantillas PDF insertando campos AcroForm interactivos sobre
+  el canvas. Es la funcionalidad original del sistema.
+- **Modo Rellenador**: subir un PDF con campos AcroForm existentes y rellenarlos con
+  datos concretos para producir un PDF final aplanado.
+
+Ambos modos DEBEN compartir el mismo sistema de renderizado PDF (`pdfjs-dist`) y los
+mismos componentes de canvas base (`PdfViewer`, `usePdfRenderer`). Sin embargo, cada
+modo DEBE tener su propio store, sus propios componentes de UI específicos, y su propio
+directorio bajo `src/features/`:
+
+- Editor: `src/features/canvas/`, `src/features/fields/`, `src/features/templates/`
+  (estructura existente).
+- Rellenador: `src/features/filler/` — store, componentes y lógica de rellenado propios.
+
+Los stores y componentes de ambos modos NO DEBEN tener dependencias cruzadas entre sí.
+Mezclar lógica de diseño de plantillas con lógica de relleno dentro del mismo store o
+componente es una violación de este principio.
+
+**Rationale**: La separación permite que cada modo evolucione de forma independiente sin
+riesgo de regresión en el otro. Compartir el sistema de renderizado evita duplicación del
+código más complejo del proyecto (inicialización del worker, renderizado del canvas,
+gestión de páginas).
+
+### XXX. API Pública de Relleno PDF
+
+Existe un endpoint público `POST /api/fill-pdf` que acepta `multipart/form-data` con
+los siguientes campos:
+
+- `pdf` — el archivo PDF con campos AcroForm existentes.
+- `fields` — un array JSON con los valores a escribir en cada campo (nombre → valor).
+
+El endpoint es **stateless** y **no requiere autenticación**. Devuelve el PDF rellenado
+(con `form.flatten()` aplicado — véase Principio XXXI) como `application/pdf`.
+
+La documentación del contrato de este endpoint (tipos de entrada/salida, códigos de
+error, ejemplos) DEBE vivir en `src/app/api/fill-pdf/README.md` y DEBE mantenerse
+actualizada con cada cambio de firma o comportamiento. Omitir la actualización del
+README en el mismo PR que cambia el endpoint es una violación de este principio.
+
+El endpoint NO DEBE persistir datos, NO DEBE escribir en el sistema de archivos más
+allá de la memoria del proceso, y NO DEBE llamar a servicios externos.
+
+**Rationale**: Un endpoint stateless y sin auth hace que el relleno de contratos sea
+invocable directamente desde cualquier backend externo (e.g., el servicio `fillContract`
+del backend de referencia) sin infraestructura adicional. El README como contrato
+explícito evita la divergencia silenciosa entre la implementación y las expectativas
+de los consumidores.
+
+### XXXI. Aplanado de Formularios
+
+El PDF generado por `POST /api/fill-pdf` DEBE aplicar `form.flatten()` mediante
+pdf-lib **antes** de serializar y devolver el documento. `form.flatten()` convierte
+todos los campos AcroForm interactivos en contenido gráfico estático no editable.
+
+Esta es la única diferencia de pipeline entre el PDF que genera `POST /api/generate-pdf`
+(que preserva los campos interactivos) y el PDF de salida final de `POST /api/fill-pdf`
+(que los aplana).
+
+`form.flatten()` DEBE llamarse en este orden estricto:
+1. `form.updateFieldAppearances()` — renderiza las apariencias con los valores escritos.
+2. `form.flatten()` — aplana los campos a contenido estático.
+3. `pdfDoc.save()` — serializa el documento.
+
+Omitir el aplanado o reordenar los pasos es una violación de este principio.
+
+**Rationale**: Un PDF de salida con campos interactivos puede ser editado por el
+destinatario, lo que invalida la integridad del contrato firmado. El aplanado garantiza
+que el PDF entregado al usuario final es inmutable. El orden es crítico porque
+`flatten()` consume las apariencias ya renderizadas — si se llama antes de
+`updateFieldAppearances()`, los campos aparecen vacíos en el documento aplanado.
+
 ---
 
 ## Technology Stack
@@ -761,4 +872,4 @@ Check" section that gates Phase 0 research. Re-check is required after Phase 1 d
 artifacts are produced. Any violation MUST be either resolved or explicitly justified
 in the plan's "Complexity Tracking" table.
 
-**Version**: 2.3.0 | **Ratified**: 2026-03-26 | **Last Amended**: 2026-04-12
+**Version**: 2.4.0 | **Ratified**: 2026-03-26 | **Last Amended**: 2026-04-12

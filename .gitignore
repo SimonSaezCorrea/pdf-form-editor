@@ -36,3 +36,6 @@ coverage/
 # Next.js
 .next/
 out/
+
+# Claude settings
+.claude/settings.json
