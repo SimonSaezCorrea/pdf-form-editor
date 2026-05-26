@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { usePdfRenderer } from '@/features/canvas';
 import { Button } from '@/components/ui/Button/Button';
 import { IconButton } from '@/components/ui/IconButton/IconButton';
@@ -39,8 +39,38 @@ export function FillerLayout({
     setZoom((z) => Math.min(MAX_ZOOM, Math.round((z + ZOOM_STEP) * 100) / 100)), []);
 
   const renderer = usePdfRenderer(pdfBytes, BASE_SCALE * zoom);
+  const canvasRef   = useRef<HTMLCanvasElement>(null);
   const overlayRef  = useRef<HTMLCanvasElement>(null);
   const pdfPanelRef = useRef<HTMLDivElement>(null);
+
+  // Render current PDF page onto the canvas (mirrors PdfViewer logic)
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const { pdfDoc, currentPage, renderScale } = renderer;
+    if (!canvas || !pdfDoc) return;
+
+    let cancelled = false;
+    // RenderTask has both .promise and .cancel()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let renderTask: any = null;
+
+    pdfDoc.getPage(currentPage).then((page) => {
+      if (cancelled) return;
+      const viewport = page.getViewport({ scale: renderScale });
+      canvas.width  = Math.round(viewport.width);
+      canvas.height = Math.round(viewport.height);
+      const ctx = canvas.getContext('2d');
+      if (!ctx || cancelled) return;
+      // annotationMode 2 = ENABLE_FORMS — hides native AcroForm widget boxes
+      renderTask = page.render({ canvasContext: ctx, viewport, annotationMode: 2 });
+      renderTask.promise.catch(() => { /* cancelled — suppress unhandled rejection */ });
+    });
+
+    return () => {
+      cancelled = true;
+      renderTask?.cancel();
+    };
+  }, [renderer.pdfDoc, renderer.currentPage, renderer.renderScale]);
 
   // Ctrl+Scroll zoom — non-passive so we can preventDefault (same as editor)
   useEffect(() => {
@@ -152,7 +182,7 @@ export function FillerLayout({
 
           {/* Canvas + live-preview overlay (second canvas, same pixel dimensions) */}
           <div className={styles['canvas-wrapper']}>
-            <canvas ref={renderer.canvasRef as React.RefObject<HTMLCanvasElement>} className={styles['pdf-canvas']} />
+            <canvas ref={canvasRef} className={styles['pdf-canvas']} />
             <canvas ref={overlayRef} className={styles['field-overlay']} aria-hidden="true" />
           </div>
 
