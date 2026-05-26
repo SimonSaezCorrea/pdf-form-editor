@@ -37,6 +37,16 @@
   flex-shrink: 0;
 }
 
+.title-btn {
+  all: unset;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  border-radius: 4px;
+  transition: opacity 0.15s;
+}
+.title-btn:hover { opacity: 0.75; }
+
 .filename {
   font-size: var(--font-size-sm);
   color: var(--color-neutral-400);
@@ -189,6 +199,27 @@
   opacity: 1;
   background: rgba(255, 255, 255, 0.14);
   border-color: rgba(255, 255, 255, 0.2);
+}
+
+.mode-btn-back {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--border-radius-md, 6px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.10);
+  color: var(--color-navbar-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium, 500);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.mode-btn-back:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.40);
 }
 
 /* ── Shortcuts FAB ── */

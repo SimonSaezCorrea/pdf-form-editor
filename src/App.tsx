@@ -20,6 +20,7 @@ import { canvasToPdf } from '@/features/pdf/utils/coordinates';
 import { Button, IconButton } from '@/components/ui';
 import { ThemeToggle } from '@/features/toolbar/components/ThemeToggle/ThemeToggle';
 import { FillerMode } from '@/features/filler';
+import type { FillerModeHandle } from '@/features/filler';
 import styles from './App.module.css';
 
 type AppMode = 'editor' | 'filler';
@@ -31,6 +32,9 @@ const ZOOM_STEP = 0.1;
 
 export default function App() {
   const [appMode, setAppMode] = useState<AppMode>('editor');
+  const [fillerHasFile, setFillerHasFile] = useState(false);
+  const [fillerFilename, setFillerFilename] = useState('');
+  const fillerRef = useRef<FillerModeHandle>(null);
   const [pdfBytes, setPdfBytes] = useState<ArrayBuffer | null>(null);
   const [pdfFilename, setPdfFilename] = useState('');
   const [isExporting, setIsExporting] = useState(false);
@@ -267,25 +271,64 @@ export default function App() {
       <header className={styles['app-header']}>
         {/* Row 1: branding + mode selector + file operations */}
         <div className={styles['header-top']}>
-          <h1>PDF Form Editor</h1>
+          <h1>
+            <button
+              className={styles['title-btn']}
+              onClick={() => {
+                if (appMode === 'editor') {
+                  setPdfBytes(null);
+                  setPdfFilename('');
+                  store.resetFields();
+                  setExportError(null);
+                } else {
+                  fillerRef.current?.reset();
+                }
+              }}
+              title="Volver al inicio"
+            >
+              PDF Form Editor
+            </button>
+          </h1>
           <nav className={styles['mode-nav']} aria-label="Modo de la aplicación">
-            <button
-              className={`${styles['mode-btn']} ${appMode === 'editor' ? styles['mode-btn--active'] : ''}`}
-              onClick={() => setAppMode('editor')}
-              aria-pressed={appMode === 'editor'}
-            >
-              Editor de plantilla
-            </button>
-            <button
-              className={`${styles['mode-btn']} ${appMode === 'filler' ? styles['mode-btn--active'] : ''}`}
-              onClick={() => setAppMode('filler')}
-              aria-pressed={appMode === 'filler'}
-            >
-              Rellenar PDF
-            </button>
+            {(pdfBytes || fillerHasFile) ? (
+              <button
+                className={styles['mode-btn-back']}
+                onClick={() => {
+                  if (appMode === 'editor') {
+                    setPdfBytes(null);
+                    setPdfFilename('');
+                    store.resetFields();
+                    setExportError(null);
+                  } else {
+                    fillerRef.current?.reset();
+                  }
+                }}
+              >
+                ← Cambiar PDF
+              </button>
+            ) : (
+              <>
+                <button
+                  className={`${styles['mode-btn']} ${appMode === 'editor' ? styles['mode-btn--active'] : ''}`}
+                  onClick={() => setAppMode('editor')}
+                  aria-pressed={appMode === 'editor'}
+                >
+                  Editor de plantilla
+                </button>
+                <button
+                  className={`${styles['mode-btn']} ${appMode === 'filler' ? styles['mode-btn--active'] : ''}`}
+                  onClick={() => setAppMode('filler')}
+                  aria-pressed={appMode === 'filler'}
+                >
+                  Rellenar PDF
+                </button>
+              </>
+            )}
           </nav>
-          {pdfBytes && (
-            <span className={styles.filename} title={pdfFilename}>{pdfFilename}</span>
+          {(pdfBytes || fillerHasFile) && (
+            <span className={styles.filename} title={appMode === 'filler' ? fillerFilename : pdfFilename}>
+              {appMode === 'filler' ? fillerFilename : pdfFilename}
+            </span>
           )}
           <div className={styles['header-top-actions']}>
             {pdfBytes && (
@@ -325,17 +368,6 @@ export default function App() {
                   {thumbnailsVisible ? 'Ocultar páginas' : 'Ver páginas'}
                 </Button>
               )}
-              <Button
-                variant="navbar"
-                onClick={() => {
-                  setPdfBytes(null);
-                  setPdfFilename('');
-                  store.resetFields();
-                  setExportError(null);
-                }}
-              >
-                Cambiar PDF
-              </Button>
             </div>
           </div>
         )}
@@ -344,7 +376,11 @@ export default function App() {
       {exportError && <div className={styles['error-banner']}>Export failed: {exportError}</div>}
 
       {appMode === 'filler' ? (
-        <FillerMode />
+        <FillerMode
+          ref={fillerRef}
+          onHasFileChange={setFillerHasFile}
+          onFilenameChange={setFillerFilename}
+        />
       ) : !pdfBytes ? (
         <div className={styles['upload-area']}>
           <PdfUploader onPdfLoaded={handlePdfLoaded} />
