@@ -4,7 +4,7 @@
   align-items: center;
   justify-content: center;
   flex: 1;
-  padding: var(--spacing-8);
+  padding: var(--space-8);
   background: var(--color-surface);
 }
 
@@ -13,22 +13,21 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-3);
-  padding: var(--spacing-10) var(--spacing-12);
-  border: 2px dashed var(--color-border);
+  gap: var(--space-4);
+  padding: var(--space-12);
+  border: 2px dashed var(--border-color);
   border-radius: var(--radius-lg);
-  background: var(--color-panel-bg);
+  background: var(--color-surface);
   color: var(--color-text);
   cursor: pointer;
   text-align: center;
   transition: border-color 0.15s, background 0.15s;
-  max-width: 480px;
-  width: 100%;
 }
 
-.uploader:hover {
+.uploader:hover,
+.uploader:focus-within {
   border-color: var(--color-primary);
-  background: var(--color-input-bg);
+  background: var(--color-panel-bg);
 }
 
 .uploader-icon {
@@ -61,8 +60,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--spacing-4);
-  padding: var(--spacing-8);
+  gap: var(--space-4);
+  padding: var(--space-8);
 }
 
 .spinner {
@@ -85,7 +84,7 @@
 }
 
 .error-msg {
-  margin-top: var(--spacing-4);
+  margin-top: var(--space-4);
   color: var(--color-danger, #dc2626);
   font-size: var(--font-size-sm, 0.875rem);
   text-align: center;
