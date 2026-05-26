@@ -42,7 +42,9 @@ export function useFillerStore(): FillerStore {
         ).toString();
       }
 
-      const doc = await pdfjs.getDocument({ data: buffer }).promise;
+      // Pass a copy to pdfjs — getDocument transfers the buffer to the worker,
+      // detaching it from the main thread. We need the original intact for usePdfRenderer.
+      const doc = await pdfjs.getDocument({ data: buffer.slice(0) }).promise;
       const detected = await detectAcroFormFields(doc);
 
       setFields(detected);
