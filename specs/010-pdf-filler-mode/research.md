@@ -15,7 +15,9 @@ anotación para cada página. Los campos AcroForm aparecen como anotaciones con
 - `'Btn'` → Checkbox o radio button — fuera de scope
 - `'Ch'` → Choice/Select — fuera de scope
 
-Cada anotación incluye `fieldName: string` (nombre único del campo en el PDF).
+Cada anotación incluye `fieldName: string` (nombre único del campo en el PDF),
+`rect: [x1, y1, x2, y2]` (posición en PDF user-space, origen bottom-left), y
+`defaultAppearanceData` (objeto con `fontSize`, `fontColor`, `fontName` — ver §9).
 
 **Subtlety — duplicados por página**: En PDFs con múltiples páginas, el mismo
 `fieldName` puede aparecer en anotaciones de varias páginas si el campo tiene
@@ -24,16 +26,15 @@ necesita una entrada por nombre lógico → deduplicar por `fieldName`.
 
 **Decision**: Iterar todas las páginas con `getAnnotations()`, filtrar
 `subtype === 'Widget' && fieldType === 'Tx'`, deduplicar por `fieldName` usando
-un `Set<string>`. Almacenar el número de la primera página donde aparece el campo
-como metadato.
+un `Set<string>`. Almacenar primera página, `rect` y `fontSize` para uso en el
+overlay de preview en vivo.
 
 **Rationale**: Este es exactamente el mismo mecanismo que usa
 `src/features/pdf/utils/extractFields.ts` (editor mode). La diferencia es que
-la versión del rellenador solo necesita `name` y `page` — no necesita `rect` ni
-las dimensiones del campo para renderizar overlays. Crear una nueva función
-liviana en `src/features/filler/` en lugar de reutilizar `extractFields.ts`
-(que devuelve `FormField[]` con campos del editor) evita acoplamiento con el
-feature de fields (Principio XXIX).
+la versión del rellenador necesita también `rect` y `fontSize` para renderizar
+el overlay en vivo. Crear una nueva función liviana en `src/features/filler/`
+en lugar de reutilizar `extractFields.ts` (que devuelve `FormField[]` con campos
+del editor) evita acoplamiento con el feature de fields (Principio XXIX).
 
 **Alternatives considered**:
 - Reutilizar `extractFields.ts` directamente: Viola Principio XXIX (imports
@@ -217,6 +218,86 @@ no viola el Principio XXIX.
 
 **Rationale**: Reutilizar `PdfViewer` y `PdfUploader` evita duplicar código de
 renderizado (>200 líneas) y de drag-and-drop. Cumple el Principio XXIX y YAGNI.
+
+---
+
+## 8. Preview en vivo — canvas overlay vs div overlay
+
+### Hallazgo
+
+**Problema con div overlay**: Un `<div>` con `position: absolute; inset: 0` sobre
+el canvas tiene las mismas dimensiones CSS que el canvas. Los valores `left`, `top`,
+`width`, `height` y `font-size` calculados en canvas pixels (e.g. `rect[0] * renderScale`)
+NO coinciden con CSS pixels cuando el canvas está escalado por `max-width: 100%`.
+Resultado: texto aparece en posición/tamaño incorrecto (más pequeño de lo esperado).
+
+**Solución**: Segundo `<canvas>` con los mismos atributos `width`/`height` que el
+canvas PDF, posicionado `absolute` dentro del mismo `.canvas-wrapper`. CSS aplica
+`max-width: 100%` idénticamente a ambos canvases. Las posiciones dibujadas via
+Canvas 2D API están en el mismo espacio de coordenadas — sin mismatch.
+
+**Conversión de coordenadas PDF → canvas**:
+- PDF usa origen bottom-left; canvas usa top-left → `canvasY = (pageHeight - rect[3]) * s`
+- `canvasX = rect[0] * s`
+- `canvasW = (rect[2] - rect[0]) * s`
+- `canvasH = (rect[3] - rect[1]) * s`
+- Donde `s = renderScale` (e.g. `1.5 * zoom`)
+
+**Font size**:
+- Si `field.fontSize > 0`: `field.fontSize * s` (PDF points → canvas pixels)
+- Si `field.fontSize === 0` (auto-size): `canvasH * 0.80`
+
+**Decision**: Canvas overlay dibujado en `useEffect` con deps `[values, fields,
+currentPage, pageDimensions, renderScale]`. `ctx.clearRect` + re-draw en cada
+cambio. Background `rgba(255,255,255,0.78)` para legibilidad sobre cualquier fondo PDF.
+
+---
+
+## 9. Font size en pdfjs v4 — defaultAppearanceData
+
+### Hallazgo
+
+**pdfjs-dist v4**: `annotation.defaultAppearance` (raw DA string) es `undefined`.
+pdfjs v4 parsea el DA internamente y expone el objeto ya procesado:
+
+```typescript
+annotation.defaultAppearanceData = {
+  fontSize: number,   // 0 si auto-size
+  fontColor: Uint8ClampedArray(3),  // RGB
+  fontName: string,   // e.g. "Helvetica"
+}
+```
+
+**Problema con enfoque previo**: parsear la regex `/(\d+(?:\.\d+)?)\s+Tf/` sobre
+`annotation.defaultAppearance` nunca funciona en pdfjs v4 porque ese campo es `undefined`.
+El preview siempre usaba el fallback y mostraba tamaño incorrecto.
+
+**Decision**: Usar `(annotation as any).defaultAppearanceData?.fontSize ?? 0` primero.
+Mantener el fallback de regex en caso de PDFs cargados en versiones más antiguas de pdfjs.
+
+**Rationale**: `defaultAppearanceData` ya está parseado y es el canal oficial en pdfjs v4.
+La regex es un fallback defensivo de bajo costo.
+
+---
+
+## 10. ArrayBuffer detach en useFillerStore
+
+### Hallazgo
+
+`pdfjs.getDocument({ data: buffer })` transfiere el `ArrayBuffer` al worker via
+`postMessage` con transferencia de ownership (Transferable). Esto **detacha** el buffer
+del hilo principal — `buffer.byteLength === 0` después de la llamada.
+
+Si `setPdfBytes(buffer)` se almacena ANTES y luego se transfiere a pdfjs, el estado
+`pdfBytes` queda con un buffer detachado. Cuando `usePdfRenderer` intenta `pdfBytes.slice(0)`,
+lanza `TypeError: Cannot perform ArrayBuffer.prototype.slice on a detached ArrayBuffer`.
+
+**Decision**: `pdfjs.getDocument({ data: buffer.slice(0) })` — pasar una copia al worker.
+El original `buffer` permanece válido en el estado del store.
+
+**Rationale**: `buffer.slice(0)` es O(n) en tamaño del PDF — costo asumible para un
+archivo de máximo 4 MB. Alternativa (pasar el original a pdfjs y almacenar una copia)
+es equivalente en costo pero menos legible.
 
 ---
 

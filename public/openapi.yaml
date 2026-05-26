@@ -1,0 +1,400 @@
+openapi: 3.0.3
+
+info:
+  title: PDF Form Editor API
+  version: 1.0.0
+  description: |
+    API for inspecting, filling and generating AcroForm PDF documents.
+
+    ## Typical workflows
+
+    ### Fill an existing PDF (inspect → fill)
+    1. `POST /api/pdf-fields` — discover field names, positions and font sizes
+    2. `POST /api/fill-pdf`   — fill those fields and download the flattened PDF
+
+    ### Create a PDF template from scratch (editor)
+    1. `POST /api/generate-pdf` — embed AcroForm fields into a base PDF
+
+servers:
+  - url: http://localhost:3000
+    description: Local development
+  - url: https://your-deployment.vercel.app
+    description: Production (replace with actual URL)
+
+tags:
+  - name: Filler
+    description: Inspect and fill existing AcroForm PDFs
+  - name: Editor
+    description: Generate PDFs with AcroForm fields from a template
+
+paths:
+
+  # ─────────────────────────────────────────────────────────────────────────
+  /api/pdf-fields:
+  # ─────────────────────────────────────────────────────────────────────────
+    post:
+      tags: [Filler]
+      summary: Inspect PDF fields
+      description: |
+        Returns all AcroForm text fields from a PDF as a **TemplateFile** — the
+        same JSON schema accepted by the editor's "Importar plantilla" action.
+
+        Each field includes its name, page, bounding box (`x`, `y`, `width`, `height`
+        in PDF points), font size and font family. The response can be imported
+        directly into the editor, or the field names can be used to build the
+        `fields` payload for `POST /api/fill-pdf`.
+
+        Returns `fields: []` if the PDF has no AcroForm text fields.
+      operationId: inspectPdfFields
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PDF to inspect. Validated via `%PDF-` magic bytes.
+                name:
+                  type: string
+                  description: |
+                    Template name for the output. Defaults to the PDF filename
+                    without the `.pdf` extension when omitted.
+                  example: Contrato de trabajo
+      responses:
+        '200':
+          description: TemplateFile with all AcroForm text fields found in the PDF
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateFile'
+              example:
+                schemaVersion: 1
+                name: contrato
+                createdAt: '2026-05-26T12:00:00.000Z'
+                fields:
+                  - id: field-1748260800000-1
+                    name: fullname
+                    page: 1
+                    x: 71.0
+                    y: 634.5
+                    width: 241.0
+                    height: 15.0
+                    fontSize: 10
+                    fontFamily: Helvetica
+                    value: ''
+                  - id: field-1748260800000-2
+                    name: startDate
+                    page: 1
+                    x: 71.0
+                    y: 580.0
+                    width: 129.0
+                    height: 15.0
+                    fontSize: 12
+                    fontFamily: Helvetica
+                    value: ''
+        '400':
+          description: Missing or invalid file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingFile:
+                  value: { error: MISSING_FILE }
+                invalidPdf:
+                  value: { error: INVALID_PDF }
+        '500':
+          description: Unexpected processing error (e.g. encrypted or corrupted PDF)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: PROCESSING_ERROR
+
+  # ─────────────────────────────────────────────────────────────────────────
+  /api/fill-pdf:
+  # ─────────────────────────────────────────────────────────────────────────
+    post:
+      tags: [Filler]
+      summary: Fill and flatten a PDF
+      description: |
+        Fills AcroForm text fields in an uploaded PDF with the provided values,
+        then flattens the form (fields become static, non-editable content).
+
+        Only field names that exist in the PDF are accepted. Use `POST /api/pdf-fields`
+        first to discover valid field names. Empty values are ignored (the field
+        is left blank in the output).
+      operationId: fillPdf
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, fields]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PDF with AcroForm fields. Validated via `%PDF-` magic bytes.
+                fields:
+                  type: string
+                  description: |
+                    JSON string mapping field names to values.
+                    Empty values (`""`) are excluded from filling.
+                    Use `{}` to flatten the PDF without modifying any field.
+                  example: '{"fullname":"Juan Pérez","startDate":"2026-04-12"}'
+      responses:
+        '200':
+          description: Filled and flattened PDF
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: 'attachment; filename="filled.pdf"'
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidPdf:
+                  value: { error: INVALID_PDF }
+                invalidFields:
+                  value: { error: INVALID_FIELDS }
+                fieldNotFound:
+                  value: { error: FIELD_NOT_FOUND, field: nonexistent_field }
+        '500':
+          description: Unexpected processing error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: PROCESSING_ERROR
+
+  # ─────────────────────────────────────────────────────────────────────────
+  /api/generate-pdf:
+  # ─────────────────────────────────────────────────────────────────────────
+    post:
+      tags: [Editor]
+      summary: Generate PDF with AcroForm fields
+      description: |
+        Embeds interactive AcroForm text fields into a base PDF and returns the
+        modified PDF. This is the export action of the PDF Form Editor.
+
+        Any pre-existing AcroForm fields in the base PDF are removed before adding
+        the new ones (prevents duplication on re-export).
+      operationId: generatePdf
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [pdf, fields]
+              properties:
+                pdf:
+                  type: string
+                  format: binary
+                  description: Base PDF file to embed fields into.
+                fields:
+                  type: string
+                  description: |
+                    JSON string that is either:
+                    - A `FormField[]` array — list of fields to embed.
+                    - A `TemplateFile` object — the shape returned by `POST /api/pdf-fields`.
+                      The server extracts its `fields` array automatically.
+
+                    All field names must be unique within the document.
+                  example: |
+                    {"schemaVersion":1,"name":"contrato","createdAt":"2026-05-26T12:00:00.000Z",
+                     "fields":[{"id":"f1","name":"fullname","page":1,"x":71,"y":634,
+                     "width":241,"height":15,"fontSize":10,"fontFamily":"Helvetica","value":""}]}
+      responses:
+        '200':
+          description: PDF with embedded AcroForm fields
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: 'attachment; filename="form.pdf"'
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Validation error (missing fields, invalid JSON, duplicate names, out-of-range page)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              examples:
+                missingPdf:
+                  value: { error: 'Missing required field: pdf (PDF file).' }
+                invalidFields:
+                  value: { error: 'fields must be a JSON array or a TemplateFile object with a fields array.' }
+                invalidField:
+                  value: { error: 'Field at index 0 is invalid. Required: id, name, page≥1, x≥0, y≥0, width>0, height>0, fontSize(6–72), fontFamily(Helvetica|TimesRoman|Courier).' }
+                duplicateNames:
+                  value: { error: "Duplicate field name(s): 'fullname'. Field names must be unique." }
+        '422':
+          description: PDF cannot be loaded (encrypted or corrupted)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              example:
+                error: 'Cannot load PDF: file may be corrupted or encrypted.'
+        '500':
+          description: Unexpected internal error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              example:
+                error: Internal server error
+
+# ───────────────────────────────────────────────────────────────────────────
+components:
+# ───────────────────────────────────────────────────────────────────────────
+  schemas:
+
+    TemplateFile:
+      type: object
+      description: |
+        The response shape for `POST /api/pdf-fields`. Matches the editor's
+        template export format — can be imported directly via "Importar plantilla".
+      required: [schemaVersion, name, createdAt, fields]
+      properties:
+        schemaVersion:
+          type: integer
+          enum: [1]
+          description: Schema version. Always `1`.
+          example: 1
+        name:
+          type: string
+          description: Template name (from the `name` form field or PDF filename).
+          example: contrato
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of when the extraction was performed.
+          example: '2026-05-26T12:00:00.000Z'
+        fields:
+          type: array
+          description: AcroForm text fields found in the PDF. Empty array if none.
+          items:
+            $ref: '#/components/schemas/FormField'
+
+    FormField:
+      type: object
+      description: |
+        Defines an AcroForm text field to be embedded in a PDF by `POST /api/generate-pdf`.
+        Matches the `FormField` interface in `src/types/shared.ts`.
+      required: [id, name, page, x, y, width, height, fontSize, fontFamily]
+      properties:
+        id:
+          type: string
+          description: Client-side UUID for React keying. Ignored by the server.
+          example: 550e8400-e29b-41d4-a716-446655440000
+        name:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: AcroForm field name — must be unique within the document.
+          example: fullname
+        page:
+          type: integer
+          minimum: 1
+          description: 1-indexed page number where the field is placed.
+          example: 1
+        x:
+          type: number
+          minimum: 0
+          description: Horizontal position in PDF points from the bottom-left of the page.
+          example: 71.0
+        y:
+          type: number
+          minimum: 0
+          description: Vertical position in PDF points from the bottom-left of the page.
+          example: 634.5
+        width:
+          type: number
+          exclusiveMinimum: 0
+          description: Field width in PDF points.
+          example: 241.0
+        height:
+          type: number
+          exclusiveMinimum: 0
+          description: Field height in PDF points.
+          example: 15.0
+        fontSize:
+          type: integer
+          minimum: 6
+          maximum: 72
+          description: Font size in points.
+          example: 10
+        fontFamily:
+          type: string
+          enum: [Helvetica, TimesRoman, Courier]
+          description: Standard PDF font family.
+          example: Helvetica
+        value:
+          type: string
+          description: Default text pre-filled in the exported PDF field. Omit or use `""` for no pre-fill.
+          example: ''
+        showBorder:
+          type: boolean
+          default: false
+          description: Whether the field border is visible in the exported PDF.
+        autoFitFont:
+          type: boolean
+          default: false
+          description: |
+            Auto-shrink font to fit content. When `true` and `value` is set,
+            the font size is reduced proportionally if the text exceeds the field width.
+        multiline:
+          type: boolean
+          default: false
+          description: Allow text to wrap across multiple lines within the field.
+        displayFont:
+          type: string
+          description: |
+            Google Font name for canvas preview only (e.g. `"Montserrat"`).
+            Not used in PDF export — `fontFamily` is always used server-side.
+          example: Montserrat
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Machine-readable error code.
+          example: INVALID_PDF
+        field:
+          type: string
+          description: Field name that caused the error (only present for `FIELD_NOT_FOUND`).
+          example: nonexistent_field

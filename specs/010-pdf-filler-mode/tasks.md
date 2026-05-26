@@ -244,6 +244,19 @@
 
 ---
 
+## Phase 6b: Post-implementation Improvements (UX & correctness)
+
+**Purpose**: Bugs y mejoras de calidad descubiertos durante uso real.
+
+- [x] T030 Fix CSS token names in all filler CSS modules: `--spacing-N` → `--space-N`, `--color-border` → `--border-color`, uploader `background: var(--color-surface)` — tokens inexistentes causaban padding/borders en 0
+- [x] T031 Fix ArrayBuffer detach in `useFillerStore.handleFileSelected`: pass `buffer.slice(0)` to `pdfjs.getDocument()` — `getDocument` transfers ownership to worker, detaching the original; stored `pdfBytes` must remain valid for `usePdfRenderer`
+- [x] T032 [P] Extend `AcroFormField` with `rect: [number,number,number,number]` and `fontSize: number`; update `detectAcroFormFields` to extract both from pdfjs annotation (`a.rect`, `a.defaultAppearanceData.fontSize`)
+- [x] T033 Add live preview canvas overlay to `FillerLayout`: second `<canvas>` (same pixel dims as PDF canvas) drawn via Canvas 2D API; re-drawn on every `values` / `currentPage` / `pageDimensions` / `renderScale` change; coordinate conversion: `canvasX = rect[0]*s`, `canvasY = (pageH-rect[3])*s`; font size from `field.fontSize * s` (or `ch*0.80` for auto-size)
+- [x] T034 Fix preview font size: use `annotation.defaultAppearanceData.fontSize` (pdfjs v4 parsed object) instead of raw DA string regex — pdfjs v4 does NOT expose `defaultAppearance` string (it's `undefined`); `defaultAppearanceData` is the correct API
+- [x] T035 Reorder FillerLayout panels: DynamicForm (form) → LEFT, PDF viewer → RIGHT; update `border-left` → `border-right` on `.form-panel`
+- [x] T036 Add zoom controls to FillerLayout header: `zoom` state (default 1.0), `BASE_SCALE=1.5`, range 25%–300%, step 10%; `IconButton` +/− with zoom % label; `usePdfRenderer(pdfBytes, BASE_SCALE * zoom)`
+- [x] T037 Add Ctrl+Scroll zoom to FillerLayout: non-passive `wheel` event listener on `pdfPanelRef`; `e.ctrlKey` guard + `e.preventDefault()`; `zoomIn`/`zoomOut` with `useCallback`
+
 ## Phase 7: Polish & Validación Final
 
 **Purpose**: Calidad transversal — typecheck, tests, build, dark mode, validación manual completa.

@@ -1,6 +1,6 @@
 # pdf-form-editor Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-04-12
+Auto-generated from all feature plans. Last updated: 2026-05-26
 
 ## Active Technologies
 
@@ -154,7 +154,15 @@ TypeScript: Follow standard conventions
 - `fillService.ts` fill order (Principle XXXI): `field.setText(value)` → `form.updateFieldAppearances(helvetica)` → `form.flatten()` → `pdfDoc.save()`. Do NOT reorder.
 - PDF validation: check first 4 bytes for `%PDF` magic (0x25 0x50 0x44 0x46) — extension/MIME type not trusted.
 - `FieldNotFoundError` in fillService — caught in route.ts to return 400 `{error:'FIELD_NOT_FOUND', field: name}` instead of 500.
-- `useFieldDetection.ts`: uses `page.getAnnotations()` from pdfjs, filters `subtype==='Widget' && fieldType==='Tx'`, deduplicates by `fieldName` across pages.
+- `useFieldDetection.ts`: uses `page.getAnnotations()` from pdfjs, filters `subtype==='Widget' && fieldType==='Tx'`, deduplicates by `fieldName` across pages. Also extracts `rect: [x1,y1,x2,y2]` (PDF bottom-left coords) and `fontSize` from `defaultAppearanceData`.
+- **pdfjs v4**: `annotation.defaultAppearance` string is `undefined` — pdfjs parses it internally and exposes `annotation.defaultAppearanceData.fontSize` (number). Use `defaultAppearanceData` first; fall back to regex on raw DA string for older PDFs.
+- **ArrayBuffer detach**: `useFillerStore.handleFileSelected` calls `pdfjs.getDocument({ data: buffer.slice(0) })` — must pass a COPY because `getDocument` transfers the buffer to the worker (detaching it). The original `buffer` is stored in `pdfBytes` state for `usePdfRenderer`.
+- **AcroFormField** (`src/features/filler/types.ts`): `{ name, type:'text', page, rect:[x1,y1,x2,y2], fontSize }`. `rect` is PDF user-space coords (bottom-left origin). `fontSize===0` means auto-size.
+- **Live preview overlay** (`FillerLayout.tsx`): A second `<canvas>` (same pixel dimensions as the PDF canvas) is positioned `absolute` over the PDF canvas via `.canvas-wrapper`. Drawn via Canvas 2D API in a `useEffect` triggered by `values`, `fields`, `currentPage`, `pageDimensions`, `renderScale`. CSS applies `max-width:100%` identically to both canvases — no CSS-scale mismatch. Coordinate conversion: `canvasX = rect[0]*s`, `canvasY = (pageH - rect[3])*s`.
+- **Font size in overlay**: `field.fontSize > 0 ? field.fontSize * renderScale : ch * 0.80` where `ch = (rect[3]-rect[1]) * renderScale`.
+- **FillerLayout layout**: Form panel (DynamicForm) is on the LEFT (`border-right`), PDF viewer is on the RIGHT. NOT the original spec order (spec said PDF left, form right — reversed by UX decision post-implementation).
+- **Zoom in FillerLayout**: `zoom` state (default 1.0), `BASE_SCALE=1.5`, range 25%–300%, step 10%. `usePdfRenderer(pdfBytes, BASE_SCALE * zoom)`. Zoom controls (`IconButton` +/−) in header. Ctrl+Scroll on `pdfPanelRef` with `{ passive: false }` non-passive wheel listener (same pattern as editor).
+- **CSS tokens in filler**: ALL filler CSS files use `--space-N` (NOT `--spacing-N`) and `--border-color` (NOT `--color-border`). These are the only tokens defined in `tokens.css`.
 - DynamicForm filters empty values before POST: only `Object.entries(values).filter(([,v]) => v !== '')` sent as `fields` JSON (FR-009).
 - `src/app/api/fill-pdf/README.md` MUST exist and stay in sync with any contract changes (Principle XXX).
 

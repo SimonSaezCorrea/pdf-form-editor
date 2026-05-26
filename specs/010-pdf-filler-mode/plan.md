@@ -265,13 +265,14 @@ Los tests nuevos siguen la estructura `tests/unit/` y `tests/integration/` exist
 
 ### FillerLayout.tsx (T015)
 
-- [ ] T015 Crear `src/features/filler/components/FillerLayout/`:
+- [x] T015 Crear `src/features/filler/components/FillerLayout/`:
   - Dos paneles flexbox side-by-side
-  - **Panel izquierdo**: `<PdfViewer>` de `src/features/canvas/` con
-    `pdfBytes={store.pdfBytes}` — navigation entre páginas si hay varias
-  - **Panel derecho**: `<DynamicForm>` con los datos del store
-  - Botón "Subir otro PDF" que llama `store.reset()` visible en la cabecera
-  - CSS: `display: flex; gap: var(--spacing-4)` — paneles `flex: 1`
+  - **Panel izquierdo**: `<DynamicForm>` con los datos del store (`width: 320px`, `border-right`)
+  - **Panel derecho**: canvas PDF via `usePdfRenderer(pdfBytes, BASE_SCALE * zoom)` + canvas overlay para preview en vivo
+  - Cabecera: contador de campos + controles de zoom (IconButton +/−, label %) + botón "Subir otro PDF"
+  - Zoom: estado local `zoom` (1.0), `BASE_SCALE=1.5`, rango 25%–300%, step 10%; Ctrl+Scroll no-passive en `pdfPanelRef`
+  - Canvas overlay: segundo `<canvas>` mismo tamaño que PDF canvas, dibujado via Canvas 2D API en `useEffect`
+  - CSS: todos los tokens usan `--space-N` y `--border-color`
 
 ### DynamicForm.tsx (T016)
 

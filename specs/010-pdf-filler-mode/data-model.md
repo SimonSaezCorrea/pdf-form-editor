@@ -16,6 +16,8 @@ interface AcroFormField {
   name: string;     // Nombre del campo tal como aparece en el AcroForm del PDF
   type: 'text';     // v1: solo texto; futura: 'checkbox' | 'radio' | 'other'
   page: number;     // Número de página (1-indexed) donde aparece por primera vez
+  rect: [number, number, number, number]; // [x1, y1, x2, y2] PDF user-space coords, bottom-left origin
+  fontSize: number; // Tamaño de fuente en puntos del DA del campo; 0 = auto-size
 }
 ```
 
@@ -23,6 +25,8 @@ interface AcroFormField {
 - `type` es siempre `'text'` en v1 (spec Assumptions: solo TextFields).
 - `page` es metadata para UI — no se usa en el request al endpoint.
 - Los nombres de campo son únicos por PDF (restricción AcroForm).
+- `rect` se extrae de `annotation.rect` en pdfjs. Coords en PDF user-space (origen bottom-left). Usado por `FillerLayout` para posicionar el overlay de preview en vivo.
+- `fontSize` se extrae de `annotation.defaultAppearanceData.fontSize` (pdfjs v4). Si es `0`, el campo usa auto-size y el overlay usa `fieldHeight * 0.80` como fallback. Coincide con el tamaño que pdf-lib usa al generar el PDF rellenado.
 
 ---
 

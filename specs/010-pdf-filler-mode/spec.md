@@ -28,8 +28,8 @@ visor PDF y confirmar que los valores aparecen y los campos son estáticos.
 
 1. **Given** el usuario está en el Modo Rellenador y no ha subido ningún PDF,
    **When** sube un PDF con campos AcroForm,
-   **Then** la vista cambia a un layout de dos paneles: previsualización del PDF a la
-   izquierda y formulario dinámico con un input por cada campo a la derecha.
+   **Then** la vista cambia a un layout de dos paneles: formulario dinámico con un
+   input por cada campo a la izquierda y previsualización del PDF a la derecha.
 
 2. **Given** el formulario dinámico está visible,
    **When** el usuario completa algunos campos y deja otros vacíos,
@@ -192,8 +192,8 @@ aparece o está deshabilitado.
 **Modo Rellenador — vista de dos paneles**
 
 - **FR-006**: Tras subir un PDF con campos, la vista DEBE cambiar a un layout de dos
-  paneles: previsualización a la izquierda y formulario dinámico a la derecha.
-- **FR-007**: El panel izquierdo DEBE renderizar el PDF completo y permitir navegar
+  paneles: formulario dinámico a la izquierda y previsualización del PDF a la derecha.
+- **FR-007**: El panel derecho DEBE renderizar el PDF completo y permitir navegar
   entre páginas si el documento tiene más de una.
 - **FR-008**: El formulario dinámico DEBE generar exactamente un input de texto por
   cada campo AcroForm detectado, con el nombre del campo como label.
@@ -201,6 +201,18 @@ aparece o está deshabilitado.
   enviado al endpoint — solo se envían campos con valor no vacío.
 - **FR-010**: Al hacer clic en "Generar PDF" el navegador DEBE descargar
   automáticamente el PDF rellenado y aplanado.
+
+**Modo Rellenador — preview en vivo**
+
+- **FR-021**: Al escribir en cualquier input del formulario, el texto DEBE aparecer
+  inmediatamente en la posición correcta del campo en el visor PDF (preview en vivo),
+  sin necesidad de hacer clic en "Generar PDF".
+- **FR-022**: El preview en vivo DEBE respetar el tamaño de fuente definido en el
+  campo AcroForm (extraído del Default Appearance del PDF). Si el campo usa auto-size
+  (fontSize=0), el preview usa una aproximación proporcional a la altura del campo.
+- **FR-023**: El visor PDF DEBE ofrecer controles de zoom (+/−, rango 25%–300%) en la
+  cabecera del layout. El zoom DEBE también activarse con Ctrl+Scroll sobre el visor.
+  El overlay de preview en vivo DEBE escalar junto con el PDF sin desalinearse.
 
 **Modo Rellenador — PDF sin campos**
 
