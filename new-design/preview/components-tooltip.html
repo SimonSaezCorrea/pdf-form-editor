@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8" />
+<title>Tooltip</title>
+<link rel="stylesheet" href="_base.css" />
+<style>
+  .card { padding: 30px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; align-items: stretch; }
+  .demo { display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; gap: 20px; }
+  .demo .lbl { font-size: 11px; color: var(--fg-3); font-family: var(--font-family-mono); }
+  .anchor { position: relative; }
+  .tip {
+    position: absolute; background: #07575B; color: #fff;
+    font-size: 11px; padding: 4px 8px; border-radius: 4px;
+    box-shadow: var(--shadow-sm); white-space: nowrap; pointer-events: none;
+  }
+  .tip--top    { bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); }
+  .tip--bottom { top:    calc(100% + 4px); left: 50%; transform: translateX(-50%); }
+  .tip--right  { left:   calc(100% + 6px); top: 50%; transform: translateY(-50%); }
+  .tip--left   { right:  calc(100% + 6px); top: 50%; transform: translateY(-50%); }
+</style></head>
+<body>
+<div class="card">
+  <div class="demo">
+    <div class="anchor"><button class="btn btn--ghost btn--sm">Insertar</button><span class="tip tip--top">Insertar · I</span></div>
+    <span class="lbl">position="top"</span>
+  </div>
+  <div class="demo">
+    <div class="anchor"><button class="btn btn--ghost btn--sm">Acercar</button><span class="tip tip--bottom">Acercar · Ctrl++</span></div>
+    <span class="lbl">position="bottom"</span>
+  </div>
+  <div class="demo">
+    <div class="anchor"><button class="icon-btn">?</button><span class="tip tip--left">Atajos</span></div>
+    <span class="lbl">position="left"</span>
+  </div>
+  <div class="demo">
+    <div class="anchor"><button class="icon-btn">+</button><span class="tip tip--right">Acercar</span></div>
+    <span class="lbl">position="right"</span>
+  </div>
+</div>
+</body></html>

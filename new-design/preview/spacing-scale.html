@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8" />
+<title>Spacing Scale</title>
+<link rel="stylesheet" href="_base.css" />
+<style>
+  .card { padding: 22px 26px; flex-direction: column; gap: 10px; }
+  .row-item { display: grid; grid-template-columns: 64px 1fr 60px; align-items: center; gap: 12px; font-family: var(--font-family-mono); font-size: 11px; }
+  .row-item .name { color: var(--fg-1); font-weight: 600; }
+  .row-item .px   { color: var(--fg-3); text-align: right; }
+  .bar { height: 14px; background: var(--color-primary); border-radius: 2px; }
+</style></head>
+<body>
+<div class="card">
+  <div class="row-item"><span class="name">space-1</span><div class="bar" style="width:4px"></div><span class="px">4 px</span></div>
+  <div class="row-item"><span class="name">space-2</span><div class="bar" style="width:8px"></div><span class="px">8 px</span></div>
+  <div class="row-item"><span class="name">space-3</span><div class="bar" style="width:12px"></div><span class="px">12 px</span></div>
+  <div class="row-item"><span class="name">space-4</span><div class="bar" style="width:16px"></div><span class="px">16 px</span></div>
+  <div class="row-item"><span class="name">space-5</span><div class="bar" style="width:20px"></div><span class="px">20 px</span></div>
+  <div class="row-item"><span class="name">space-6</span><div class="bar" style="width:24px"></div><span class="px">24 px</span></div>
+  <div class="row-item"><span class="name">space-8</span><div class="bar" style="width:32px"></div><span class="px">32 px</span></div>
+  <div class="row-item"><span class="name">space-10</span><div class="bar" style="width:40px"></div><span class="px">40 px</span></div>
+  <div class="row-item"><span class="name">space-12</span><div class="bar" style="width:48px"></div><span class="px">48 px</span></div>
+  <div class="row-item"><span class="name">space-16</span><div class="bar" style="width:64px"></div><span class="px">64 px</span></div>
+</div>
+</body></html>

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8" />
+<title>Input</title>
+<link rel="stylesheet" href="_base.css" />
+<style>
+  .card { padding: 22px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px 22px; align-items: start; }
+  .group { display: flex; flex-direction: column; gap: 4px; }
+  .hint  { font-size: 11px; color: var(--fg-3); }
+  .err   { font-size: 11px; color: #f87171; }
+</style></head>
+<body>
+<div class="card">
+  <div class="group">
+    <span class="field-label">Name / ID</span>
+    <input class="field-input" value="customer_email" />
+    <span class="hint">Identificador único del campo</span>
+  </div>
+  <div class="group">
+    <span class="field-label">Tamaño de fuente (pt)</span>
+    <input class="field-input field-input--focus" value="12" />
+  </div>
+  <div class="group">
+    <span class="field-label">Name / ID</span>
+    <input class="field-input field-input--error" value="email" />
+    <span class="err">⚠ Duplicate name — must be unique</span>
+  </div>
+  <div class="group">
+    <span class="field-label">Valor predeterminado</span>
+    <input class="field-input" placeholder="Texto que aparecerá en el PDF…" />
+  </div>
+  <div class="group">
+    <span class="field-label">Width (pt)</span>
+    <input class="field-input" value="612.00" disabled style="opacity:.55;cursor:not-allowed" />
+  </div>
+  <div class="group">
+    <span class="field-label">X (pt)</span>
+    <input class="field-input" value="48.50" />
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8" />
+<title>Buttons — variants</title>
+<link rel="stylesheet" href="_base.css" />
+<style>
+  .card { padding: 22px 24px; display: grid; grid-template-columns: 90px 1fr; gap: 14px 16px; align-items: center; }
+  .lbl { font-size: 11px; color: var(--fg-3); font-family: var(--font-family-mono); }
+  .row-buttons { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .navbar-strip {
+    display: flex; gap: 8px; align-items: center; padding: 6px 10px;
+    background: var(--bg-navbar); border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+  }
+</style></head>
+<body>
+<div class="card">
+  <span class="lbl">primary</span>
+  <div class="row-buttons">
+    <button class="btn btn--primary btn--sm">Exportar PDF</button>
+    <button class="btn btn--primary">Generar PDF</button>
+    <button class="btn btn--primary" style="opacity:.5;cursor:not-allowed">Disabled</button>
+  </div>
+  <span class="lbl">secondary</span>
+  <div class="row-buttons">
+    <button class="btn btn--secondary btn--sm">Copiar</button>
+    <button class="btn btn--secondary">Importar plantilla</button>
+  </div>
+  <span class="lbl">ghost</span>
+  <div class="row-buttons">
+    <button class="btn btn--ghost btn--sm">Cancelar</button>
+    <button class="btn btn--ghost">Subir otro PDF</button>
+  </div>
+  <span class="lbl">danger</span>
+  <div class="row-buttons">
+    <button class="btn btn--danger btn--sm">Eliminar</button>
+    <button class="btn btn--danger">Delete Field</button>
+  </div>
+  <span class="lbl">navbar</span>
+  <div class="row-buttons">
+    <div class="navbar-strip">
+      <button class="btn btn--navbar btn--sm">Importar</button>
+      <button class="btn btn--navbar btn--sm">Exportar</button>
+      <button class="btn btn--primary btn--sm">Exportar PDF</button>
+    </div>
+  </div>
+</div>
+</body></html>

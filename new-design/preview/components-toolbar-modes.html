@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8" />
+<title>Toolbar Modes</title>
+<link rel="stylesheet" href="_base.css" />
+<style>
+  .card { padding: 22px 26px; background: var(--bg-navbar); border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 16px; }
+  .toolbar { display: flex; gap: 4px; align-items: center; }
+  .mode-btn {
+    padding: 4px 12px; background: transparent; color: var(--color-navbar-text);
+    border: 1px solid transparent; border-radius: 4px;
+    font-size: 11px; font-family: var(--font-family-base);
+    opacity: 0.7; cursor: pointer;
+  }
+  .mode-btn:hover { opacity: 1; background: rgba(255,255,255,0.12); }
+  .mode-btn.active { opacity: 1; background: #F4A261; color:#2a1208; border-color:#F4A261; font-weight:600; }
+
+  .zoom {
+    display: flex; align-items: center; gap: 4px;
+    margin-left: 12px;
+  }
+  .zoom-label { color: var(--color-navbar-text); opacity: .75; font-size: 12px; min-width: 40px; text-align:center; font-variant-numeric: tabular-nums; }
+  .row { display: flex; align-items: center; }
+  .lbl { font-size: 11px; color: var(--color-neutral-400); font-family: var(--font-family-mono); margin-right: 16px; min-width: 76px; }
+</style></head>
+<body>
+<div class="card">
+  <div class="row">
+    <span class="lbl">3 modes</span>
+    <div class="toolbar">
+      <button class="mode-btn">Seleccionar</button>
+      <button class="mode-btn active">Insertar</button>
+      <button class="mode-btn">Mover</button>
+    </div>
+    <div class="zoom">
+      <button class="icon-btn" style="color:var(--color-navbar-text)">−</button>
+      <span class="zoom-label">100%</span>
+      <button class="icon-btn" style="color:var(--color-navbar-text)">+</button>
+    </div>
+  </div>
+</div>
+</body></html>

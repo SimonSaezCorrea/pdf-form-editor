@@ -1,0 +1,278 @@
+/* prototype/filler/filler-enhancements.css
+   Add-ons for the polished filler: per-section progress, asterisks,
+   autosave pill, section collapse, final-preview, reset confirm. */
+
+/* ── Header (en form-panel) reescrito ─────────────────────────── */
+.filler-form-header {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-color);
+  display: flex; flex-direction: column; gap: var(--space-2);
+  flex-shrink: 0;
+}
+.filler-form-header h2 {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--fg-1);
+  display: flex; align-items: center; gap: var(--space-2);
+}
+.filler-form-header .save-pill {
+  font-size: 10px;
+  color: var(--fg-3);
+  display: inline-flex; align-items: center; gap: 4px;
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+}
+.filler-form-header .save-pill .dot-live {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  animation: live-pulse 1.4s ease-in-out infinite;
+}
+@keyframes live-pulse {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 1; }
+}
+.filler-form-header .header-actions {
+  display: flex; align-items: center; gap: var(--space-1);
+  margin-left: auto;
+}
+.filler-form-header .header-actions .icon-btn {
+  width: 22px; height: 22px;
+  color: var(--fg-2);
+}
+
+/* ── Per-section progress (mini bars) ─────────────────────────── */
+.section-row {
+  margin-top: var(--space-2);
+  display: flex; flex-direction: column; gap: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+.section-row__head {
+  display: flex; align-items: center; gap: var(--space-2);
+  font-size: 11px;
+  color: var(--fg-1);
+}
+.section-row__head .chev {
+  font-size: 9px;
+  color: var(--fg-3);
+  transition: transform 0.15s;
+  width: 10px;
+  display: inline-flex; justify-content: center;
+}
+.section-row.collapsed .section-row__head .chev { transform: rotate(-90deg); }
+.section-row__head .name {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.section-row__head .count {
+  margin-left: auto;
+  color: var(--fg-3);
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+}
+.section-row__head .check {
+  color: var(--color-primary);
+  font-size: 11px;
+}
+.section-row__bar {
+  height: 3px;
+  background: var(--bg-input);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.section-row__bar > div {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+  transition: width .25s ease;
+}
+
+/* ── Field row tweaks for required + error + jump highlight ───── */
+.filler-field { position: relative; }
+.filler-field .field-label-form .req {
+  color: var(--color-danger);
+  margin-left: 2px;
+  font-weight: 700;
+}
+.filler-field .field-label-form .opt {
+  color: var(--fg-3);
+  font-weight: 400;
+  margin-left: 4px;
+  font-size: 10px;
+}
+.filler-field-status {
+  position: absolute;
+  right: 8px; top: 28px;
+  font-size: 12px;
+  color: var(--color-primary);
+  pointer-events: none;
+  font-weight: 700;
+}
+.filler-field-status.empty { color: var(--fg-3); }
+.filler-field-status.error { color: var(--color-danger); }
+.filler-field.jump-highlight .field-input {
+  animation: jump-pulse 0.9s ease;
+}
+@keyframes jump-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(244,162,97,0.45); }
+  40%  { box-shadow: 0 0 0 8px rgba(244,162,97,0.18); }
+  100% { box-shadow: 0 0 0 0 rgba(244,162,97,0); }
+}
+
+/* number field: unit suffix */
+.field-unit {
+  position: absolute;
+  right: 10px; bottom: 8px;
+  font-size: 11px;
+  color: var(--fg-3);
+  pointer-events: none;
+}
+
+/* Section divider: when collapsed, hide its children. Use a class set in JS. */
+.section-children-hidden > .filler-field { display: none; }
+
+/* ── Section blocks in the fields list ─────────────────────────── */
+.filler-section {
+  display: flex; flex-direction: column;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: rgba(102,165,173,0.03);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.filler-section__head {
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-sm);
+  color: var(--fg-1);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+  transition: background 0.15s;
+}
+.filler-section__head:hover { background: rgba(102,165,173,0.06); }
+.filler-section__head .chev {
+  font-size: 9px;
+  color: var(--fg-3);
+  width: 12px;
+  display: inline-flex; justify-content: center;
+  transition: transform 0.15s;
+}
+.filler-section__head.collapsed .chev { transform: rotate(-90deg); }
+.filler-section__head.collapsed { border-bottom: none; }
+.filler-section__head .name { flex: 1; }
+.filler-section__head .meta {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--fg-3);
+  font-variant-numeric: tabular-nums;
+}
+.filler-section__head .meta .warn  { color: var(--color-danger); }
+.filler-section__head .meta .check { color: var(--color-primary); margin-left: 4px; }
+.filler-section__head.is-complete .name { color: var(--fg-2); }
+.filler-section__body {
+  display: flex; flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+/* ── PDF field click target (over the form fields in preview) ── */
+.pdf-field-target {
+  position: absolute;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background 0.12s;
+}
+.pdf-field-target:hover {
+  background: rgba(244,162,97,0.12);
+  outline: 1px dashed var(--color-accent);
+}
+
+/* ── Final-preview mode (toggle): hide outlines + helpers ────── */
+.final-preview .fill-highlight { display: none; }
+.final-preview .fill-pdf-field-hint { display: none; }
+.final-preview .pdf-field-target { display: none; }
+.final-preview .fill-text--white,
+.final-preview .fill-text--bare,
+.final-preview .fill-text--outline {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Toolbar: vista final toggle */
+.filler-pdf-toolbar .toggle-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  font-size: 11px;
+  color: var(--fg-2);
+  cursor: pointer;
+}
+.filler-pdf-toolbar .toggle-pill:hover { color: var(--fg-1); }
+.filler-pdf-toolbar .toggle-pill.on {
+  background: var(--color-accent);
+  color: #2a1208;
+  border-color: var(--color-accent);
+  font-weight: 600;
+}
+
+/* ── Footer: sticky already; add "next empty" button ───────── */
+.filler-form-footer {
+  display: flex; gap: var(--space-2);
+  align-items: center;
+}
+.filler-form-footer .next-empty {
+  flex: 1;
+  text-align: left;
+  background: none;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  color: var(--fg-2);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+}
+.filler-form-footer .next-empty:hover {
+  color: var(--fg-1);
+  border-color: var(--color-primary);
+}
+.filler-form-footer .next-empty kbd {
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  background: var(--bg-input);
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: auto;
+}
+
+/* ── Reset confirm bar ──────────────────────────────────────── */
+.reset-confirm {
+  margin: var(--space-3);
+  padding: var(--space-3);
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.30);
+  border-radius: var(--radius-md);
+  display: flex; flex-direction: column; gap: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+.reset-confirm strong { color: var(--fg-1); }
+.reset-confirm .actions { display: flex; gap: var(--space-2); justify-content: flex-end; }
+
+/* Section complete check */
+.section-check {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #06222a;
+  font-size: 9px;
+  font-weight: 700;
+}

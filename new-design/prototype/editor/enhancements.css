@@ -1,0 +1,485 @@
+/* prototype/editor/enhancements.css — additions for the polished editor */
+
+/* ── Field-type icon (used in field list + on canvas) ──────────── */
+.ftype-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px;
+  border-radius: 4px;
+  background: rgba(102,165,173,0.15);
+  color: var(--color-primary);
+  font-size: 10px; font-weight: 700;
+  flex-shrink: 0;
+}
+.ftype-badge.ftype-text  { background: rgba(102,165,173,0.16); color: #66A5AD; }
+.ftype-badge.ftype-number{ background: rgba(244,162,97,0.16);  color: #F4A261; }
+.ftype-badge.ftype-date  { background: rgba(167,139,250,0.18); color: #a78bfa; }
+.ftype-badge.ftype-check { background: rgba(34,197,94,0.16);   color: #22c55e; }
+.ftype-badge.ftype-signature { background: rgba(236,72,153,0.16); color: #ec4899; }
+
+/* ── Type chips in the canvas toolbar ──────────────────────────── */
+.type-chips {
+  display: inline-flex; align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
+  background: rgba(255,255,255,0.04);
+  border-radius: var(--radius-sm);
+  margin-left: var(--space-2);
+}
+.type-chips .divider {
+  width: 1px; height: 18px;
+  background: rgba(255,255,255,0.12);
+  margin: 0 var(--space-1);
+}
+.type-chip {
+  display: inline-flex; align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--color-navbar-text);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-family-base);
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.15s, background 0.15s;
+}
+.type-chip:hover { opacity: 1; background: rgba(255,255,255,0.10); }
+.type-chip.active {
+  opacity: 1;
+  background: var(--color-accent);
+  color: #2a1208;
+  border-color: var(--color-accent);
+  font-weight: var(--font-weight-semibold);
+}
+.type-chip .key {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.10);
+  font-size: 9px; font-weight: 600;
+  font-family: var(--font-family-mono);
+  letter-spacing: 0;
+}
+.type-chip.active .key {
+  background: rgba(0,0,0,0.18);
+  color: #2a1208;
+}
+
+/* mode buttons get a shortcut key indicator too */
+.mode-btn-tb { display: inline-flex; align-items: center; gap: 6px; }
+.mode-btn-tb .key {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.10);
+  font-size: 9px; font-weight: 600;
+  font-family: var(--font-family-mono);
+  opacity: 0.7;
+}
+.toolbar-modes .mode-btn-tb.active {
+  background: rgba(102,165,173,0.20);
+  border-color: rgba(102,165,173,0.45);
+  color: var(--color-navbar-text);
+}
+.toolbar-modes .mode-btn-tb.active .key {
+  background: rgba(255,255,255,0.18);
+  opacity: 1;
+}
+
+/* Undo/Redo cluster */
+.undo-cluster {
+  display: inline-flex; align-items: center; gap: 2px;
+  margin-right: var(--space-2);
+  padding-right: var(--space-2);
+  border-right: 1px solid rgba(255,255,255,0.10);
+}
+
+/* ── Empty-state overlay on the canvas ─────────────────────────── */
+.canvas-empty {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  pointer-events: none;
+  z-index: 5;
+}
+.canvas-empty__card {
+  background: rgba(255,255,255,0.92);
+  border: 1.5px dashed var(--color-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-6);
+  display: flex; flex-direction: column;
+  align-items: center; gap: var(--space-2);
+  text-align: center; max-width: 360px;
+  box-shadow: var(--shadow-md);
+}
+.canvas-empty__card h3 {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: #07575B;
+}
+.canvas-empty__card p {
+  font-size: var(--font-size-sm);
+  color: #4b5563;
+  line-height: 1.5;
+}
+.canvas-empty__card kbd {
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  background: #e8edef;
+  color: #07575B;
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid #b2d7de;
+}
+.canvas-empty__arrow {
+  position: absolute;
+  font-size: 28px;
+  color: var(--color-primary);
+  opacity: 0.6;
+}
+
+/* ── Insert-mode hint banner (top of canvas) ───────────────────── */
+.insert-banner {
+  position: absolute;
+  top: var(--space-3); left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-accent);
+  color: #2a1208;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-md);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  pointer-events: none;
+  animation: insertBannerIn 0.18s ease;
+}
+.insert-banner kbd {
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  background: rgba(0,0,0,0.18);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+@keyframes insertBannerIn {
+  from { opacity: 0; transform: translate(-50%, -6px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ── Snap guides on canvas ─────────────────────────────────────── */
+.snap-line {
+  position: absolute;
+  background: #ff00aa;
+  z-index: 25;
+  pointer-events: none;
+}
+.snap-line.vert { width: 1px; }
+.snap-line.horiz { height: 1px; }
+
+/* ── Status bar at bottom ──────────────────────────────────────── */
+.status-bar {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: 0 var(--space-4);
+  height: 28px; flex-shrink: 0;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border-color);
+  font-size: var(--font-size-xs);
+  color: var(--fg-2);
+  font-variant-numeric: tabular-nums;
+}
+.status-bar .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--color-neutral-500); }
+.status-bar .right { margin-left: auto; display: flex; align-items: center; gap: var(--space-3); }
+.status-bar .pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 1px 6px;
+  background: rgba(102,165,173,0.12);
+  color: var(--color-primary);
+  border-radius: var(--radius-pill);
+  font-size: 10px;
+  border: 1px solid rgba(102,165,173,0.25);
+}
+
+/* ── Context menu (right-click on field) ───────────────────────── */
+.context-menu {
+  position: fixed;
+  z-index: 200;
+  min-width: 180px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 4px;
+  font-size: var(--font-size-sm);
+}
+.context-menu .ctx-item {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--fg-1);
+}
+.context-menu .ctx-item:hover { background: rgba(102,165,173,0.10); }
+.context-menu .ctx-item.danger { color: var(--fg-danger); }
+.context-menu .ctx-item.danger:hover { background: rgba(220,38,38,0.10); }
+.context-menu .ctx-item .ctx-shortcut {
+  margin-left: auto;
+  color: var(--fg-3);
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+}
+.context-menu .ctx-divider {
+  height: 1px; background: var(--border-color);
+  margin: 4px 6px;
+}
+
+/* ── Properties panel — collapsible sections ───────────────────── */
+.prop-section {
+  display: flex; flex-direction: column; gap: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-color);
+}
+.prop-section:first-of-type { border-top: none; padding-top: 0; }
+.prop-section__head {
+  display: flex; align-items: center; gap: var(--space-2);
+  font-size: 10px; font-weight: 600;
+  color: var(--fg-2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 0;
+  margin: 0;
+}
+.prop-section__head .chev {
+  font-size: 9px;
+  opacity: 0.6;
+  transition: transform 0.15s;
+}
+.prop-section.collapsed .prop-section__head .chev { transform: rotate(-90deg); }
+.prop-section.collapsed .prop-section__body { display: none; }
+.prop-section__body {
+  display: flex; flex-direction: column; gap: var(--space-2);
+}
+
+/* ── Inline rename input (when double-clicking a field) ────────── */
+.inline-rename {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  border: none;
+  background: rgba(255,255,255,0.95);
+  color: #07575B;
+  padding: 2px 4px;
+  font-size: 12px;
+  font-family: var(--font-family-base);
+  outline: 2px solid var(--color-accent);
+  border-radius: 2px;
+}
+
+/* ── Field list grouping ──────────────────────────────────────── */
+.field-group-head {
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) 2px;
+  font-size: 10px; font-weight: 600;
+  color: var(--fg-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.field-group-head .count {
+  margin-left: auto;
+  padding: 0 5px;
+  background: var(--bg-input);
+  border-radius: var(--radius-pill);
+  font-size: 9px;
+  color: var(--fg-2);
+}
+
+/* field list item: type icon + name + page */
+.field-list-item { gap: var(--space-2); align-items: center; }
+
+/* Delete button on canvas (top-right of selected fields).
+   Dark mode → solid red fill, white glyph (pops on white canvas).
+   Light mode → outlined red on white (less aggressive). */
+.field-delete-pin {
+  position: absolute;
+  top: -10px; right: -10px;
+  width: 18px; height: 18px;
+  border-radius: 4px;
+  background: var(--color-danger);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; line-height: 1; font-weight: 600;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-danger);
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 40;
+  padding: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.field-delete-pin:hover {
+  background: var(--color-danger-hover);
+  border-color: var(--color-danger-hover);
+}
+[data-theme="light"] .field-delete-pin {
+  background: #fff;
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+[data-theme="light"] .field-delete-pin:hover {
+  background: var(--color-danger);
+  color: #fff;
+  border-color: var(--color-danger);
+}
+
+/* ── Lock icon (on field corner + field list) ─────────────────── */
+.lock-pin {
+  position: absolute;
+  top: -10px; left: -10px;
+  width: 18px; height: 18px;
+  border-radius: 4px;
+  background: var(--bg-panel);
+  color: var(--fg-2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 40;
+}
+.lock-pin:hover { color: var(--color-accent); }
+.field.is-locked {
+  cursor: not-allowed;
+}
+.field.is-locked .field__label { opacity: 0.6; }
+.field-list-item .lock-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px;
+  color: var(--fg-3);
+  opacity: 0;
+  flex-shrink: 0;
+  transition: opacity .15s, color .15s;
+  margin-left: auto;
+  cursor: pointer;
+}
+.field-list-item:hover .lock-icon { opacity: 1; }
+.field-list-item .lock-icon.is-locked { opacity: 1; color: var(--color-accent); }
+.field-list-item .lock-icon:hover { color: var(--fg-1); }
+.field-list-item.is-locked .name { color: var(--fg-2); }
+
+/* drag-reorder states */
+.field-list-item.is-dragging {
+  opacity: 0.4;
+}
+.field-list-item.drag-over {
+  border-top: 2px solid var(--color-accent);
+  margin-top: -1px;
+}
+
+/* ── Alignment floating bar (visible when 2+ fields selected) ── */
+.align-bar {
+  position: absolute;
+  top: var(--space-3); left: 50%;
+  transform: translateX(-50%);
+  z-index: 35;
+  display: flex; align-items: center; gap: 1px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  box-shadow: var(--shadow-md);
+  font-size: var(--font-size-xs);
+  color: var(--fg-1);
+  animation: alignBarIn 0.18s ease;
+}
+@keyframes alignBarIn {
+  from { opacity: 0; transform: translate(-50%, -6px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+.align-bar .count {
+  padding: 2px 8px;
+  color: var(--fg-2);
+  font-size: 11px;
+  border-right: 1px solid var(--border-color);
+  margin-right: 2px;
+}
+.align-bar .sep {
+  width: 1px; height: 18px;
+  background: var(--border-color);
+  margin: 0 2px;
+}
+.align-btn {
+  width: 28px; height: 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent;
+  color: var(--fg-1);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.align-btn:hover { background: rgba(102,165,173,0.10); }
+.align-btn svg { display: block; }
+
+/* ── Insert-mode dropdown (narrow viewports) ──────────────────── */
+.insert-dd {
+  position: relative;
+  margin-left: var(--space-2);
+}
+.insert-dd__btn {
+  padding: 4px 10px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: var(--color-navbar-text);
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: var(--font-family-base);
+  cursor: pointer;
+  display: inline-flex; align-items: center; gap: 4px;
+  transition: background 0.15s;
+}
+.insert-dd__btn:hover { background: rgba(255,255,255,0.10); }
+.insert-dd__btn.active {
+  background: var(--color-accent);
+  color: #2a1208;
+  border-color: var(--color-accent);
+  font-weight: var(--font-weight-semibold);
+}
+.insert-dd__menu {
+  position: absolute;
+  top: calc(100% + 4px); left: 0;
+  z-index: 100;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 4px;
+  min-width: 160px;
+}
+.insert-dd__item {
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: var(--font-size-sm);
+  color: var(--fg-1);
+  cursor: pointer;
+}
+.insert-dd__item:hover { background: rgba(102,165,173,0.10); }
+.insert-dd__item .key {
+  margin-left: auto;
+  font-size: 10px;
+  font-family: var(--font-family-mono);
+  color: var(--fg-3);
+  background: var(--bg-input);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+.insert-dd__item.active { background: rgba(244,162,97,0.12); color: var(--color-accent); }
+
+/* Narrow-viewport: hide type-chips, show dropdown
+   (toggled by a class on app, set by JS based on width) */
+.app.is-narrow .type-chips { display: none; }
+.app:not(.is-narrow) .insert-dd { display: none; }

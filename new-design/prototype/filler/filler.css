@@ -1,0 +1,168 @@
+/* prototype/filler/filler.css — additions on top of app.css */
+
+/* Form panel — refined for filler context */
+.filler-form-panel {
+  width: 360px;
+}
+.filler-form-panel.compact { width: 300px; }
+
+.filler-form-header {
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  border-bottom: 1px solid var(--border-color);
+  display: flex; flex-direction: column; gap: var(--space-1);
+  flex-shrink: 0;
+}
+.filler-form-header h2 {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--fg-1);
+}
+.filler-form-header .progress {
+  display: flex; align-items: center; gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--fg-2);
+}
+.filler-form-header .progress-bar {
+  flex: 1; height: 4px;
+  background: var(--bg-input);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.filler-form-header .progress-bar > div {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+  transition: width .25s ease;
+}
+
+.filler-form-fields-v {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  display: flex; flex-direction: column;
+  gap: var(--space-3);
+}
+.filler-form-fields-v.compact { gap: var(--space-2); }
+.filler-form-fields-v.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2) var(--space-3);
+}
+
+.filler-field {
+  display: flex; flex-direction: column; gap: 4px;
+  position: relative;
+}
+.filler-field.is-current .field-label-form { color: var(--color-primary); }
+.filler-field .group-divider {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  margin-top: var(--space-3);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--border-color);
+}
+.filler-field-status {
+  position: absolute;
+  right: 8px; top: 28px;
+  font-size: 11px;
+  color: var(--color-primary);
+  pointer-events: none;
+}
+.filler-field-status.empty { color: var(--fg-3); }
+
+/* Live fill text styles (overrides) */
+.fill-text--white {
+  position: absolute;
+  font-family: 'Times New Roman', Times, serif;
+  color: #1a1a1a;
+  background: rgba(255,255,255,0.92);
+  padding: 1px 4px;
+  font-size: 12px;
+  display: flex; align-items: center;
+  pointer-events: none;
+}
+.fill-text--bare {
+  position: absolute;
+  font-family: 'Times New Roman', Times, serif;
+  color: #1a1a1a;
+  padding: 1px 4px;
+  font-size: 12px;
+  display: flex; align-items: center;
+  pointer-events: none;
+}
+.fill-text--outline {
+  position: absolute;
+  font-family: 'Times New Roman', Times, serif;
+  color: #1a1a1a;
+  background: rgba(255,255,255,0.85);
+  padding: 1px 4px;
+  font-size: 12px;
+  display: flex; align-items: center;
+  border: 1px solid rgba(102,165,173,0.45);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.fill-highlight {
+  position: absolute;
+  border: 1.5px solid var(--color-accent);
+  border-radius: 2px;
+  background: rgba(244,162,97,0.10);
+  pointer-events: none;
+  z-index: 5;
+  box-shadow: 0 0 0 3px rgba(244,162,97,0.08);
+}
+
+.fill-pdf-field-hint {
+  position: absolute;
+  font-size: 10px;
+  font-family: var(--font-family-base);
+  color: var(--color-primary);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Empty / completion banners */
+.filler-banner {
+  margin: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  display: flex; align-items: center; gap: var(--space-3);
+  font-size: var(--font-size-sm);
+}
+.filler-banner.success {
+  background: rgba(102,165,173,0.10);
+  border: 1px solid rgba(102,165,173,0.30);
+  color: var(--fg-1);
+}
+.filler-banner.warning {
+  background: rgba(244,162,97,0.08);
+  border: 1px solid rgba(244,162,97,0.25);
+  color: var(--fg-1);
+}
+.filler-banner .dot-tag {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--color-primary);
+  color: #0c2026;
+  font-weight: 700;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.filler-banner.warning .dot-tag { background: var(--color-accent); color: #2a1208; }
+
+/* PDF panel toolbar */
+.filler-pdf-toolbar {
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  font-size: var(--font-size-sm);
+  color: var(--fg-2);
+}
+.filler-pdf-toolbar .right { margin-left: auto; display: flex; align-items: center; gap: var(--space-2); }
+.filler-pdf-toolbar .zoom-label { color: var(--fg-2); }
