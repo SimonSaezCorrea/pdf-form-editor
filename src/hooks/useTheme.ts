@@ -41,6 +41,7 @@ interface UseThemeReturn {
   theme: Theme;
   preference: Theme | null;
   setTheme: (t: Theme) => void;
+  toggle: () => void;
   resetTheme: () => void;
 }
 
@@ -97,5 +98,9 @@ export function useTheme(): UseThemeReturn {
     if (os === 'dark') applyTheme('dark');
   }, []);
 
-  return { theme, preference, setTheme, resetTheme };
+  const toggle = useCallback(() => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  }, [theme, setTheme]);
+
+  return { theme, preference, setTheme, toggle, resetTheme };
 }

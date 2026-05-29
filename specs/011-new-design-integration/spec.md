@@ -1,211 +1,235 @@
-# Feature Specification: New Design System Integration
+# Feature Specification: New Design System Integration + Feature Enhancements
 
 **Feature Branch**: `011-new-design-integration`  
 **Created**: 2026-05-27  
-**Status**: Draft  
-**Input**: Integrate `new-design/` system into production `src/` — visual migration only, zero logic changes.
+**Updated**: 2026-05-27 (CSS phase complete; added US5–US8 functional enhancements)  
+**Status**: CSS Phase Complete → Feature Phase In Progress
 
 ---
 
 ## Overview
 
-The app already has a complete new design system in `new-design/` (dark-first teal palette, Geist variable font, comprehensive token set, UI-kit prototypes). This feature migrates the production UI to match it. Functional correctness is preserved: all hooks, stores, API routes, PDF logic, and CLAUDE.md constraints are untouched. Only CSS tokens, component styles, and minor JSX restructuring (prop-driven theme/toolbar state) are changed.
+Feature 011 has two phases:
+
+**Phase A — CSS Migration (COMPLETE)**: Migrated production UI to the new design system (dark-first teal palette, Geist variable font, comprehensive token ramp, restyled primitives, Kbd primitive, ThemeToggle prop-driven, showEditorToolbar wiring). All tasks T001–T036 complete. Zero functional changes.
+
+**Phase B — Feature Enhancements (IN PROGRESS)**: Implement the functional features shown in the prototypes at `new-design/prototype/` — editor enhancements (field types, undo/redo, alignment tools, status bar), landing screen hero, and filler mode improvements (sections, validation, autosave, click-to-focus).
 
 ---
 
-## User Scenarios & Testing *(mandatory)*
+## Phase A Status (CSS Migration)
 
-### User Story 1 — Token & Font Layer Migration (Priority: P1)
-
-A developer replaces `src/styles/tokens.css` with the consolidated token set from `new-design/colors_and_type.css`, adds the Geist font, and verifies the app renders correctly in both dark and light mode with no FOUC.
-
-**Why this priority**: Foundation for all other stories. Nothing else can be visually correct until the token layer is right.
-
-**Independent Test**: Load the app on cold start. Verify: (a) no flash of light background before dark mode applies, (b) all semantic color tokens resolve to teal-tinted values, (c) Geist renders for body text, (d) toggling the theme switch cycles dark↔light cleanly.
-
-**Acceptance Scenarios**:
-
-1. **Given** app loads in a browser with no localStorage key, **When** page renders, **Then** `<html data-theme="dark">` is set before first paint (anti-FOUC inline script still works) and background is `#091214`.
-2. **Given** user clicks the theme toggle, **When** light mode activates, **Then** `[data-theme="light"]` applies and surface becomes `#F4F7F8`; toggle again restores dark.
-3. **Given** Geist woff2 is present at `src/styles/fonts/Geist_wght_.woff2`, **When** page loads, **Then** body text renders in Geist (variable font, weight axis 400–700); system UI stack is the fallback only.
-4. **Given** existing CLAUDE.md dark-mode rule (anti-FOUC in `layout.tsx` `<head>`), **When** token strategy changes to dark-first, **Then** inline script still functions without modification (mechanism is `[data-theme]` attribute — compatible).
+All CSS tasks complete. Reference: tasks.md T001–T036. Outstanding: T008/T037 (browser smoke test — manual).
 
 ---
 
-### User Story 2 — Primitive Components Restyle (Priority: P2)
+## Phase B — Feature Enhancements
 
-A developer updates `src/components/ui/` (Button, IconButton, Input, Select, Modal, Tooltip) and adds a new `Kbd` primitive, matching the new design spec. All existing prop APIs are preserved.
+### User Story 5 — Editor: Field Types & Toolbar (Priority: P1)
 
-**Why this priority**: Primitives are used everywhere; getting them right propagates correctness to all feature components.
+A user can choose a field type (Texto, Número, Fecha, Checkbox, Firma) before inserting, see type-colored overlays on the canvas, and use Undo/Redo to correct mistakes. An unsaved-changes indicator appears in the navbar when the template has pending changes.
 
-**Independent Test**: Each primitive can be visually verified in isolation by loading any screen that uses it. No behavioral change means existing unit tests pass unchanged.
+**Why P1**: Field types are the foundation of US6 (canvas features) and the PropertiesPanel changes. Undo/Redo is the most-requested UX improvement and shares the history stack infrastructure.
+
+**Independent Test**: Select "Número" chip → draw on canvas → field appears orange-bordered. Press Ctrl+Z → field disappears. Press Ctrl+Shift+Z → field reappears. "Sin guardar" badge appears after any change.
 
 **Acceptance Scenarios**:
 
-1. **Given** Button with variant `primary`, **When** rendered, **Then** border-radius is 5px (`--radius-md`), padding is `4px 12px`, hover darkens background.
-2. **Given** Modal rendered, **When** displayed, **Then** border-radius is 8px (`--radius-lg`), backdrop is `rgba(0,0,0,0.5)`, shadow is `--shadow-lg`.
-3. **Given** Tooltip on an IconButton, **When** user hovers, **Then** tooltip opens after 700ms hold and closes immediately on mouse-out.
-4. **Given** ShortcutsPanel, **When** rendered, **Then** keyboard hints display using the new `Kbd` primitive (styled key cap, not plain text).
-5. **Given** Input with error state, **When** error prop is set, **Then** border changes to `--color-danger` with `--color-danger-bg` background.
-6. **Given** IconButton with `variant="navbar"`, **When** hovered, **Then** background becomes `rgba(255,255,255,0.12)`.
+1. **Given** toolbar in insert mode, **When** user clicks a type chip (T/N/D/C/F), **Then** the cursor changes to crosshair and dragging on the canvas creates a field of that type.
+2. **Given** fields of different types on canvas, **When** rendered, **Then** each type has a distinct border color: Texto=`#66A5AD`, Número=`#F4A261`, Fecha=`#a78bfa`, Checkbox=`#22c55e`, Firma=`#ec4899`.
+3. **Given** user creates/moves/deletes a field, **When** action completes, **Then** "Sin guardar" badge appears in navbar (accent pill style). Exporting PDF clears the badge.
+4. **Given** Undo stack has entries, **When** user presses Ctrl+Z (or clicks Deshacer button), **Then** last field mutation is reversed (delete, move, create, resize, property change).
+5. **Given** Redo stack has entries, **When** user presses Ctrl+Shift+Z, **Then** reversed action is re-applied.
+6. **Given** user double-clicks a field on canvas, **When** rename input appears, **Then** typing and pressing Enter renames the field; Escape cancels without change.
 
 ---
 
-### User Story 3 — App Shell & Toolbar State Wiring (Priority: P3)
+### User Story 6 — Editor: Advanced Canvas Features (Priority: P2)
 
-The navbar becomes prop-driven: `App.tsx` manages `showEditorToolbar` and the mode-nav visibility state, passing them to the header component. CSS class names remain unchanged.
+A user working with multiple fields can align them using the alignment bar, see magnetic snap guides during drag, use an enhanced context menu, lock fields against accidental moves, and see collapsible property sections. The field list shows type badges and group names.
 
-**Why this priority**: Structural change needed to match new design's conditional rendering, but lower risk than token/primitive layers.
+**Why P2**: Dependent on US5 (field types). High UX value for power users dealing with complex PDFs.
 
-**Independent Test**: Verify that loading a PDF shows the toolbar row; filler mode hides it; "← Cambiar PDF" appears instead of mode tabs when a file is open in filler.
+**Independent Test**: Select 2+ fields → alignment bar appears → click "Alinear a la izquierda" → fields align. Drag a field near another → magenta guide line appears at the alignment edge.
 
 **Acceptance Scenarios**:
 
-1. **Given** no PDF loaded (upload screen), **When** app renders, **Then** second navbar row is hidden; mode tabs (Editor / Rellenar PDF) are visible.
-2. **Given** PDF loaded in editor mode, **When** app renders, **Then** second navbar row shows toolbar (Select/Insert/Move/Pan + Zoom); mode tabs still visible.
-3. **Given** PDF loaded in filler mode, **When** app renders, **Then** second navbar row is hidden; mode tabs replaced by "← Cambiar PDF" link.
-4. **Given** `App.tsx` manages theme state (currently done via `useTheme`), **When** ThemeToggle renders inside header, **Then** it receives `theme` and `onToggleTheme` as props — `useTheme` hook still owns localStorage, no duplication.
+1. **Given** 2 or more fields selected, **When** alignment bar renders, **Then** buttons for left/center-H/right/top/center-V/bottom align and H/V distribute appear below the second navbar row.
+2. **Given** user drags a field within 4px of another field's edge/center, **When** dragging, **Then** a 1px magenta guide line (`#ec4899`) appears at the snap axis. Guides disappear on mouse-up.
+3. **Given** user right-clicks a field, **When** context menu opens, **Then** items include: Duplicar (⌘D), Copiar propiedades, separator, Traer al frente, Enviar al fondo, separator, Bloquear/Desbloquear, separator, Eliminar (Del, red).
+4. **Given** user clicks Bloquear on a field, **When** field is locked, **Then** drag is disabled; resize handles disappear; lock icon shows in field list item. Unlocking reverses all.
+5. **Given** field is selected in PropertiesPanel, **When** panel renders, **Then** properties are grouped in collapsible sections: General, Posición y tamaño, Tipografía, Comportamiento. Sections expand/collapse on header click.
+6. **Given** fields list renders, **When** fields have types and groups, **Then** each item shows a type-badge chip (T/N/D/C/F with type color) and the group name below the field name in muted style.
+7. **Given** insert mode is active with a type selected, **When** rendered, **Then** a hint banner appears below the toolbar row: "Modo Insertar · {type} · arrastra sobre el PDF [Esc para cancelar]".
+8. **Given** canvas has no fields, **When** rendered, **Then** an empty-state card appears: title + description + keyboard shortcut hint.
 
 ---
 
-### User Story 4 — Feature Component Restyle (Priority: P4)
+### User Story 7 — Landing / Menu Screen (Priority: P3)
 
-All feature-level components (ThumbnailStrip, FieldList, DraggableField, ResizeHandles, PropertiesPanel, ToolbarModes, ShortcutsPanel, PdfUploader, FillerLayout, DynamicForm) are restyled to match the new design. Zero logic changes.
+A user opening the app sees a branded landing screen with a hero headline, a prominent dropzone with a CTA button, and a quick-info row. The copy adapts to the selected mode (Editor / Rellenar PDF).
 
-**Why this priority**: Dependent on P1 (tokens) and P2 (primitives) being complete.
+**Why P3**: Independent of US5/US6. Affects PdfUploader and PdfUploadScreen. Biggest visual difference from the current app.
 
-**Independent Test**: Each component can be visually verified independently in the running app. Unit tests (which test logic, not style) pass unchanged.
+**Independent Test**: Load app with no PDF → hero headline "Coloca campos de formulario sobre cualquier PDF." visible. Switch to Rellenar PDF mode → headline changes. Drag a file onto the dropzone → "Analizando campos…" spinner appears.
 
 **Acceptance Scenarios**:
 
-1. **Given** ThumbnailStrip, **When** rendered, **Then** each thumb has `--shadow-sm`, strip width is 110px, selected thumb has 1px `--color-primary` border.
-2. **Given** FieldList, **When** user hovers a field item, **Then** background becomes `rgba(102,165,173,0.08)`; when selected, border is 1px `--color-primary`.
-3. **Given** DraggableField selected, **When** in single-select mode, **Then** border is 1.5px `--color-primary`; field background is `#fff !important` (PDF canvas must read true — no dark-mode bleed per CLAUDE.md FR-008).
-4. **Given** ToolbarModes button active, **When** mode is active, **Then** button shows `rgba(255,255,255,0.18)` fill with 1px transparent border — no shrink, no shadow change.
-5. **Given** PdfUploader (both editor and filler entry), **When** rendered, **Then** uses `icon-document.svg` from `new-design/assets/` (copied to `src/`).
-6. **Given** FillerLayout, **When** PDF is loaded in filler mode, **Then** form panel is 320px with `border-right` partition; PDF viewer is on the right; zoom controls work.
-7. **Given** DynamicForm, **When** rendered, **Then** inputs use restyled `Input` primitive (compact, 13px base, teal focus ring).
+1. **Given** app loads with no PDF, **When** editor mode active, **Then** upload screen shows: eyebrow "Editor de plantilla", headline "Coloca campos de formulario sobre cualquier PDF.", subhead "Importa un PDF, dibuja los campos donde los necesites y exporta el archivo listo para firmar.", CTA "Seleccionar PDF", hint "o arrastra un archivo aquí", quick-row "PDF · hasta 50 MB · se procesa localmente".
+2. **Given** app loads with no PDF, **When** filler mode active, **Then** copy changes to filler context: eyebrow "Rellenar PDF", headline "Rellena cualquier formulario PDF, sin imprimirlo.", subhead + CTA adapted to filler.
+3. **Given** user drags a file over the dropzone, **When** dragging, **Then** dropzone enters active/hover state (brighter border, teal tint background).
+4. **Given** user clicks "Seleccionar PDF", **When** file is processing, **Then** spinner animation appears with text "Analizando campos del PDF…".
+5. **Given** landing screen renders, **When** background applied, **Then** a subtle radial vignette (dark teal, `rgba(0,0,0,0.2)` center fade) renders behind the dropzone.
+6. **Given** landing screen renders, **When** footer renders, **Then** a small footer bar shows keyboard shortcuts: ⌘O abrir · ? atajos · T cambiar tema.
+
+---
+
+### User Story 8 — Filler: Enhanced Form Experience (Priority: P2)
+
+A user filling a PDF form sees fields grouped in collapsible sections with progress bars, can navigate with Enter/Tab, has their draft autosaved to localStorage, can toggle a final-preview mode, can click directly on PDF fields to focus the corresponding input, and receives inline validation when submitting.
+
+**Why P2**: The current filler is functional but the UX is significantly worse than the prototype. Users filling long contracts need the section structure, progress, and jump-to-next-empty navigation.
+
+**Independent Test**: Fill 3/3 fields in the "Arrendador" section → section auto-collapses and shows ✓. Press "↓ Siguiente vacío" → first empty field in next section is focused and its input scrolls into view. Reload page → filled values are restored from localStorage.
+
+**Acceptance Scenarios**:
+
+1. **Given** filler form panel renders, **When** fields have group names, **Then** fields are displayed in collapsible sections with a section header showing name + done/total count + mini progress bar.
+2. **Given** all fields in a section are filled, **When** the last field gets a value, **Then** the section auto-collapses and shows a ✓ checkmark. If a field is later emptied, the section auto-expands.
+3. **Given** form has required fields (marked with `*`), **When** user clicks "Generar PDF" with missing required fields, **Then** a banner appears: "Faltan N campo(s) obligatorio(s). Te llevamos al primero." + each missing field gets error styling (red border). App scrolls to the first missing field.
+4. **Given** user presses Enter in a filled field (or clicks "↓ Siguiente vacío"), **When** action fires, **Then** next empty field is focused, its section is auto-expanded if collapsed, and the form scrolls the input into view.
+5. **Given** user types or changes a field value, **When** 400ms debounce passes, **Then** draft is saved to `localStorage['pdf-filler-draft-v1']`. A "Guardado · hace N s" pill with a live dot shows in the form header.
+6. **Given** user clicks "Vista final" toggle, **When** active, **Then** the PDF overlay hides field outlines and highlights, showing only the text values as they will appear in the generated PDF.
+7. **Given** user clicks on a field area in the PDF preview, **When** click fires, **Then** the corresponding form input is focused, its section expands if collapsed, and the form panel scrolls to the input.
+8. **Given** PDF preview scroll position changes due to focused field, **When** focus changes, **Then** the PDF preview auto-scrolls so the focused field is visible (with 100px top padding).
+9. **Given** form header renders, **When** rendered, **Then** shows total fields detected, completed/total count, required missing count (red if > 0), and "Sin guardar"/"Guardado · hace N s" pill.
+10. **Given** user clicks reset/limpiar icon, **When** clicked, **Then** a confirmation banner appears: "¿Limpiar todos los valores? Se borrarán los N campos completados y el borrador guardado." with Cancelar / Sí, limpiar buttons.
+11. **Given** filler field has type `number`, **When** a value is displayed on the PDF overlay, **Then** it is formatted with `toLocaleString('es-CL')` (e.g., `850000` → `850.000`) and the unit suffix if present.
+12. **Given** filler field has type `date`, **When** displayed on PDF overlay, **Then** the ISO date `YYYY-MM-DD` is reformatted to `DD/MM/YYYY`.
 
 ---
 
 ### Edge Cases
 
-- What happens when `--color-primary` changes in dark mode (`#07575B` → `#66A5AD`)? DraggableField uses `--color-primary` for selected-field border. Verify the 1.5px border remains visible against the PDF background.
-- CLAUDE.md: `DraggableField .field-bg: background-color: #fff !important` — dark tokens MUST NOT bleed. Verify after token migration that this rule still wins the cascade.
-- Filler live-preview canvas: coordinate math unchanged; only CSS wrapper changes. Verify `max-width:100%` still applies identically to both the PDF canvas and overlay canvas (no CSS-scale mismatch per CLAUDE.md feedback_canvas_overlay_css_scale memory).
-- Geist `@font-face` declared twice if both `tokens.css` and `layout.tsx` import it — ensure single declaration point.
-- `--color-viewer-bg` new token — verify it is used in `.viewer-area` background, not `--color-surface` (they are intentionally different).
+**Field Types**
+- `FormField` type field extension: existing fields without a `type` property default to `'text'` — backward compatible with all saved templates.
+- Type chips in the toolbar only appear in insert mode; in select/move/pan they are hidden.
+- Undo stack is capped at 50 entries to prevent unbounded memory growth.
+
+**Alignment Bar**
+- Distribute (H/V) requires at least 3 fields; clicking with 2 shows a toast "Selecciona al menos 3 campos para distribuir".
+- Alignment actions use the bounding box of the selected group — not a reference field.
+
+**Snap Guides**
+- Guides only appear when dragging a single field; group moves do not show guides (complexity vs. value).
+- Snap threshold: 4px in canvas pixel space.
+
+**Filler Autosave**
+- Autosave uses the same `localStorage` key `pdf-filler-draft-v1` regardless of the loaded PDF — draft is per-browser, not per-document.
+- If localStorage is full or unavailable, autosave fails silently (try/catch).
+
+**Filler Click-to-Focus**
+- Click targets on the PDF are invisible `<button>` elements positioned over each field rectangle using PDF user-space coordinates transformed by `renderScale` (same coordinate system as the live-preview overlay canvas).
 
 ---
 
-## Requirements *(mandatory)*
+## Requirements
 
-### Functional Requirements
+### Functional Requirements — Phase B
 
-**Token Layer**
+**Field Types**
 
-- **FR-001**: `src/styles/tokens.css` MUST be replaced with the consolidated token set from `new-design/colors_and_type.css`, preserving all tokens already consumed by production code and adding new ones (semantic aliases, full neutral ramp, type roles, shadow ramp, radius ramp).
-- **FR-002**: Token strategy MUST switch to dark-first defaults: `:root` block defines dark-mode values; `[data-theme="light"]` block overrides to light values. The existing `@media (prefers-color-scheme: dark)` block is removed.
-- **FR-003**: Geist variable font MUST be wired via `@font-face` referencing `src/styles/fonts/Geist_wght_.woff2` (file copied from `new-design/fonts/`). System UI stack is the fallback. No npm font package.
-- **FR-004**: All existing token names consumed by production CSS Modules MUST continue to resolve. Deprecated tokens must be aliased (not deleted) in a `/* deprecated */` comment block until all consumers are updated.
-- **FR-005**: `[data-theme="dark"]` mechanism remains the hook for both the anti-FOUC inline script in `layout.tsx` and CSS override blocks — the inline script is NOT modified.
+- **FR-101**: `FormField` MUST add optional `fieldType?: 'text' | 'number' | 'date' | 'checkbox' | 'signature'` (defaults to `'text'` when absent). `isValidField` accepts `fieldType === undefined`.
+- **FR-102**: Each field type MUST have a canonical color: `text=#66A5AD`, `number=#F4A261`, `date=#a78bfa`, `checkbox=#22c55e`, `signature=#ec4899`. Colors stored in a `FIELD_TYPE_CONFIG` constant in `src/features/fields/config/fieldTypes.ts`.
+- **FR-103**: Canvas overlay MUST use `fieldType` color for unselected field borders and background tint (`color + '14'` alpha hex). Selected field uses `--color-primary` border (overrides type color).
+- **FR-104**: Toolbar MUST render type chips (T/N/D/C/F) only when in insert mode. Each chip activates its type and enters insert mode. Keyboard shortcuts T/N/D/C/F trigger corresponding type.
+- **FR-105**: Type badge in `FieldList` — one character chip (T/N/D/C/F) colored per type. Group name shown below field name in `--color-text-muted`.
 
-**Primitive Components**
+**Undo/Redo**
 
-- **FR-006**: `Button` component CSS MUST update border-radius to `--radius-md` (5px), padding to `var(--space-1) var(--space-3)` (4px 12px), transitions to `background .15s, opacity .15s`.
-- **FR-007**: `IconButton` MUST add `variant="navbar"` variant with `rgba(255,255,255,0.12)` hover fill. Existing variants unchanged.
-- **FR-008**: `Input` and `Select` MUST update to 13px base size, `--color-input-bg` background, `--radius-sm` (4px) border-radius, error state with `--color-danger` border + `--color-danger-bg` fill.
-- **FR-009**: `Modal` MUST update backdrop to `rgba(0,0,0,0.5)`, border-radius to `--radius-lg` (8px), shadow to `--shadow-lg`.
-- **FR-010**: `Tooltip` MUST implement 700ms open delay, 0ms close delay, `--shadow-sm` shadow. Delay implemented via CSS or JS — no new library.
-- **FR-011**: A new `Kbd` primitive MUST be created at `src/components/ui/Kbd/`. Renders a single keyboard key: small, monospaced, bordered key-cap style. Used by `ShortcutsPanel`.
+- **FR-106**: History stack implemented in `useFieldStore` — `undoStack: FormField[][]` and `redoStack: FormField[][]` (snapshots of the full fields array). Max depth: 50.
+- **FR-107**: All field mutations (`addField`, `deleteField`, `updateField`, `updateFields`, `duplicateField`, `moveField`) MUST push a snapshot before mutating.
+- **FR-108**: `undo()` pops from `undoStack`, pushes current to `redoStack`, restores. `redo()` is the inverse.
+- **FR-109**: Keyboard handler in `App.tsx`: `Ctrl+Z` / `Cmd+Z` → undo; `Ctrl+Shift+Z` / `Cmd+Shift+Z` → redo. Ignored when focus is in an input/textarea.
+- **FR-110**: Navbar shows `<IconButton>` for Deshacer + Rehacer when a PDF is loaded in editor mode. Disabled when stack is empty.
 
-**App Shell**
+**Unsaved Indicator**
 
-- **FR-012**: `App.tsx` MUST expose `showEditorToolbar: boolean` state (true when PDF loaded AND appMode==='editor'). Passed as prop to the header area.
-- **FR-013**: Mode nav MUST conditionally render: when filler mode AND file loaded, show "← Cambiar PDF" link instead of mode tabs. Width of the nav area must remain stable to prevent layout shift.
-- **FR-014**: `--color-viewer-bg` MUST be applied to the `.viewer-area` scroll container background.
-- **FR-015**: `--color-navbar-bg` MUST be applied to `.app-header` background (both rows).
+- **FR-111**: `isDirty: boolean` in `useFieldStore`. Set to `true` on any mutation. Set to `false` after successful PDF export (`handleExport`).
+- **FR-112**: When `isDirty && appMode === 'editor' && !!pdfBytes`, render an accent-colored pill "sin guardar" in the navbar (between filename and actions).
 
-**Feature Components (CSS/Style only)**
+**Alignment Bar**
 
-- **FR-016**: `ThumbnailStrip` thumbnails MUST have `box-shadow: var(--shadow-sm)`. Strip container width 110px. Selected thumb: 1px `--color-primary` border.
-- **FR-017**: `FieldList` items MUST have hover `background: rgba(102,165,173,0.08)` and selected state `border: 1px solid var(--color-primary)` with same teal-tint fill.
-- **FR-018**: `DraggableField` selected state MUST use 1.5px `--color-primary` border (or `--color-danger` for invalid/conflict). `.field-bg` keeps `background-color: #fff !important` — dark tokens MUST NOT override this.
-- **FR-019**: `ToolbarModes` active button MUST show `background: rgba(255,255,255,0.18)` with `border: 1px solid transparent`. No opacity change on inactive buttons (use 0.7 opacity for non-active, 1.0 for active/hover).
-- **FR-020**: `ShortcutsPanel` FAB remains fixed bottom-right 40×40px circle. Panel uses `Kbd` primitive for keyboard hints.
-- **FR-021**: `PdfUploader` (both editor entry and filler entry) MUST use `icon-document.svg` (copied to `src/assets/`). Inline SVG, not `<img>`.
-- **FR-022**: `FillerLayout` form panel width MUST be 320px. Panel uses `border-right: 1px solid var(--border-color)` as the only partition (no card/shadow).
-- **FR-023**: `DynamicForm` inputs MUST use the restyled `Input` primitive.
-- **FR-024**: All feature component CSS files MUST use `--space-N` (NOT `--spacing-N`) and `--border-color` (NOT `--color-border`). These are the tokens actually defined in `tokens.css` (per CLAUDE.md filler key notes).
+- **FR-113**: When `selectionIds.size >= 2`, render `AlignBar` component below the toolbar row (or as a floating strip above the canvas). Ports directly from the prototype.
+- **FR-114**: Align actions: left, center-H, right, top, center-V, bottom. Distribute: H (≥3), V (≥3). All via `updateFields(ids, partial)` bulk update.
+- **FR-115**: Alignment logic uses the bounding box (min-left, max-right, min-top, max-bottom) of the selected set.
 
-**Iconography**
+**Snap Guides**
 
-- **FR-025**: No new icon library introduced. Additional icons (if needed) sourced from `unpkg.com/lucide-static@0.469.0/icons/<name>.svg`, 1.5–2px stroke, `currentColor`, inline SVG.
-- **FR-026**: Unicode glyphs (`+`, `−`, `✕`, `?`, `▾`) remain as text inside `IconButton` — no change.
+- **FR-116**: During field drag, compute candidate snap axes from all non-dragged fields (left edge, center-X, right edge; top edge, center-Y, bottom edge).
+- **FR-117**: If dragged field edge/center is within 4px of a candidate axis, snap to that axis and render a full-height or full-width 1px magenta guide line on the canvas overlay.
+- **FR-118**: Guide lines are rendered in the `FieldOverlay` canvas layer. Cleared on `pointerup`.
 
-**Typography**
+**Context Menu Enhancement**
 
-- **FR-027**: Base font-size MUST be 13px (`--font-size-base`). All existing CSS that uses px-based font sizes MUST be converted to use tokens.
-- **FR-028**: `.t-*` semantic type-role classes from `new-design/colors_and_type.css` MUST be available globally (imported in `layout.tsx` or `tokens.css`). Components MAY use them; existing CSS Module class definitions are NOT deleted — `.t-*` classes complement, not replace, until a full typography pass is done.
+- **FR-119**: Add to context menu: Traer al frente (`bringToFront`), Enviar al fondo (`sendToBack`), separator, Bloquear/Desbloquear campo.
+- **FR-120**: `bringToFront(id)`: moves field to end of `fields` array (highest render order). `sendToBack(id)`: moves to index 0.
+- **FR-121**: `locked?: boolean` field in `FormField` (optional, defaults false). When locked: `@dnd-kit` `disabled=true`, resize handles hidden, delete key ignored for this field.
 
-**Animation**
+**Collapsible PropertiesPanel**
 
-- **FR-029**: All interactive element transitions MUST use `background .15s, opacity .15s` (or border-color .15s). Any longer or spring-based transitions found in production CSS MUST be removed.
-- **FR-030**: `enhancements.css` keyframes (`insertBannerIn`, `alignBarIn`) and `filler-enhancements.css` keyframes (`live-pulse`, `jump-pulse`) MUST be integrated into the relevant feature CSS Modules if the corresponding UI elements exist.
+- **FR-122**: PropertiesPanel sections (General, Posición y tamaño, Tipografía, Comportamiento) are collapsible via a chevron toggle. State is local to PropertiesPanel (no store).
+- **FR-123**: Comportamiento section is collapsed by default (power-user options: required, showBorder, autoFitFont, multiline).
 
-**What MUST NOT change**
+**Insert Mode Banner**
 
-- **FR-031**: All TypeScript logic — hooks (`useFieldStore`, `useInteractionMode`, `useFillerStore`, `useFieldDetection`, `useRubberBand`, `useTheme`, `usePdfRenderer`), stores, and API route handlers — MUST NOT be modified.
-- **FR-032**: CLAUDE.md constraints MUST remain enforced: `annotationMode:2` in `usePdfRenderer`, field dedup in `pdfService`, fill order in `fillService`, `buffer.slice(0)` in filler, `defaultAppearanceData` for pdfjs v4.
-- **FR-033**: Existing Vitest unit tests MUST pass without modification. Style-only changes must not break tests that query by class name (use `data-*` attributes in tests, not CSS class selectors — flag any test that queries a CSS class for team review).
-- **FR-034**: No new npm dependencies. Geist is a local `.woff2` file.
+- **FR-124**: When `interactionMode === 'insert'` and an insert type is active, render a banner div below the toolbar row: "Modo Insertar · {typeName} · arrastra sobre el PDF [Esc]".
+- **FR-125**: Banner slides in from top (CSS animation `insertBannerIn` already in `FillerLayout.module.css` — port to `FieldOverlay.module.css` or `App.module.css`).
 
-### Key Entities
+**Canvas Empty State**
 
-- **Design System Source**: `new-design/` folder — read-only reference, never imported by production build.
-- **Token File**: `src/styles/tokens.css` — the single source of truth for all design tokens in production.
-- **CSS Module Files**: One per component (e.g., `Button.module.css`, `App.module.css`) — consume tokens via `var(--token-name)`.
-- **Primitive Components**: `src/components/ui/` — Button, IconButton, Input, Select, Modal, Tooltip, **Kbd** (new).
+- **FR-126**: When `fields.length === 0` and a PDF is loaded in editor mode, render a centered card over the canvas: "Aún no hay campos" + instruction text + keyboard hint `I` + `S`.
 
----
+**Landing Screen Hero**
 
-## Success Criteria *(mandatory)*
+- **FR-127**: `PdfUploader` component MUST add a hero section above the dropzone: eyebrow, headline, subhead — with content driven by `appMode` prop.
+- **FR-128**: Dropzone MUST add a primary CTA `<Button variant="primary">Seleccionar PDF</Button>` and a hint line "o arrastra un archivo aquí" and a quick-row `PDF · hasta 50 MB · se procesa localmente`.
+- **FR-129**: Landing screen background MUST apply a subtle radial vignette via CSS `::before` or `background` property on the `.menu-stage` container.
+- **FR-130**: Landing footer with keyboard shortcuts renders as a small muted row: `⌘O abrir · ? atajos · T cambiar tema`.
+- **FR-131**: `PdfUploadScreen` (filler entry) receives equivalent hero treatment with filler-specific copy.
 
-### Measurable Outcomes
+**Filler Enhancements**
 
-- **SC-001**: All visual surfaces match the new design system: teal-tinted dark palette (`#091214` base), Geist type, 13px density — verifiable by comparing running app screenshots to `new-design/screenshots/`.
-- **SC-002**: Theme toggle cycles dark↔light in under 50ms with no visible flash (anti-FOUC inline script preserves sub-paint application of `data-theme`).
-- **SC-003**: 100% of existing Vitest unit tests pass after migration with zero modifications.
-- **SC-004**: Zero `--spacing-N` or `--color-border` token references remain in filler feature CSS (use `--space-N` / `--border-color` per CLAUDE.md).
-- **SC-005**: Zero inline `px` font-size values remain in component CSS — all use `var(--font-size-*)` tokens.
-- **SC-006**: `npm run build` completes without TypeScript or CSS module errors.
-- **SC-007**: PDF canvas field overlays maintain white `#fff` background in dark mode — no teal bleed into PDF fill area.
-- **SC-008**: Filler live-preview overlay aligns with PDF canvas at all zoom levels (no CSS-scale mismatch).
+- **FR-132**: `AcroFormField` (and the extracted fields from `useFieldDetection`) MUST expose `group?: string` for section grouping. Groups derived from `fieldName` prefix (e.g., `arrendador_nombre` → group `arrendador`) or explicit `group` annotation if present in the PDF's extended DA.
+- **FR-133**: `useFillerStore` MUST add: `collapsed: Set<string>` (collapsed group names), `toggleCollapse(group)`, `lastSaved: number | null`, `finalPreview: boolean`, `toggleFinalPreview()`, `isDirty: boolean`, `resetValues()`.
+- **FR-134**: Auto-collapse: when all fields in a group become filled, the group is auto-collapsed. When any field in a group is emptied, the group is auto-expanded.
+- **FR-135**: Progress bars per section: `done/total` ratio rendered as a thin bar below each section header.
+- **FR-136**: `required?: boolean` on detected AcroForm fields — PDF AcroForm required flag extracted from `annotation.fieldFlags` (bit 2 = required). Shown as `*` in label; missing on submit shows error styling.
+- **FR-137**: "Saltar al siguiente vacío": `jumpToNextEmpty(fromId)` finds the next unfilled field (wrapping), expands its section, sets `focusedId`, and focuses the input ref. `Enter` key in a filled input triggers this. Footer button also triggers it.
+- **FR-138**: Autosave: 400ms debounce on `values` changes → `localStorage.setItem('pdf-filler-draft-v1', JSON.stringify({ values, ts: Date.now() }))`. Restore on mount. `lastSaved` timestamp updated; a relTime pill "Guardado · hace N s" shows in form header.
+- **FR-139**: "Vista final" toggle: `finalPreview` state. When true, click targets on PDF are hidden and field outlines/highlights are removed; only text values show.
+- **FR-140**: Click-to-focus: invisible `<button>` elements over each field's rect on the PDF panel. Click → `setFocusedId(id)`, expand section if collapsed, focus input ref.
+- **FR-141**: PDF auto-scroll: when `focusedId` changes, scroll the PDF panel so the focused field's top is at `fieldVisualTop * zoom - 100px`.
+- **FR-142**: Number formatting: `Number(v).toLocaleString('es-CL')` + unit suffix. Date formatting: `YYYY-MM-DD` → `DD/MM/YYYY`.
+- **FR-143**: Reset confirmation: clicking reset shows an inline confirmation banner with Cancelar / Sí, limpiar buttons. Confirming clears `values`, `errors`, `collapsed`, localStorage key.
+- **FR-144**: Validation banner on submit: if required fields missing, show banner (kind=warning) with field count + scroll to first missing. On success, show banner (kind=success) with filename.
 
----
+**What MUST NOT change (Phase B addendum)**
 
-## Migration Sequence
-
-Execute layers in this order to minimize regression risk:
-
-1. **Token layer** — Replace `tokens.css`; copy Geist `.woff2`; verify anti-FOUC still applies.
-2. **Primitive components** — Restyle Button, IconButton, Input, Select, Modal, Tooltip; add `Kbd`.
-3. **App shell** — Update `App.tsx` state wiring + `App.module.css` (navbar bg, viewer bg, conditional toolbar).
-4. **Canvas & toolbar** — ThumbnailStrip, ToolbarModes, ThemeToggle (prop-driven), ShortcutsPanel.
-5. **Fields** — FieldOverlay, DraggableField, ResizeHandles, FieldList, PropertiesPanel.
-6. **Filler** — FillerLayout, DynamicForm, live-preview CSS wrapper.
-7. **PDF utilities** — PdfUploader icon swap; TemplatePanel/ExportModal/ImportModal restyle.
-8. **Typography pass** — Apply `.t-*` classes to headings/labels where appropriate.
-9. **Animation audit** — Remove heavy transitions; integrate enhancement keyframes.
+- **FR-150**: All Phase A CSS changes (tokens, CSS Modules) remain in place. No token renames or reversions.
+- **FR-151**: `fillService.ts` fill/flatten order remains unchanged (CLAUDE.md Principle XXXI).
+- **FR-152**: `pdf-lib` field deduplication (`form.removeField()` before `createTextField`) remains in `pdfService.ts`.
+- **FR-153**: `annotationMode: 2` in `usePdfRenderer` stays unchanged (CLAUDE.md BF-005-01).
+- **FR-154**: `buffer.slice(0)` in filler for ArrayBuffer copy stays unchanged (CLAUDE.md memory).
 
 ---
 
-## Assumptions
+## Success Criteria — Phase B
 
-- Geist `@font-face` is declared once, in `tokens.css` (imported by `layout.tsx`). Not repeated in `layout.tsx` directly.
-- The `new-design/` folder stays in the repo as a reference artifact but is excluded from the Next.js build (not under `src/` or `public/`).
-- Mobile/responsive layout is out of scope: this is a power-user desktop tool.
-- The `new-design/prototype/editor/enhancements.css` insert-banner and alignment-bar features are design explorations — include only if corresponding DOM elements already exist in production.
-- Mixed EN/ES strings in component UI are kept as-is; no i18n library is introduced.
-- `useTheme` hook remains the sole owner of `localStorage['pdf-editor-theme']` — `App.tsx` reads theme state from the hook, does not manage localStorage directly.
-- The `new-design/ui_kits/pdf-form-editor/` components (JSX files) are **reference only** — their APIs are not imported into production. Production components are updated to match their visual output.
+- **SC-101**: All five field types can be created on canvas, have correct type-colored borders, and are saved/exported correctly by `pdfService` (all export as text fields — type is a UI-only concept for now unless pdf-lib supports typed fields).
+- **SC-102**: Undo reverses the last 50 field mutations. Redo replays them. Ctrl+Z / Ctrl+Shift+Z work. Navbar buttons reflect stack state.
+- **SC-103**: Alignment bar aligns 2+ fields correctly. Distribute requires 3+. Snap guides appear at ±4px.
+- **SC-104**: Landing screen shows hero + CTA button + quick-row. Copy changes when mode toggles.
+- **SC-105**: Filler: drafts survive page reload. Required field validation shows banner + red borders. Section auto-collapse fires when section completes. "Guardado · hace N s" shows within 500ms of a change.
+- **SC-106**: All existing Vitest unit tests pass without modification.
+- **SC-107**: `npm run typecheck` and `npm run build` pass with zero errors.

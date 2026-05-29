@@ -94,6 +94,12 @@ function addTextField(
   if (fieldDef.multiline) {
     textField.enableMultiline();
   }
+  if (fieldDef.required) {
+    textField.enableRequired();
+  }
+  if (fieldDef.locked) {
+    textField.enableReadOnly();
+  }
 
   const effectiveFontSize = fieldDef.autoFitFont && fieldDef.value
     ? computeFitFontSize(

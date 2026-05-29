@@ -1,11 +1,24 @@
+.shortcuts-fab {
+  position: fixed;
+  bottom: var(--space-4);
+  right: var(--space-4);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-panel-bg);
+  border: 1px solid var(--border-color);
+  z-index: var(--z-toolbar);
+}
+
 .shortcuts-panel {
   position: fixed;
   bottom: var(--space-16);
   right: var(--space-4);
   width: 320px;
-  background: var(--color-dark-800);
-  color: var(--color-neutral-200);
+  background: var(--color-panel-bg);
+  color: var(--color-text);
   border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
   box-shadow: var(--shadow-lg);
   z-index: var(--z-toolbar);
   overflow: hidden;
@@ -16,15 +29,17 @@
   justify-content: space-between;
   align-items: center;
   padding: var(--space-3) var(--space-4);
-  background: var(--color-dark-900);
+  background: var(--color-navbar-bg);
+  color: var(--color-navbar-text);
   font-weight: var(--font-weight-semibold);
   font-size: var(--font-size-base);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .shortcuts-panel__close {
   background: none;
   border: none;
-  color: var(--color-neutral-400);
+  color: var(--color-text-muted);
   cursor: pointer;
   font-size: var(--font-size-md);
   padding: var(--space-1);
@@ -32,7 +47,7 @@
   line-height: 1;
 }
 .shortcuts-panel__close:hover {
-  color: var(--color-white);
+  color: var(--color-text);
 }
 
 .shortcuts-panel__body {
@@ -47,9 +62,9 @@
 .shortcuts-group__title {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-neutral-400);
+  color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   margin: 0 0 var(--space-1);
 }
 
@@ -62,7 +77,7 @@
 }
 
 .shortcut-desc {
-  color: var(--color-neutral-300);
+  color: var(--color-text);
 }
 
 .shortcut-keys {
@@ -71,20 +86,8 @@
   gap: 2px;
 }
 
-.kbd {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px var(--space-1);
-  background: var(--color-dark-700);
-  border: 1px solid var(--color-neutral-600);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-xs);
-  color: var(--color-neutral-300);
-}
-
 .kbd-sep {
-  color: var(--color-neutral-500);
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs);
   padding: 0 1px;
 }

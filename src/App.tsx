@@ -15,10 +15,13 @@ import { useFieldStore } from '@/hooks/useFieldStore';
 import { useInteractionMode } from '@/hooks/useInteractionMode';
 import { extractFieldsFromPdf } from '@/features/pdf/utils/extractFields';
 import { exportPdf } from '@/features/pdf/utils/export';
-import type { FormField } from '@/types/shared';
+import type { FormField, FieldTypeId } from '@/types/shared';
 import { canvasToPdf } from '@/features/pdf/utils/coordinates';
-import { Button, IconButton } from '@/components/ui';
+import { Button, IconButton, Kbd } from '@/components/ui';
+import { getFieldTypeConfig } from '@/features/fields/config/fieldTypes';
 import { ThemeToggle } from '@/features/toolbar/components/ThemeToggle/ThemeToggle';
+import { useTheme } from '@/hooks/useTheme';
+import { AlignBar } from '@/features/fields/components/AlignBar/AlignBar';
 import { FillerMode } from '@/features/filler';
 import type { FillerModeHandle } from '@/features/filler';
 import styles from './App.module.css';
@@ -43,7 +46,9 @@ export default function App() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [clipboard, setClipboard] = useState<FormField[]>([]);
+  const [propClipboard, setPropClipboard] = useState<Partial<FormField> | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [insertType, setInsertType] = useState<FieldTypeId>('text');
   const [thumbnailsVisible, setThumbnailsVisible] = useState(true);
   const mousePosRef = useRef({ clientX: 0, clientY: 0 });
   const viewerAreaRef = useRef<HTMLElement>(null);
@@ -58,6 +63,8 @@ export default function App() {
   }, []);
   const store = useFieldStore();
   const { mode, setMode } = useInteractionMode();
+  const { theme, toggle: toggleTheme } = useTheme();
+  const showEditorToolbar = !!pdfBytes && appMode === 'editor';
 
   const hasDuplicateNames = (() => {
     const names = store.fields.map((f) => f.name);
@@ -92,6 +99,7 @@ export default function App() {
     setExportError(null);
     try {
       await exportPdf(pdfBytes, store.fields, pdfFilename);
+      store.setDirty(false);
     } catch (err) {
       setExportError(err instanceof Error ? err.message : 'Export failed');
     } finally {
@@ -163,86 +171,86 @@ export default function App() {
     return () => window.removeEventListener('mousemove', onMouseMove);
   }, []);
 
+  const TYPE_KEYS: Record<string, FieldTypeId> = { t: 'text', n: 'number', d: 'date', c: 'checkbox', f: 'signature' };
+
+  const pasteFields = useCallback(() => {
+    if (clipboard.length === 0 || !pdfRenderer.pageDimensions) return;
+    const overlayEl = document.querySelector('[data-role="field-overlay"]') as HTMLElement | null;
+    if (overlayEl) {
+      const rect = overlayEl.getBoundingClientRect();
+      const cx = mousePosRef.current.clientX - rect.left;
+      const cy = mousePosRef.current.clientY - rect.top;
+      if (cx >= 0 && cy >= 0 && cx <= rect.width && cy <= rect.height) {
+        const target = canvasToPdf(cx, cy, 0, 0, pdfRenderer.renderScale, pdfRenderer.pageDimensions.height);
+        const minX = Math.min(...clipboard.map((f) => f.x));
+        const maxY = Math.max(...clipboard.map((f) => f.y + f.height));
+        store.loadTemplateFields(
+          clipboard.map((f) => ({ ...f, page: pdfRenderer.currentPage, x: Math.max(0, f.x + target.x - minX), y: Math.max(0, f.y + target.y - maxY) })),
+          'append',
+        );
+        return;
+      }
+    }
+    const off = 10 / pdfRenderer.renderScale;
+    store.loadTemplateFields(
+      clipboard.map((f) => ({ ...f, page: pdfRenderer.currentPage, x: f.x + off, y: Math.max(0, f.y - off) })),
+      'append',
+    );
+  }, [clipboard, pdfRenderer.pageDimensions, pdfRenderer.renderScale, pdfRenderer.currentPage, store.loadTemplateFields]);
+
   // Keyboard shortcuts
   useEffect(() => {
     if (!pdfBytes) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (showExportModal || showImportModal) return;
-
-      // Page navigation (no modifier)
-      if (!e.ctrlKey && !e.metaKey && !e.altKey) {
-        if (e.key === 'ArrowLeft' && pdfRenderer.currentPage > 1) {
-          pdfRenderer.setCurrentPage(pdfRenderer.currentPage - 1);
-          return;
-        }
-        if (e.key === 'ArrowRight' && pdfRenderer.currentPage < pdfRenderer.totalPages) {
-          pdfRenderer.setCurrentPage(pdfRenderer.currentPage + 1);
-          return;
-        }
-        if (e.key === 'Escape') {
-          store.clearSelection();
-          return;
-        }
-        if ((e.key === 'Delete' || e.key === 'Backspace') && store.selectionIds.size > 0) {
-          e.preventDefault();
-          for (const id of store.selectionIds) {
-            store.deleteField(id);
-          }
-          return;
-        }
-      }
-
-      // Ctrl / Meta shortcuts
       if (e.ctrlKey || e.metaKey) {
-        if (e.key === 'a' || e.key === 'A') {
-          e.preventDefault();
-          store.selectAll(pdfRenderer.currentPage);
-        } else if ((e.key === 'd' || e.key === 'D') && store.selectedFieldId) {
-          e.preventDefault();
-          handleDuplicate(store.selectedFieldId);
-        } else if (e.key === 'c' || e.key === 'C') {
-          if (store.selectionIds.size > 0) {
-            e.preventDefault();
-            const copied = store.fields.filter((f) => store.selectionIds.has(f.id));
-            setClipboard(copied);
-          }
-        } else if (e.key === 'v' || e.key === 'V') {
-          if (clipboard.length > 0 && pdfRenderer.pageDimensions) {
-            e.preventDefault();
-            const overlayEl = document.querySelector('[data-role="field-overlay"]') as HTMLElement | null;
-            if (overlayEl) {
-              const rect = overlayEl.getBoundingClientRect();
-              const canvasX = mousePosRef.current.clientX - rect.left;
-              const canvasY = mousePosRef.current.clientY - rect.top;
-              if (canvasX >= 0 && canvasY >= 0 && canvasX <= rect.width && canvasY <= rect.height) {
-                const target = canvasToPdf(canvasX, canvasY, 0, 0, pdfRenderer.renderScale, pdfRenderer.pageDimensions.height);
-                const minX = Math.min(...clipboard.map((f) => f.x));
-                const maxY = Math.max(...clipboard.map((f) => f.y + f.height));
-                const offsetX = target.x - minX;
-                const offsetY = target.y - maxY;
-                const pasted = clipboard.map((f) => ({
-                  ...f,
-                  page: pdfRenderer.currentPage,
-                  x: Math.max(0, f.x + offsetX),
-                  y: Math.max(0, f.y + offsetY),
-                }));
-                store.loadTemplateFields(pasted, 'append');
-                return;
-              }
-            }
-            const offset = 10 / pdfRenderer.renderScale;
-            const pasted = clipboard.map((f) => ({
-              ...f,
-              page: pdfRenderer.currentPage,
-              x: f.x + offset,
-              y: Math.max(0, f.y - offset),
-            }));
-            store.loadTemplateFields(pasted, 'append');
-          }
-        }
+        handleCtrlKey(e);
+      } else if (!e.altKey) {
+        handlePlainKey(e);
       }
     };
+
+    const handlePlainKey = (e: KeyboardEvent) => {
+      const typeKey = TYPE_KEYS[e.key.toLowerCase()];
+      if (typeKey) { setInsertType(typeKey); setMode('insert'); return; }
+      if (e.key === 'ArrowLeft' && pdfRenderer.currentPage > 1) {
+        pdfRenderer.setCurrentPage(pdfRenderer.currentPage - 1);
+      } else if (e.key === 'ArrowRight' && pdfRenderer.currentPage < pdfRenderer.totalPages) {
+        pdfRenderer.setCurrentPage(pdfRenderer.currentPage + 1);
+      } else if (e.key === 'Escape') {
+        store.clearSelection();
+      } else if ((e.key === 'Delete' || e.key === 'Backspace') && store.selectionIds.size > 0) {
+        e.preventDefault();
+        for (const id of store.selectionIds) store.deleteField(id);
+      }
+    };
+
+    const handleCtrlKey = (e: KeyboardEvent) => {
+      const k = e.key.toLowerCase();
+      if (k === 'z' && e.shiftKey) { e.preventDefault(); store.redo(); }
+      else if (k === 'z') { e.preventDefault(); store.undo(); }
+      else if (k === 'a') { e.preventDefault(); store.selectAll(pdfRenderer.currentPage); }
+      else if (k === 'd' && store.selectedFieldId) { e.preventDefault(); handleDuplicate(store.selectedFieldId); }
+      else if (k === 'c' && e.shiftKey && store.selectionIds.size > 0) {
+        e.preventDefault();
+        const f = store.fields.find((x) => store.selectionIds.has(x.id));
+        if (f) {
+          const { group, fieldType, fontSize, fontFamily, displayFont, showBorder, autoFitFont, multiline, required } = f;
+          setPropClipboard({ group, fieldType, fontSize, fontFamily, displayFont, showBorder, autoFitFont, multiline, required });
+        }
+      } else if (k === 'c' && store.selectionIds.size > 0) {
+        e.preventDefault();
+        setClipboard(store.fields.filter((f) => store.selectionIds.has(f.id)));
+      } else if (k === 'v' && e.shiftKey && propClipboard && store.selectionIds.size > 0) {
+        e.preventDefault();
+        store.updateFields([...store.selectionIds], propClipboard);
+      } else if (k === 'v' && clipboard.length > 0) {
+        e.preventDefault();
+        pasteFields();
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
@@ -250,6 +258,9 @@ export default function App() {
     clipboard,
     showExportModal,
     showImportModal,
+    setInsertType,
+    setMode,
+    pasteFields,
     pdfRenderer.currentPage,
     pdfRenderer.totalPages,
     pdfRenderer.renderScale,
@@ -260,7 +271,8 @@ export default function App() {
     store.selectAll,
     store.clearSelection,
     store.deleteField,
-    store.duplicateField,
+    store.undo,
+    store.redo,
     handleDuplicate,
   ]);
 
@@ -289,78 +301,86 @@ export default function App() {
               PDF Form Editor
             </button>
           </h1>
-          <nav className={styles['mode-nav']} aria-label="Modo de la aplicación">
-            {(pdfBytes || fillerHasFile) ? (
-              <button
-                className={styles['mode-btn-back']}
-                onClick={() => {
-                  if (appMode === 'editor') {
-                    setPdfBytes(null);
-                    setPdfFilename('');
-                    store.resetFields();
-                    setExportError(null);
-                  } else {
-                    fillerRef.current?.reset();
-                  }
-                }}
-              >
-                ← Cambiar PDF
-              </button>
-            ) : (
-              <>
+          {/* Mode nav: only when no file loaded in editor */}
+          {!pdfBytes && (
+            <nav className={styles['mode-nav']} aria-label="Modo de la aplicación">
+              {(appMode === 'filler' && fillerHasFile) ? (
                 <button
-                  className={`${styles['mode-btn']} ${appMode === 'editor' ? styles['mode-btn--active'] : ''}`}
-                  onClick={() => setAppMode('editor')}
-                  aria-pressed={appMode === 'editor'}
+                  className={styles['mode-btn-back']}
+                  onClick={() => fillerRef.current?.reset()}
                 >
-                  Editor de plantilla
+                  ← Cambiar PDF
                 </button>
-                <button
-                  className={`${styles['mode-btn']} ${appMode === 'filler' ? styles['mode-btn--active'] : ''}`}
-                  onClick={() => setAppMode('filler')}
-                  aria-pressed={appMode === 'filler'}
-                >
-                  Rellenar PDF
-                </button>
-              </>
-            )}
-          </nav>
+              ) : (
+                <>
+                  <button
+                    className={`${styles['mode-btn']} ${appMode === 'editor' ? styles['mode-btn--active'] : ''}`}
+                    onClick={() => setAppMode('editor')}
+                    aria-pressed={appMode === 'editor'}
+                  >
+                    Editor de plantilla
+                  </button>
+                  <button
+                    className={`${styles['mode-btn']} ${appMode === 'filler' ? styles['mode-btn--active'] : ''}`}
+                    onClick={() => setAppMode('filler')}
+                    aria-pressed={appMode === 'filler'}
+                  >
+                    Rellenar PDF
+                  </button>
+                </>
+              )}
+            </nav>
+          )}
           {(pdfBytes || fillerHasFile) && (
             <span className={styles.filename} title={appMode === 'filler' ? fillerFilename : pdfFilename}>
               {appMode === 'filler' ? fillerFilename : pdfFilename}
             </span>
           )}
           <div className={styles['header-top-actions']}>
+            {showEditorToolbar && (store.canUndo || store.canRedo || store.isDirty) && (
+              <>
+                {store.isDirty && <span className={styles['dirty-pill']}>sin guardar</span>}
+                <IconButton icon="↩" label="Deshacer (Ctrl+Z)" variant="navbar" onClick={store.undo} disabled={!store.canUndo} />
+                <IconButton icon="↪" label="Rehacer (Ctrl+Shift+Z)" variant="navbar" onClick={store.redo} disabled={!store.canRedo} />
+              </>
+            )}
             {pdfBytes && (
               <>
                 <Button variant="navbar" onClick={() => setShowImportModal(true)}>Importar</Button>
                 <Button variant="navbar" onClick={() => setShowExportModal(true)}>Exportar</Button>
                 <Button
-                  variant="navbar"
+                  variant="navbar-cta"
+                  size="sm"
                   onClick={handleExport}
                   disabled={!canExport}
                   loading={isExporting}
                   title={exportButtonTitle}
                 >
-                  {isExporting ? 'Exportando…' : 'Exportar PDF'}
+                  {isExporting ? 'Exportando…' : '↓ Exportar PDF'}
                 </Button>
               </>
             )}
-            <ThemeToggle />
+            <ThemeToggle theme={theme} onToggleTheme={toggleTheme} />
           </div>
         </div>
 
-        {/* Row 2: canvas toolbar */}
-        {pdfBytes && (
+        {/* Row 2: canvas toolbar + align bar */}
+        {showEditorToolbar && (
+          <>
           <div className={styles['header-toolbar']}>
-            <div />
-            <div className={styles['header-toolbar-center']}>
-              <ToolbarModes mode={mode} onModeChange={setMode} />
-              <div className={styles['zoom-controls']}>
-                <IconButton icon="−" label="Alejar" onClick={zoomOut} disabled={zoom <= MIN_ZOOM} />
-                <span className={styles['zoom-label']}>{Math.round(zoom * 100)}%</span>
-                <IconButton icon="+" label="Acercar" onClick={zoomIn} disabled={zoom >= MAX_ZOOM} />
-              </div>
+            <div className={styles['header-toolbar-left']}>
+              <ToolbarModes
+                mode={mode}
+                onModeChange={setMode}
+                insertType={insertType}
+                onInsertTypeChange={setInsertType}
+                selectionCount={store.selectionIds.size}
+              />
+            </div>
+            <div className={styles['zoom-controls']}>
+              <IconButton icon="−" label="Alejar" onClick={zoomOut} disabled={zoom <= MIN_ZOOM} />
+              <span className={styles['zoom-label']}>{Math.round(zoom * 100)}%</span>
+              <IconButton icon="+" label="Acercar" onClick={zoomIn} disabled={zoom >= MAX_ZOOM} />
             </div>
             <div className={styles['header-toolbar-actions']}>
               {hasThumbnails && (
@@ -370,10 +390,27 @@ export default function App() {
               )}
             </div>
           </div>
+          {store.selectionIds.size >= 2 && (
+            <AlignBar
+              count={store.selectionIds.size}
+              onAlign={store.alignSelected}
+              onDistribute={store.distributeSelected}
+            />
+          )}
+          </>
         )}
       </header>
 
       {exportError && <div className={styles['error-banner']}>Export failed: {exportError}</div>}
+
+      {showEditorToolbar && mode === 'insert' && (
+        <div className={styles['insert-banner']}>
+          Modo Insertar · <strong>{getFieldTypeConfig(insertType).label}</strong> · arrastra sobre el PDF
+          <span className={styles['insert-banner-esc']}>
+            <Kbd>Esc</Kbd> para cancelar
+          </span>
+        </div>
+      )}
 
       {appMode === 'filler' ? (
         <FillerMode
@@ -383,7 +420,7 @@ export default function App() {
         />
       ) : !pdfBytes ? (
         <div className={styles['upload-area']}>
-          <PdfUploader onPdfLoaded={handlePdfLoaded} />
+          <PdfUploader onPdfLoaded={handlePdfLoaded} appMode={appMode} />
         </div>
       ) : (
         <div className={styles['editor-layout']}>
@@ -392,7 +429,12 @@ export default function App() {
               pdfDoc={pdfRenderer.pdfDoc!}
               totalPages={pdfRenderer.totalPages}
               currentPage={pdfRenderer.currentPage}
-              onPageSelect={pdfRenderer.setCurrentPage}
+              onPageSelect={(page) => {
+                pdfRenderer.setCurrentPage(page);
+                requestAnimationFrame(() => {
+                  document.getElementById(`pdf-page-${page}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+              }}
               hidden={!thumbnailsVisible}
             />
           )}
@@ -401,7 +443,21 @@ export default function App() {
             <FieldList
               fields={store.fields}
               selectedFieldId={store.selectedFieldId}
+              selectionIds={store.selectionIds}
               onSelect={store.selectSingle}
+              onToggleSelect={store.toggleSelect}
+              onDuplicate={(id) => store.duplicateField(id, 8, 8)}
+              onCopyProps={(id) => {
+                const f = store.fields.find((x) => x.id === id);
+                if (!f) return;
+                const { group, fieldType, fontSize, fontFamily, displayFont, showBorder, autoFitFont, multiline, required } = f;
+                setPropClipboard({ group, fieldType, fontSize, fontFamily, displayFont, showBorder, autoFitFont, multiline, required });
+              }}
+              onBringToFront={store.bringToFront}
+              onSendToBack={store.sendToBack}
+              onToggleLock={store.toggleLock}
+              onDelete={store.deleteField}
+              onReorder={store.reorderFields}
             />
           </aside>
 
@@ -410,6 +466,12 @@ export default function App() {
             className={styles['viewer-area']}
             onScroll={handleViewerScroll}
           >
+            {store.fields.length === 0 && mode !== 'insert' && !pdfRenderer.isLoading && (
+              <div className={styles['canvas-empty']}>
+                <h3>Aún no hay campos</h3>
+                <p>Presiona <Kbd>I</Kbd> para insertar, o usa la barra de modos.</p>
+              </div>
+            )}
             {pdfRenderer.error ? (
               <p className={styles['error-msg']}>{pdfRenderer.error}</p>
             ) : (
@@ -418,7 +480,7 @@ export default function App() {
                 allFields={store.fields}
                 selectionIds={store.selectionIds}
                 mode={mode}
-                onFieldAdd={store.addField}
+                onFieldAdd={(pg, cx, cy, ph, rs) => store.addField(pg, cx, cy, ph, rs, insertType)}
                 onFieldUpdate={store.updateField}
                 onFieldsUpdate={store.updateFields}
                 onFieldSelectSingle={store.selectSingle}
@@ -427,6 +489,9 @@ export default function App() {
                 onSetSelection={store.setSelection}
                 onFieldDelete={store.deleteField}
                 onFieldDuplicate={handleDuplicate}
+                onFieldBringToFront={store.bringToFront}
+                onFieldSendToBack={store.sendToBack}
+                onFieldToggleLock={store.toggleLock}
               />
             )}
           </main>

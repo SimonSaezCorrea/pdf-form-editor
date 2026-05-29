@@ -1,3 +1,5 @@
+import type { FieldTypeId } from '@/types/shared';
+
 export interface AcroFormField {
   name: string;
   type: 'text';
@@ -9,6 +11,14 @@ export interface AcroFormField {
    * 0 means auto-size (fill field height). Match what pdf-lib uses when filling.
    */
   fontSize: number;
+  /** Readable label derived from fieldName, e.g. "Contacto · contacto_email" */
+  label?: string;
+  /** Group prefix derived from the first segment of fieldName split on '_' */
+  group?: string;
+  /** Whether the field has the Required bit set (fieldFlags & 4) */
+  required?: boolean;
+  /** Field type derived from pdfjs annotation fieldType ('Tx' → 'text') */
+  fieldType?: FieldTypeId;
 }
 
 export type FillerStatus =

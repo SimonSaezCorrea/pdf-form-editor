@@ -1,6 +1,6 @@
 'use client';
 
-import { IconButton } from '@/components/ui';
+import { IconButton, Kbd } from '@/components/ui';
 import styles from './ShortcutsPanel.module.css';
 
 interface ShortcutGroup {
@@ -68,7 +68,7 @@ export function ShortcutsPanel({ visible, onClose }: ShortcutsPanelProps) {
                 <span className={styles['shortcut-keys']}>
                   {s.keys.map((k, i) => (
                     <span key={i}>
-                      <kbd className={styles['kbd']}>{k}</kbd>
+                      <Kbd>{k}</Kbd>
                       {i < s.keys.length - 1 && <span className={styles['kbd-sep']}>+</span>}
                     </span>
                   ))}

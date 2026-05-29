@@ -1,162 +1,190 @@
-# Quickstart: New Design System Integration
+# Quickstart: New Design System Integration + Feature Enhancements
 
 **Branch**: `011-new-design-integration`
 
 ---
 
-## Pre-conditions
+## Status
 
-1. You are on branch `011-new-design-integration`.
-2. `new-design/` folder is present at repo root (read-only reference).
-3. `npm run dev` starts without errors on current code.
-4. `npm test` passes (baseline green).
+**Phase A (CSS Migration)** — COMPLETE. Tasks T001–T036 done. Outstanding: T008/T037 browser smoke tests.
+
+**Phase B (Feature Enhancements)** — IN PROGRESS. Tasks T038+ (see tasks.md).
 
 ---
 
-## Migration Checklist (sequential)
+## Phase A: Completed Migration Checklist
 
-### Step 1 — Copy assets
-
-```bash
-# Geist font → public/fonts/
-cp new-design/fonts/Geist_wght_.woff2 public/fonts/Geist_wght_.woff2
-
-# Document icon → src/assets/
-mkdir -p src/assets
-cp new-design/assets/icon-document.svg src/assets/icon-document.svg
-cp new-design/assets/icon-sun.svg src/assets/icon-sun.svg
-cp new-design/assets/icon-moon.svg src/assets/icon-moon.svg
+```
+✅ T001-T004  Assets copied (Geist font, icon-document, icon-sun, icon-moon)
+✅ T005-T007  tokens.css rewritten (dark-first, @font-face, [data-theme="light"])
+⬜ T008       Browser smoke test (manual — verify dark bg, Geist, theme toggle)
+✅ T009-T016  Kbd primitive + all UI primitives restyled
+✅ T017-T020  App.tsx shell wiring (showEditorToolbar, ThemeToggle props, App.module.css)
+✅ T021-T027  Feature CSS: canvas, toolbar, fields
+✅ T028-T031  Feature CSS: filler, PDF utils, template modals
+✅ T032-T036  Polish: typography pass, animation audit, typecheck, build
+⬜ T037       Visual verification against quickstart checklist (manual)
 ```
 
-### Step 2 — Replace `tokens.css`
+---
 
-Replace `src/styles/tokens.css` entirely using the token schema from:
-- Primary source: `new-design/colors_and_type.css`
-- Reference: `specs/011-new-design-integration/data-model.md` (complete token table)
+## Phase B: Pre-conditions
 
-Token strategy: dark-first (`:root` = dark defaults; `[data-theme="light"]` = light overrides).
-Remove: `@media (prefers-color-scheme: dark)` block (no longer needed; dark is default).
-Keep: `[data-theme="dark"]` block identical to the new `:root` block (for explicit manual override via localStorage).
-
-Verify: `npm run dev` — open app → dark mode renders with teal palette → Geist font loads.
-
-### Step 3 — Add `Kbd` primitive
-
-Create `src/components/ui/Kbd/` with:
-- `Kbd.tsx` — renders `<kbd className={styles.kbd}>{children}</kbd>`
-- `Kbd.module.css` — key-cap styles from research.md R-004
-- `index.ts` — barrel export
-
-### Step 4 — Restyle primitives
-
-Update CSS Modules for: `Button`, `IconButton`, `Input`, `Select`, `Modal`, `Tooltip`.
-
-Reference files:
-- `new-design/preview/components-button.html`
-- `new-design/preview/components-icon-button.html`
-- `new-design/preview/components-input.html`
-- `new-design/preview/components-select.html`
-- `new-design/preview/components-modal.html`
-- `new-design/preview/components-tooltip.html`
-- `new-design/ui_kits/pdf-form-editor/primitives.jsx` (CSS class names + variant logic)
-
-Key changes per primitive:
-- **Button**: `border-radius: var(--radius-md)`, `padding: var(--space-1) var(--space-3)`, `transition: background .15s, opacity .15s`
-- **IconButton**: add `.navbar` variant with `rgba(255,255,255,0.12)` hover
-- **Input/Select**: `font-size: var(--font-size-base)`, `background: var(--color-input-bg)`, `border-radius: var(--radius-sm)`, error state
-- **Modal**: `border-radius: var(--radius-lg)`, `box-shadow: var(--shadow-lg)`, backdrop `rgba(0,0,0,0.5)`
-- **Tooltip**: open delay 700ms, close 0ms, `box-shadow: var(--shadow-sm)`
-
-### Step 5 — App shell wiring
-
-In `App.tsx`:
-1. Add `const showEditorToolbar = !!pdfBytes && appMode === 'editor';`
-2. Add conditional mode nav: when `!!pdfBytes && appMode === 'filler'` → render "← Cambiar PDF"; else → render mode tabs.
-3. ThemeToggle: read `const { theme, toggle } = useTheme()` in App.tsx; pass `theme` + `onToggleTheme={toggle}` to header section; ThemeToggle component becomes prop-driven.
-
-In `App.module.css`:
-- `.app-header`: `background: var(--color-navbar-bg)`
-- `.viewer-area`: `background: var(--color-viewer-bg)`
-
-### Step 6 — Canvas & toolbar components
-
-Reference: `new-design/ui_kits/pdf-form-editor/EditorScreen.jsx` + `new-design/prototype/editor/enhancements.css`
-
-- `ThumbnailStrip.module.css`: thumb `box-shadow: var(--shadow-sm)`, selected `border: 1px solid var(--color-primary)`, strip width 110px.
-- `ToolbarModes.module.css`: active button `background: rgba(255,255,255,0.18)`, inactive opacity `.7`, `transition: background .15s, opacity .15s`.
-- `ShortcutsPanel.module.css`: update panel styles; replace `<kbd>` spans with `<Kbd>` primitive in TSX.
-- `ThemeToggle.tsx`: change from self-managing to prop-driven (`theme` + `onToggleTheme`).
-
-### Step 7 — Field components
-
-Reference: `new-design/preview/components-field-overlay.html`, `new-design/preview/components-field-list-item.html`
-
-- `DraggableField.module.css`: selected = `1.5px solid var(--color-primary)` border; `.field-bg` keeps `background-color: #fff !important`.
-- `FieldList.module.css`: item hover `background: rgba(102,165,173,0.08)`, selected `border: 1px solid var(--color-primary)` + same teal-tint fill.
-- `PropertiesPanel.module.css`: 13px base size, section headers via token.
-- `FieldOverlay.module.css`: rubber-band selection styles.
-
-### Step 8 — Filler components
-
-Reference: `new-design/ui_kits/pdf-form-editor/FillerScreen.jsx` + `new-design/prototype/filler/filler-enhancements.css`
-
-- `FillerLayout.module.css`: form panel `width: 320px`, `border-right: 1px solid var(--border-color)`.
-- `DynamicForm.module.css`: uses restyled `Input` primitive (no direct style override needed if Input CSS is updated in Step 4).
-- Integrate `live-pulse` and `jump-pulse` keyframes into `FillerLayout.module.css`.
-- Token check: confirm all `--space-N` (not `--spacing-N`) and `--border-color` (not `--color-border`).
-
-### Step 9 — PDF uploader & templates
-
-- `PdfUploader.tsx` (editor + filler): replace current icon SVG with `src/assets/icon-document.svg` — inline it via `import IconDocument from '@/assets/icon-document.svg?raw'` or as a React component.
-- `TemplatePanel.module.css`, `ExportModal.module.css`, `ImportModal.module.css`: apply token updates (panel bg, border colors, button styles already handled by Step 4).
-
-### Step 10 — Typography pass
-
-Apply `.t-*` semantic classes where appropriate:
-- Upload screen title → `.t-h1`
-- Section headers in panels → `.t-label` or `.t-eyebrow`
-- Body text → verify `font-size: var(--font-size-base)` (13px) is inherited; no explicit overrides needed in most cases.
-- Shortcuts panel group titles → `.t-eyebrow` (uppercase, letter-spaced).
-
-### Step 11 — Animation audit
-
-Scan all `.module.css` files for transitions longer than `.15s` or spring-based animations. Remove or reduce to `background .15s, opacity .15s`. Integrate enhancement keyframes (Step 6 and Step 8 cover the main ones).
+1. Branch `011-new-design-integration` — Phase A changes committed.
+2. `npm run dev` starts without errors.
+3. `npm test` passes (baseline: 92 tests green).
+4. `npm run typecheck` clean.
 
 ---
 
-## Verification
+## Phase B: Integration Scenarios
 
-After each step:
-```bash
-npm run typecheck   # TypeScript must pass
-npm test            # All tests must pass (zero modifications)
-npm run build       # Build must succeed
+### Scenario B-1: Field Type Creation
+
+```
+1. Open the app and load any PDF.
+2. In editor mode, look at the toolbar row — you should see type chips:
+   [T Texto] [N Número] [D Fecha] [C Checkbox] [F Firma]
+3. Click "N Número" chip → cursor becomes crosshair.
+4. Drag a rectangle on the PDF → a new field appears with orange (#F4A261) border.
+5. Check FieldList → field shows an "N" badge in orange.
+6. Check PropertiesPanel → "Tipo" selector shows "Número".
+7. Press Ctrl+Z → field disappears. Press Ctrl+Shift+Z → field reappears.
+8. Check navbar → "sin guardar" accent badge appears after step 4.
 ```
 
-Visual verification checklist:
-- [ ] Dark mode default (cold start, no localStorage)
-- [ ] Light mode toggle (sun/moon button)
-- [ ] No FOUC on cold start
-- [ ] Geist renders (check DevTools → Fonts)
-- [ ] Field overlay: white background in dark mode
-- [ ] Filler live-preview canvas aligned with PDF canvas at all zoom levels
-- [ ] All modal shadows visible
-- [ ] Tooltips delay 700ms
-- [ ] Kbd keys visible in ShortcutsPanel
-- [ ] Thumbnail strip 110px, left of FieldList
+### Scenario B-2: Alignment Bar
+
+```
+1. Load a PDF and create 3+ fields.
+2. Shift+click to select 2 fields → AlignBar appears below the toolbar.
+3. Click "Alinear a la izquierda" → both fields' X values set to the leftmost X.
+4. Select 3 fields → click "Distribuir horizontalmente" → equal spacing applied.
+5. Select 2 fields → click "Distribuir horizontalmente" → toast: "Selecciona al menos 3 campos".
+```
+
+### Scenario B-3: Snap Guides
+
+```
+1. Load a PDF with 2+ fields.
+2. Drag one field near another → a magenta vertical or horizontal line appears
+   when the field edge/center is within 4px of the other field.
+3. Release the mouse → guide disappears.
+```
+
+### Scenario B-4: Context Menu Enhancement
+
+```
+1. Right-click a field → context menu opens.
+2. Verify items: Duplicar, Copiar propiedades, [separator],
+   Traer al frente, Enviar al fondo, [separator],
+   Bloquear campo, [separator], Eliminar.
+3. Click "Bloquear campo" → lock icon appears on field in FieldList; dragging is disabled.
+4. Right-click again → item now shows "Desbloquear campo".
+```
+
+### Scenario B-5: PropertiesPanel Collapsible Sections
+
+```
+1. Select a field → PropertiesPanel opens.
+2. Verify sections: General, Posición y tamaño, Tipografía, Comportamiento.
+3. Click a section header → section collapses. Click again → expands.
+4. "Comportamiento" should be collapsed by default.
+```
+
+### Scenario B-6: Double-Click Rename
+
+```
+1. Double-click a field on the canvas → an inline input appears inside the field.
+2. Type a new name → press Enter → field name updates everywhere (canvas + FieldList + PropertiesPanel).
+3. Double-click again → press Escape → name unchanged.
+```
+
+### Scenario B-7: Landing Screen Hero
+
+```
+1. Load the app with no PDF → landing screen shows.
+2. Verify: eyebrow "Editor de plantilla", headline text, subhead text,
+   "Seleccionar PDF" primary button, "o arrastra un archivo aquí" hint,
+   quick-row "PDF · hasta 50 MB · se procesa localmente".
+3. Switch mode to "Rellenar PDF" (navbar) → verify copy changes to filler context.
+4. Drag a file over the dropzone → border brightens, teal tint appears.
+5. Drop the file (or click CTA) → spinner "Analizando campos del PDF…" appears.
+```
+
+### Scenario B-8: Filler Sections + Progress
+
+```
+1. Enter filler mode and load a PDF with named fields.
+2. Verify fields are grouped in sections by prefix (e.g. "arrendador_*" → "Arrendador" section).
+3. Each section shows a progress bar and "N/M" count.
+4. Fill all fields in a section → section auto-collapses and shows ✓.
+5. Clear a field in that section → it auto-expands.
+```
+
+### Scenario B-9: Filler Autosave & Restore
+
+```
+1. Enter filler mode with a PDF, fill some fields.
+2. Wait 1 second → "Guardado · hace N s" pill appears in form header.
+3. Close/refresh the tab.
+4. Re-enter filler mode with the same PDF → previously filled values are restored.
+5. Click the reset/trash icon → confirmation banner appears.
+6. Click "Sí, limpiar todo" → all values cleared, localStorage key removed.
+```
+
+### Scenario B-10: Filler Validation & Jump
+
+```
+1. In filler mode, click "Generar PDF" with required fields empty.
+2. Banner: "Faltan N campo(s) obligatorio(s). Te llevamos al primero."
+3. First missing required field is highlighted with red border; form scrolls to it.
+4. Fill that field → red border clears.
+5. Press Enter in a filled input → next empty field receives focus.
+6. Click "↓ Siguiente vacío" button → same behavior.
+7. Press Enter when all fields are filled → toast "¡Todos los campos están completos!".
+```
+
+### Scenario B-11: Filler Click-to-Focus + Vista Final
+
+```
+1. In filler mode with fields detected, look at the PDF preview.
+2. Click on any field area in the PDF → corresponding form input focuses.
+3. The form panel scrolls to show that input.
+4. Toggle "Vista final" → field outlines/highlights disappear from PDF preview;
+   only filled text values remain visible.
+5. Toggle back → outlines return.
+```
 
 ---
 
-## Reference files (quick access)
+## Verification Checklist — Phase B
 
-| What | Where |
-|------|-------|
-| Full token set | `new-design/colors_and_type.css` |
-| App shell layout | `new-design/ui_kits/pdf-form-editor/app.css` |
-| Editor UI | `new-design/ui_kits/pdf-form-editor/EditorScreen.jsx` |
-| Filler UI | `new-design/ui_kits/pdf-form-editor/FillerScreen.jsx` |
-| Editor enhancements | `new-design/prototype/editor/enhancements.css` |
-| Filler enhancements | `new-design/prototype/filler/filler-enhancements.css` |
-| Component previews | `new-design/preview/components-*.html` |
-| Token schema | `specs/011-new-design-integration/data-model.md` |
-| Research decisions | `specs/011-new-design-integration/research.md` |
+Before marking Phase B complete:
+
+- [ ] All 5 field types create correctly with correct colors
+- [ ] Undo/Redo works for create, delete, move, resize, rename
+- [ ] AlignBar aligns correctly; distribute requires 3+ fields
+- [ ] Snap guides appear at ±4px during single-field drag
+- [ ] Context menu has Traer al frente, Enviar al fondo, Bloquear
+- [ ] Locked fields cannot be dragged or deleted via keyboard
+- [ ] PropertiesPanel sections collapse correctly; Comportamiento defaults closed
+- [ ] Double-click canvas rename works; Escape cancels
+- [ ] Insert banner shows when type is active; Esc exits
+- [ ] Canvas empty state shows when no fields present
+- [ ] Landing hero shows correct copy per mode; CTA button works
+- [ ] Vignette background visible on landing screen
+- [ ] Filler sections group by prefix; auto-collapse on completion
+- [ ] Progress bars update correctly per section
+- [ ] Required validation shows banner + red borders on submit
+- [ ] "↓ Siguiente vacío" + Enter-in-filled-input navigation works
+- [ ] Autosave fires within 500ms; "Guardado · hace N s" pill shows
+- [ ] Draft restores on page reload
+- [ ] Reset confirmation banner with Cancelar / Sí, limpiar
+- [ ] Click PDF field → form input focused + form scrolls
+- [ ] PDF preview auto-scrolls to focused field
+- [ ] Vista final toggle hides outlines/highlights
+- [ ] Number values formatted es-CL; dates formatted DD/MM/YYYY
+- [ ] `npm test` passes (0 modifications to test files)
+- [ ] `npm run typecheck` clean
+- [ ] `npm run build` succeeds

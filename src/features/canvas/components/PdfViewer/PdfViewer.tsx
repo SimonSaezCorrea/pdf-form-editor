@@ -8,6 +8,7 @@ import {
   useSensors,
   useDndMonitor,
   type DragEndEvent,
+  type DragMoveEvent,
 } from '@dnd-kit/core';
 import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist';
 import type { FormField } from '@/types/shared';
@@ -19,6 +20,7 @@ import { useSnapToBaseline } from '@/features/canvas/hooks/useSnapToBaseline';
 import { DraggableField } from '@/features/fields/components/FieldOverlay/DraggableField';
 import { BaselineGuides } from '@/features/fields/components/FieldOverlay/BaselineGuides';
 import { PageNavigator } from '@/features/fields/components/PageNavigator/PageNavigator';
+import { FieldContextMenu } from '@/features/fields/components/FieldContextMenu/FieldContextMenu';
 import { canvasToPdf, pdfToCanvas } from '@/features/pdf/utils/coordinates';
 import styles from './PdfViewer.module.css';
 
@@ -43,6 +45,9 @@ interface PdfViewerProps {
   onSetSelection: (ids: string[]) => void;
   onFieldDelete: (id: string) => void;
   onFieldDuplicate: (id: string) => void;
+  onFieldBringToFront?: (id: string) => void;
+  onFieldSendToBack?: (id: string) => void;
+  onFieldToggleLock?: (id: string) => void;
 }
 
 interface PageSectionProps {
@@ -61,6 +66,10 @@ interface PageSectionProps {
   onSetSelection: (ids: string[]) => void;
   onFieldDelete: (id: string) => void;
   onFieldDuplicate: (id: string) => void;
+  onFieldBringToFront?: (id: string) => void;
+  onFieldSendToBack?: (id: string) => void;
+  onFieldToggleLock?: (id: string) => void;
+  onContextMenuRequest: (fieldId: string, x: number, y: number) => void;
 }
 
 function PageSection({
@@ -79,6 +88,10 @@ function PageSection({
   onSetSelection,
   onFieldDelete,
   onFieldDuplicate,
+  onFieldBringToFront,
+  onFieldSendToBack,
+  onFieldToggleLock,
+  onContextMenuRequest,
 }: PageSectionProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -88,6 +101,7 @@ function PageSection({
     dragPdfY: null,
     activeBaseline: null,
   });
+  const [snapGuides, setSnapGuides] = useState<SnapGuides>({ v: [], h: [] });
 
   const { baselines } = useTextBaselines(pdfDoc, pageNum);
   const computeSnap = useSnapToBaseline(baselines, renderScale);
@@ -213,12 +227,33 @@ function PageSection({
 
   const handleGroupDragEnd = useCallback(() => {
     setGroupDragDelta(null);
+    setSnapGuides({ v: [], h: [] });
   }, []);
 
+  const handleGuideMove = useCallback((activeId: string, delta: { x: number; y: number }) => {
+    // Only compute snap guides for single-field drags
+    if (selectionIds.size > 1 && selectionIds.has(activeId)) return;
+    const field = fields.find((f) => f.id === activeId);
+    if (!field) return;
+    const canvasPos = pdfToCanvas(field.x, field.y, field.width, field.height, renderScale, pageDimensions.height);
+    const drag: DragRect = {
+      x: canvasPos.left + delta.x,
+      y: canvasPos.top + delta.y,
+      w: canvasPos.width,
+      h: canvasPos.height,
+    };
+    const guides = computeSnapGuides(activeId, drag, fields, renderScale, pageDimensions.height);
+    setSnapGuides(guides);
+  }, [fields, selectionIds, renderScale, pageDimensions.height]);
+
   return (
-    <div id={`pdf-page-${pageNum}`} className={styles['page-section']}>
+    <div
+      id={`pdf-page-${pageNum}`}
+      className={styles['page-section']}
+      onPointerDown={mode === 'select' ? (e) => rubberBand.onOuterPointerDown(e, overlayRef.current) : undefined}
+    >
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-        <DragStateTracker onMove={handleGroupDragMove} onSnapMove={handleSnapMove} onEnd={handleGroupDragEnd} />
+        <DragStateTracker onMove={handleGroupDragMove} onSnapMove={handleSnapMove} onEnd={handleGroupDragEnd} onGuideMove={handleGuideMove} />
         <div
           className={styles['pdf-canvas-container']}
           style={{ width: canvasWidth, height: canvasHeight }}
@@ -243,6 +278,34 @@ function PageSection({
               pageHeight={pageDimensions.height}
               dragPdfY={snapState.dragPdfY}
             />
+            {snapGuides.v.map((x, i) => (
+              <div
+                key={`sg-v-${i}`}
+                style={{
+                  position: 'absolute',
+                  left: x,
+                  top: 0,
+                  width: 1,
+                  height: '100%',
+                  background: '#ec4899',
+                  pointerEvents: 'none',
+                }}
+              />
+            ))}
+            {snapGuides.h.map((y, i) => (
+              <div
+                key={`sg-h-${i}`}
+                style={{
+                  position: 'absolute',
+                  top: y,
+                  left: 0,
+                  height: 1,
+                  width: '100%',
+                  background: '#ec4899',
+                  pointerEvents: 'none',
+                }}
+              />
+            ))}
             {fields.map((field) => (
               <DraggableField
                 key={field.id}
@@ -258,6 +321,10 @@ function PageSection({
                 onDelete={onFieldDelete}
                 onDuplicate={() => onFieldDuplicate(field.id)}
                 onUpdate={onFieldUpdate}
+                onBringToFront={onFieldBringToFront}
+                onSendToBack={onFieldSendToBack}
+                onToggleLock={onFieldToggleLock}
+                onContextMenuRequest={onContextMenuRequest}
               />
             ))}
           </div>
@@ -281,6 +348,9 @@ export function PdfViewer({
   onSetSelection,
   onFieldDelete,
   onFieldDuplicate,
+  onFieldBringToFront,
+  onFieldSendToBack,
+  onFieldToggleLock,
 }: PdfViewerProps) {
   const { pdfDoc, totalPages, currentPage, setCurrentPage, pageDimensionsMap, renderScale, isLoading } =
     pdfRenderer;
@@ -292,6 +362,15 @@ export function PdfViewer({
     },
     [setCurrentPage],
   );
+
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; fieldId: string } | null>(null);
+
+  const handleContextMenuRequest = useCallback(
+    (fieldId: string, x: number, y: number) => setCtxMenu({ fieldId, x, y }),
+    [],
+  );
+
+  const ctxField = ctxMenu ? allFields.find((f) => f.id === ctxMenu.fieldId) : null;
 
   const dimensionsReady = Object.keys(pageDimensionsMap).length === totalPages && totalPages > 0;
 
@@ -324,6 +403,10 @@ export function PdfViewer({
             onSetSelection={onSetSelection}
             onFieldDelete={onFieldDelete}
             onFieldDuplicate={onFieldDuplicate}
+            onFieldBringToFront={onFieldBringToFront}
+            onFieldSendToBack={onFieldSendToBack}
+            onFieldToggleLock={onFieldToggleLock}
+            onContextMenuRequest={handleContextMenuRequest}
           />
         );
       })}
@@ -335,6 +418,25 @@ export function PdfViewer({
           onNext={() => scrollToPage(currentPage + 1)}
         />
       )}
+      {ctxMenu && ctxField && (() => {
+        const inSelection = selectionIds.has(ctxMenu.fieldId) && selectionIds.size > 1;
+        const ids = inSelection ? [...selectionIds] : [ctxMenu.fieldId];
+        const close = () => setCtxMenu(null);
+        return (
+          <FieldContextMenu
+            x={ctxMenu.x}
+            y={ctxMenu.y}
+            isLocked={ctxField.locked ?? false}
+            onClose={close}
+            onDuplicate={() => { ids.forEach((id) => onFieldDuplicate(id)); close(); }}
+            onCopyProps={close}
+            onBringToFront={() => { ids.forEach((id) => onFieldBringToFront?.(id)); close(); }}
+            onSendToBack={() => { ids.forEach((id) => onFieldSendToBack?.(id)); close(); }}
+            onToggleLock={() => { ids.forEach((id) => onFieldToggleLock?.(id)); close(); }}
+            onDelete={() => { ids.forEach((id) => onFieldDelete(id)); close(); }}
+          />
+        );
+      })()}
     </div>
   );
 }
@@ -344,18 +446,90 @@ function DragStateTracker({
   onMove,
   onSnapMove,
   onEnd,
+  onGuideMove,
 }: {
   onMove: (activeId: string, delta: { x: number; y: number }) => void;
   onSnapMove: (activeId: string, delta: { x: number; y: number }) => void;
   onEnd: () => void;
+  onGuideMove?: (activeId: string, delta: { x: number; y: number }) => void;
 }) {
   useDndMonitor({
-    onDragMove(event) {
-      onMove(event.active.id as string, event.delta);
-      onSnapMove(event.active.id as string, event.delta);
+    onDragMove(event: DragMoveEvent) {
+      const activeId = event.active.id as string;
+      onMove(activeId, event.delta);
+      onSnapMove(activeId, event.delta);
+      onGuideMove?.(activeId, event.delta);
     },
     onDragEnd: onEnd,
     onDragCancel: onEnd,
   });
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Snap guide computation — exported for unit tests (T077)
+// ---------------------------------------------------------------------------
+
+export interface SnapGuides {
+  /** Canvas-pixel X positions for vertical guide lines */
+  v: number[];
+  /** Canvas-pixel Y positions for horizontal guide lines */
+  h: number[];
+}
+
+/** Geometry of the actively-dragged field in canvas pixels. */
+export interface DragRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+const SNAP_THRESHOLD_PX = 4;
+
+/** Returns the subset of `candidates` that are within threshold of any axis in `active`. */
+function matchingAxes(candidates: number[], active: number[]): number[] {
+  return candidates.filter((c) => active.some((a) => Math.abs(a - c) <= SNAP_THRESHOLD_PX));
+}
+
+/**
+ * Compute alignment snap guide lines for the actively-dragged field.
+ *
+ * For each non-active field, 3 X-axes and 3 Y-axes are derived in canvas
+ * space (left/center/right and top/center/bottom).  If the corresponding
+ * axis of the dragged field is within SNAP_THRESHOLD_PX of a candidate
+ * axis, that axis is emitted as a guide line.
+ *
+ * @param activeId      - id of the field being dragged
+ * @param drag          - candidate canvas rect of the active field
+ * @param allFields     - all fields on the current page (including active)
+ * @param renderScale   - canvas px / PDF pt
+ * @param pdfPageHeight - page height in PDF points
+ */
+export function computeSnapGuides(
+  activeId: string,
+  drag: DragRect,
+  allFields: FormField[],
+  renderScale: number,
+  pdfPageHeight: number,
+): SnapGuides {
+  const activeXAxes = [drag.x, drag.x + drag.w / 2, drag.x + drag.w];
+  const activeYAxes = [drag.y, drag.y + drag.h / 2, drag.y + drag.h];
+
+  const vSet = new Set<number>();
+  const hSet = new Set<number>();
+
+  for (const field of allFields) {
+    if (field.id === activeId) continue;
+
+    const pos = pdfToCanvas(field.x, field.y, field.width, field.height, renderScale, pdfPageHeight);
+
+    const candidateX = [pos.left, pos.left + pos.width / 2, pos.left + pos.width];
+    const candidateY = [pos.top, pos.top + pos.height / 2, pos.top + pos.height];
+
+    for (const x of matchingAxes(candidateX, activeXAxes)) vSet.add(x);
+    for (const y of matchingAxes(candidateY, activeYAxes)) hSet.add(y);
+  }
+
+  return { v: Array.from(vSet), h: Array.from(hSet) };
 }

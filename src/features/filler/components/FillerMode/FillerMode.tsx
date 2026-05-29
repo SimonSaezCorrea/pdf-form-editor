@@ -1,21 +1,21 @@
 'use client';
 
-import { forwardRef, useImperativeHandle, useEffect } from 'react';
+import { forwardRef, useImperativeHandle, useEffect, useState, useCallback, useRef } from 'react';
 import { useFillerStore } from '../../hooks/useFillerStore';
 import { PdfUploadScreen } from '../PdfUploadScreen/PdfUploadScreen';
 import { FillerLayout } from '../FillerLayout/FillerLayout';
 import { Button } from '@/components/ui/Button/Button';
 import styles from './FillerMode.module.css';
 
+const AUTOSAVE_KEY = 'pdf-filler-autosave';
+const AUTOSAVE_DELAY_MS = 400;
+
 export interface FillerModeHandle {
-  /** Resets the filler to the upload screen — callable from outside (e.g. navbar). */
   reset: () => void;
 }
 
 interface FillerModeProps {
-  /** Called whenever the filler transitions between "has a file" and "no file". */
   onHasFileChange?: (hasFile: boolean) => void;
-  /** Called with the current PDF filename (or '' when reset). */
   onFilenameChange?: (filename: string) => void;
 }
 
@@ -23,10 +23,143 @@ export const FillerMode = forwardRef<FillerModeHandle, FillerModeProps>(
   function FillerMode({ onHasFileChange, onFilenameChange }, ref) {
     const store = useFillerStore();
 
-    // Expose reset() so App.tsx can trigger it from the navbar back button
-    useImperativeHandle(ref, () => ({ reset: store.reset }), [store.reset]);
+    // ── UI state (T065) ──────────────────────────────────────────────────────
+    const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+    const [lastSaved, setLastSaved] = useState<number | null>(null);
+    const [finalPreview, setFinalPreview] = useState(false);
+    const [resetConfirm, setResetConfirm] = useState(false);
+    const [errors, setErrors] = useState<Set<string>>(new Set());
+    const [jumpedId, setJumpedId] = useState<string | null>(null);
+    // ticker state to force re-render for relative time display
 
-    // Notify parent when file presence changes
+    // Expose reset() via ref
+    useImperativeHandle(ref, () => ({
+      reset: () => {
+        store.reset();
+        setCollapsed(new Set());
+        setLastSaved(null);
+        setFinalPreview(false);
+        setResetConfirm(false);
+        setErrors(new Set());
+        setJumpedId(null);
+      },
+    }), [store]);
+
+    // ── Handlers ─────────────────────────────────────────────────────────────
+    const toggleCollapse = useCallback((group: string) => {
+      setCollapsed((prev) => {
+        const next = new Set(prev);
+        if (next.has(group)) next.delete(group); else next.add(group);
+        return next;
+      });
+    }, []);
+
+    const toggleFinalPreview = useCallback(() => {
+      setFinalPreview((v) => !v);
+    }, []);
+
+    const handleChange = useCallback((name: string, value: string) => {
+      store.setValue(name, value);
+      setErrors((prev) => {
+        if (!prev.has(name)) return prev;
+        const next = new Set(prev);
+        next.delete(name);
+        return next;
+      });
+    }, [store]);
+
+    const jumpToNextEmpty = useCallback((fromId: string | null) => {
+      const fields = store.fields;
+      if (fields.length === 0) return;
+      const idx = fromId ? fields.findIndex((f) => f.name === fromId) : -1;
+      const remaining = [...fields.slice(idx + 1), ...fields.slice(0, idx + 1)];
+      const nextEmpty = remaining.find((f) => !store.values[f.name]);
+      if (nextEmpty) {
+        setJumpedId(nextEmpty.name);
+        // Expand the group if collapsed
+        if (nextEmpty.group) {
+          setCollapsed((prev) => {
+            if (!prev.has(nextEmpty.group!)) return prev;
+            const next = new Set(prev);
+            next.delete(nextEmpty.group!);
+            return next;
+          });
+        }
+      }
+    }, [store.fields, store.values]);
+
+    const focusField = useCallback((name: string) => {
+      const field = store.fields.find((f) => f.name === name);
+      if (!field) return;
+      setJumpedId(name);
+      const group = field.group;
+      if (group) {
+        setCollapsed((prev) => {
+          if (!prev.has(group)) return prev;
+          const next = new Set(prev);
+          next.delete(group);
+          return next;
+        });
+      }
+    }, [store.fields]);
+
+    const handleResetConfirm = useCallback(() => {
+      setResetConfirm(true);
+    }, []);
+
+    const cancelReset = useCallback(() => {
+      setResetConfirm(false);
+    }, []);
+
+    const confirmReset = useCallback(() => {
+      setResetConfirm(false);
+      store.reset();
+      setCollapsed(new Set());
+      setLastSaved(null);
+      setFinalPreview(false);
+      setErrors(new Set());
+      setJumpedId(null);
+    }, [store]);
+
+    // ── Auto-collapse: when all fields in a group are filled, collapse it ─────
+    useEffect(() => {
+      const fields = store.fields;
+      if (fields.length === 0) return;
+      const groupNames = [...new Set(fields.map((f) => f.group ?? 'General'))];
+      for (const group of groupNames) {
+        const groupFields = fields.filter((f) => (f.group ?? 'General') === group);
+        const allFilled = groupFields.every((f) => !!store.values[f.name]);
+        if (allFilled) {
+          setCollapsed((prev) => {
+            if (prev.has(group)) return prev;
+            const next = new Set(prev);
+            next.add(group);
+            return next;
+          });
+        }
+      }
+    }, [store.values, store.fields]);
+
+    // ── Autosave: 400ms debounce to localStorage ──────────────────────────────
+    const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => {
+      if (Object.keys(store.values).length === 0) return;
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = setTimeout(() => {
+        try {
+          localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(store.values));
+          setLastSaved(Date.now());
+        } catch {
+          // localStorage may be unavailable in some environments
+        }
+      }, AUTOSAVE_DELAY_MS);
+      return () => {
+        if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+      };
+    }, [store.values]);
+
+
+    // ── Parent notifications ──────────────────────────────────────────────────
     useEffect(() => {
       const hasFile = store.status === 'ready' ||
                       store.status === 'generating' ||
@@ -34,12 +167,11 @@ export const FillerMode = forwardRef<FillerModeHandle, FillerModeProps>(
       onHasFileChange?.(hasFile);
     }, [store.status, onHasFileChange]);
 
-    // Notify parent of the current filename
     useEffect(() => {
       onFilenameChange?.(store.pdfFile?.name ?? '');
     }, [store.pdfFile, onFilenameChange]);
 
-    // Upload / loading / error states
+    // ── Render ────────────────────────────────────────────────────────────────
     if (store.status === 'idle' || store.status === 'loading' || store.status === 'error') {
       return (
         <PdfUploadScreen
@@ -50,7 +182,6 @@ export const FillerMode = forwardRef<FillerModeHandle, FillerModeProps>(
       );
     }
 
-    // PDF has no AcroForm text fields
     if (store.status === 'no-fields') {
       return (
         <div className={styles['no-fields']}>
@@ -81,16 +212,28 @@ export const FillerMode = forwardRef<FillerModeHandle, FillerModeProps>(
       );
     }
 
-    // PDF with fields — two-panel layout (ready | generating)
     return (
       <FillerLayout
         pdfBytes={store.pdfBytes!}
         fields={store.fields}
         values={store.values}
         generating={store.status === 'generating'}
-        onValueChange={store.setValue}
+        onValueChange={handleChange}
         onGeneratePdf={store.generatePdf}
-        onReset={store.reset}
+        onReset={handleResetConfirm}
+        collapsed={collapsed}
+        lastSaved={lastSaved}
+        finalPreview={finalPreview}
+        resetConfirm={resetConfirm}
+        errors={errors}
+        jumpedId={jumpedId}
+        onToggleCollapse={toggleCollapse}
+        onToggleFinalPreview={toggleFinalPreview}
+        onJumpToNextEmpty={jumpToNextEmpty}
+        onFocusField={focusField}
+        onCancelReset={cancelReset}
+        onConfirmReset={confirmReset}
+        onValidationError={setErrors}
       />
     );
   },

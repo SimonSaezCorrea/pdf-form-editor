@@ -1,5 +1,7 @@
 export type FontFamily = 'Helvetica' | 'TimesRoman' | 'Courier';
 
+export type FieldTypeId = 'text' | 'number' | 'date' | 'checkbox' | 'signature';
+
 export interface FormField {
   /** Client-side UUID — used for React keying; ignored by the server */
   id: string;
@@ -26,6 +28,14 @@ export interface FormField {
   autoFitFont?: boolean;
   /** Allow text to wrap across multiple lines within the field. */
   multiline?: boolean;
+  /** Field must be filled before generating the PDF. Shown as required in filler view. */
+  required?: boolean;
   /** Google Font name for canvas preview only (e.g. "Montserrat"). Not used in PDF export. */
   displayFont?: string;
+  /** UI-only field type for color-coding and future typed field support. Defaults to 'text'. */
+  fieldType?: FieldTypeId;
+  /** When true, field cannot be dragged, resized, or deleted via keyboard. */
+  locked?: boolean;
+  /** Optional grouping label (e.g. "Arrendador"). UI-only, not exported to PDF. */
+  group?: string;
 }

@@ -81,12 +81,11 @@ export function ImportModal({ existingFieldCount, onImport, onClose }: ImportMod
       ) : hasPreview ? (
         <Button variant="primary" onClick={() => handleAccept('replace')}>Aceptar</Button>
       ) : null}
-      <Button variant="ghost" onClick={onClose}>Cancelar</Button>
     </>
   );
 
   return (
-    <Modal isOpen={true} onClose={onClose} title="Importar plantilla" footer={footer}>
+    <Modal isOpen={true} onClose={onClose} title="Importar plantilla" size="lg" footer={footer}>
       {/* Drop zone */}
       <div
         className={[styles['modal-dropzone'], isDragging ? styles['modal-dropzone--active'] : ''].filter(Boolean).join(' ')}
@@ -112,18 +111,20 @@ export function ImportModal({ existingFieldCount, onImport, onClose }: ImportMod
       <div className={styles['modal-manual-row']}>
         <textarea
           className={styles['modal-manual-textarea']}
-          placeholder='{ "schemaVersion": 1, "name": "...", "fields": [...] }'
+          placeholder='{ "schemaVersion": 2, "name": "...", "fields": [...] }'
           value={manualText}
           onChange={(e) => handleManualChange(e.target.value)}
           spellCheck={false}
         />
-        <Button
-          variant="secondary"
-          onClick={handleManualImport}
-          disabled={!manualText.trim()}
-        >
-          Importar texto
-        </Button>
+        <div className={styles['modal-manual-actions']}>
+          <Button
+            variant="secondary"
+            onClick={handleManualImport}
+            disabled={!manualText.trim()}
+          >
+            Importar texto
+          </Button>
+        </div>
       </div>
 
       {error && <p className={styles['modal-error']}>{error}</p>}

@@ -1,110 +1,139 @@
-# Implementation Plan: New Design System Integration
+# Implementation Plan: New Design System Integration + Feature Enhancements
 
-**Branch**: `011-new-design-integration` | **Date**: 2026-05-27 | **Spec**: [spec.md](./spec.md)  
-**Input**: Feature specification from `/specs/011-new-design-integration/spec.md`
+**Branch**: `011-new-design-integration` | **Date**: 2026-05-27 | **Spec**: [spec.md](./spec.md)
 
 ## Summary
 
-Migrate all production UI styles to match the `new-design/` system (dark-first teal palette, Geist variable font, comprehensive token ramp, restyled primitives). Zero functional changes — all hooks, stores, API routes, and PDF logic are preserved exactly. The migration is layered: token foundation → primitives → app shell → feature components → filler → typography/animation polish.
+**Phase A (COMPLETE)**: CSS-only migration — dark-first teal tokens, Geist font, all component CSS Modules restyled, Kbd primitive, ThemeToggle prop-driven, showEditorToolbar wiring. Tasks T001–T036 done.
+
+**Phase B (IN PROGRESS)**: Functional enhancements from the `new-design/prototype/` files:
+- Editor: field types with colors, undo/redo, alignment bar, snap guides, enhanced context menu, field locking, collapsible PropertiesPanel, insert banner, canvas empty state
+- Landing: hero section, CTA button, quick-row, vignette, footer shortcuts
+- Filler: collapsible sections with progress, required validation, autosave, jump-to-next-empty, Vista final toggle, click-to-focus, PDF auto-scroll, formatted display values, reset confirmation
 
 ## Technical Context
 
 **Language/Version**: TypeScript 5.7.2 + React 18  
-**Primary Dependencies**: Next.js 15 (App Router), CSS Modules, pdfjs-dist (unchanged), pdf-lib (unchanged)  
-**Storage**: N/A (session-only state per Principle III)  
-**Testing**: Vitest + @testing-library/react (existing suite must pass unchanged)  
-**Target Platform**: Web browser (desktop), deployed to Vercel  
-**Project Type**: Web application — single Next.js project  
-**Performance Goals**: Theme toggle < 50ms (no FOUC); no render-blocking from Geist font load (woff2 preload)  
-**Constraints**: Zero new npm dependencies; Geist via local `.woff2`; no changes to TypeScript logic  
-**Scale/Scope**: ~15 component CSS Modules + 1 tokens.css replacement + 1 new primitive (`Kbd`)
+**Primary Dependencies**: Next.js 15 (App Router), CSS Modules, Zustand (useFieldStore), pdfjs-dist, pdf-lib  
+**Storage**: localStorage for filler autosave (`pdf-filler-draft-v1`); no new backend routes  
+**Testing**: Vitest + @testing-library/react; existing suite unchanged  
+**Performance**: Undo stack capped at 50 snapshots; snap guide computation O(n) where n = fields  
+**Constraints**: Zero new npm dependencies; no API route changes
 
-## Constitution Check
-
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+## Constitution Check (Phase B)
 
 | Principle | Gate | Status |
 |-----------|------|--------|
-| XI — CSS per Component | New `enhancements.css` keyframes go into feature `.module.css` files, NOT a new global file | ✅ PASS |
-| XII — Design Tokens | `tokens.css` is being upgraded (not bypassed); all hex values stay in tokens | ✅ PASS |
-| XXIII — Mandatory Dark Mode | New token set supports both modes; dark-first is compliant with the `[data-theme]` mechanism | ✅ PASS |
-| XIII — Reusable Base Components | `Kbd` added to `src/components/ui/` — new primitive, not a re-implementation | ✅ PASS |
-| VI — YAGNI | `Kbd` has 1 call-site (ShortcutsPanel). Justified: it is a design-system visual primitive per Principle XIII, not a logic abstraction. Documented in Complexity Tracking. | ✅ JUSTIFIED |
-| I, X — Client/Server Separation | No API route touched | ✅ PASS |
-| VII — Test Discipline | No new pure functions or components with logic; existing tests unmodified | ✅ PASS |
-| II — Shared Types Contract | `FormField` in `shared.ts` unchanged | ✅ PASS |
+| I — Client/Server Separation | No new API routes; all features are client-side | ✅ PASS |
+| II — Shared Types Contract | `FormField` gets `fieldType?` and `locked?` (both optional, backward compatible) | ✅ PASS |
+| III — Ephemeral Filler State | `useFillerStore` stays `useState` local to `FillerMode` — filler state is ephemeral by design. Autosave is to localStorage, not store | ✅ PASS |
+| VI — YAGNI | `AlignBar` and `SnapGuides` are high-value, directly prototyped features; not speculative | ✅ PASS |
+| VII — Test Discipline | New pure functions (`alignSelected`, `distributeSelected`, `computeSnapGuides`, `findNextEmpty`) get unit tests | ✅ REQUIRED |
+| XI — CSS per Component | Banner, empty state, snap guides styles go into existing feature CSS Modules | ✅ PASS |
+| XIII — Reusable Base Components | `AlignBar` goes in `src/features/fields/components/`; not a generic primitive | ✅ PASS |
+| XXIX — Filler Independence | Filler changes stay within `src/features/filler/`; no imports from `fields/` or `templates/` | ✅ PASS |
 
-**Gate result: PASS — proceed to Phase 0.**
-
-*Post-design re-check*: After Phase 1, verify that `app.css` content from the UI kit is split correctly into component CSS Modules (not introduced as a new global file).
-
-## Project Structure
-
-### Documentation (this feature)
-
-```text
-specs/011-new-design-integration/
-├── plan.md              ← this file
-├── research.md          ← Phase 0 output
-├── data-model.md        ← Phase 1 output (token schema)
-├── quickstart.md        ← Phase 1 output
-├── checklists/
-│   └── requirements.md
-└── tasks.md             ← Phase 2 output (/speckit.tasks — NOT created here)
-```
-
-### Source Code (affected files)
+## Project Structure — New Files (Phase B)
 
 ```text
 src/
-├── styles/
-│   ├── tokens.css          ← REPLACE (full rewrite)
-│   └── fonts/
-│       └── Geist_wght_.woff2    ← ADD (copy from new-design/fonts/)
-├── components/
-│   └── ui/
-│       ├── Button/Button.module.css       ← RESTYLE
-│       ├── IconButton/IconButton.module.css  ← RESTYLE
-│       ├── Input/Input.module.css         ← RESTYLE
-│       ├── Select/Select.module.css       ← RESTYLE
-│       ├── Modal/Modal.module.css         ← RESTYLE
-│       ├── Tooltip/Tooltip.module.css     ← RESTYLE
-│       └── Kbd/                           ← ADD NEW
-│           ├── Kbd.tsx
-│           ├── Kbd.module.css
-│           └── index.ts
 ├── features/
-│   ├── canvas/
-│   │   ├── PdfViewer.module.css           ← RESTYLE
-│   │   └── ThumbnailStrip.module.css      ← RESTYLE
-│   ├── toolbar/
-│   │   ├── ToolbarModes.module.css        ← RESTYLE
-│   │   ├── ShortcutsPanel.module.css      ← RESTYLE (+ Kbd usage in TSX)
-│   │   └── ThemeToggle/ThemeToggle.tsx    ← PROP-DRIVEN refactor
 │   ├── fields/
-│   │   ├── DraggableField.module.css      ← RESTYLE
-│   │   ├── FieldOverlay.module.css        ← RESTYLE
-│   │   ├── FieldList.module.css           ← RESTYLE
-│   │   └── PropertiesPanel.module.css     ← RESTYLE
-│   ├── filler/
-│   │   ├── FillerLayout.module.css        ← RESTYLE
-│   │   └── DynamicForm.module.css         ← RESTYLE (uses Input primitive)
-│   └── pdf/
-│       └── PdfUploader.module.css         ← RESTYLE (+ icon-document.svg ref)
-├── App.tsx                                ← state wiring: showEditorToolbar, mode nav
-├── App.module.css                         ← navbar bg, viewer bg tokens
-└── assets/
-    └── icon-document.svg                  ← ADD (copy from new-design/assets/)
-
-new-design/   ← READ ONLY reference; not imported by build
+│   │   ├── config/
+│   │   │   └── fieldTypes.ts          ← NEW: FIELD_TYPE_CONFIG constant
+│   │   ├── components/
+│   │   │   ├── AlignBar/
+│   │   │   │   ├── AlignBar.tsx       ← NEW: alignment + distribute buttons
+│   │   │   │   └── AlignBar.module.css
+│   │   │   ├── DraggableField/
+│   │   │   │   └── DraggableField.tsx ← MODIFY: fieldType color, lock icon, inline rename
+│   │   │   ├── FieldList/
+│   │   │   │   └── FieldList.tsx      ← MODIFY: type badge, group name
+│   │   │   └── PropertiesPanel/
+│   │   │       └── PropertiesPanel.tsx ← MODIFY: collapsible sections, fieldType select
+│   ├── canvas/
+│   │   └── components/
+│   │       └── PdfViewer/
+│   │           └── PdfViewer.tsx      ← MODIFY: snap guides, group move uses fieldType color
+│   ├── toolbar/
+│   │   └── components/
+│   │       └── ToolbarModes/
+│   │           └── ToolbarModes.tsx   ← MODIFY: type chips, insert mode UX
+│   ├── pdf/
+│   │   └── components/
+│   │       └── PdfUploader/
+│   │           └── PdfUploader.tsx    ← MODIFY: hero section, CTA button, quick-row
+│   └── filler/
+│       ├── useFillerStore.ts          ← MODIFY: add collapsed, lastSaved, finalPreview, isDirty
+│       ├── components/
+│       │   ├── FillerLayout/
+│       │   │   └── FillerLayout.tsx   ← MODIFY: click-to-focus, autoscroll, Vista final, sections
+│       │   ├── DynamicForm/
+│       │   │   └── DynamicForm.tsx    ← MODIFY: sections, progress, validation, jump, autosave pill
+│       │   └── PdfUploadScreen/
+│       │       └── PdfUploadScreen.tsx ← MODIFY: hero section, CTA button
+├── hooks/
+│   └── useFieldStore.ts               ← MODIFY: undo/redo stacks, isDirty, bringToFront, sendToBack, locked
+├── types/
+│   └── shared.ts                      ← MODIFY: FormField + fieldType?, locked?; FieldTypeId type
+├── App.tsx                            ← MODIFY: isDirty pill, undo/redo keybindings, AlignBar wiring
 ```
 
-**Structure Decision**: Single Next.js project (Option 1). Token migration affects only CSS files; no directory restructuring needed.
+## Affected Files — Modified (Phase B)
 
-## Complexity Tracking
+| File | Change |
+|------|--------|
+| `src/types/shared.ts` | Add `fieldType?: FieldTypeId`, `locked?: boolean` to `FormField` |
+| `src/hooks/useFieldStore.ts` | Add `undoStack`, `redoStack`, `isDirty`, `bringToFront`, `sendToBack`, `locked` toggle |
+| `src/App.tsx` | Add Ctrl+Z/Shift+Z handler, AlignBar conditional, isDirty pill |
+| `src/features/fields/components/DraggableField/DraggableField.tsx` | fieldType color, lock badge, inline rename input |
+| `src/features/fields/components/FieldList/FieldList.tsx` | Type badge chip, group name row |
+| `src/features/fields/components/PropertiesPanel/PropertiesPanel.tsx` | Collapsible sections, fieldType selector |
+| `src/features/canvas/components/PdfViewer/PdfViewer.tsx` | Snap guides render layer, computeSnapGuides |
+| `src/features/toolbar/components/ToolbarModes/ToolbarModes.tsx` | Type chips, insert type state, banner |
+| `src/features/pdf/components/PdfUploader/PdfUploader.tsx` | Hero, CTA, quick-row, vignette, footer |
+| `src/features/filler/useFillerStore.ts` | collapsed, lastSaved, finalPreview, isDirty, resetValues |
+| `src/features/filler/components/FillerLayout/FillerLayout.tsx` | Click targets, Vista final, PDF auto-scroll |
+| `src/features/filler/components/DynamicForm/DynamicForm.tsx` | Sections+progress, jump, autosave pill, validation banner, reset confirm |
+| `src/features/filler/components/PdfUploadScreen/PdfUploadScreen.tsx` | Hero, CTA, filler-specific copy |
 
-| Item | Why Needed | Simpler Alternative Rejected Because |
-|------|------------|--------------------------------------|
-| `Kbd` primitive (1 call-site) | Part of the new design system's component set (Principle XIII); ShortcutsPanel needs it for visual consistency | Inline `<span>` would require re-implementing key-cap styling at each usage point when other panels adopt shortcuts display |
-| Token strategy inversion (dark-first) | New design system is dark-first; keeping light-first would require maintaining two parallel token sets | Light-first with `[data-theme="dark"]` override has been the source of cascading specificity bugs in the existing code |
-| `showEditorToolbar` prop in App.tsx | Required by new design's conditional toolbar rendering | Keeps toolbar always visible as-is → defeats new design's cleaner filler-mode UX |
+## New Files (Phase B)
+
+| File | Purpose |
+|------|---------|
+| `src/features/fields/config/fieldTypes.ts` | `FIELD_TYPE_CONFIG`: id, label, short, color per type |
+| `src/features/fields/components/AlignBar/AlignBar.tsx` | Alignment + distribute action bar |
+| `src/features/fields/components/AlignBar/AlignBar.module.css` | AlignBar styles |
+
+## Complexity Tracking (Phase B)
+
+| Item | Why Needed | Simpler Alternative Rejected |
+|------|------------|------------------------------|
+| Undo/Redo history stack in `useFieldStore` | Most-requested UX; 50-snapshot cap keeps memory bounded | Zustand temporal middleware: adds a dependency; overkill for this use case |
+| `FIELD_TYPE_CONFIG` constant | Single source of truth for type colors and labels; referenced by DraggableField, FieldList, ToolbarModes, PropertiesPanel | Inlining per component creates drift risk when adding new types |
+| `AlignBar` as separate component | 12+ buttons with SVG icons; better isolated | Inline in App.tsx: too noisy in the root component |
+| Snap guides in PdfViewer | High UX value for precision field placement | Skip entirely: acceptable for MVP but the prototype shows it as a core feature |
+| Filler autosave (localStorage) | Draft survival across page reloads is essential for long forms | Session storage only: lost on tab close, worse UX |
+
+## Execution Order (Phase B)
+
+```
+Phase 9:  Data model (shared.ts FieldTypeId, FormField extensions)
+Phase 10: useFieldStore (undo/redo, isDirty, bringToFront, sendToBack, locked)
+Phase 11: FIELD_TYPE_CONFIG + DraggableField fieldType color + FieldList badge
+Phase 12: ToolbarModes type chips + insert banner
+Phase 13: AlignBar + PropertiesPanel collapsible sections + snap guides
+Phase 14: App.tsx undo keybindings + isDirty pill + AlignBar wiring
+Phase 15: PdfUploader hero + CTA + quick-row + vignette (landing screen)
+Phase 16: useFillerStore extensions (collapsed, lastSaved, finalPreview, isDirty)
+Phase 17: DynamicForm sections + progress + jump + autosave pill + validation banner
+Phase 18: FillerLayout click-to-focus + Vista final toggle + PDF auto-scroll
+Phase 19: PdfUploadScreen filler hero
+Phase 20: Tests + typecheck + build
+```
+
+## Notes on Filler Independence (Principle XXIX)
+
+- `DynamicForm` must detect field groups from `AcroFormField.group?` — this field needs to be added to `AcroFormField` in `src/features/filler/types.ts` (NOT to `FormField` in `shared.ts`).
+- Group derivation heuristic: split `fieldName` on `_` and take the first segment as a candidate group name. If `fieldName` has no `_`, use "General" as the group.
+- `useFillerStore` holds `collapsed`, `lastSaved`, `finalPreview` as `useState` inside `FillerMode` (not global Zustand) — preserving Principle III (ephemeral filler state).

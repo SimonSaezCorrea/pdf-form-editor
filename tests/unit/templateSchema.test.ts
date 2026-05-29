@@ -90,7 +90,7 @@ describe('serializeTemplateFile', () => {
     const fields: FormField[] = [validField];
     const json = serializeTemplateFile('test', fields);
     const result = parseTemplateFile(json);
-    expect(result.schemaVersion).toBe(1);
+    expect(result.schemaVersion).toBe(2);
     expect(result.name).toBe('test');
     expect(result.fields).toHaveLength(1);
     expect(result.fields[0]).toMatchObject({

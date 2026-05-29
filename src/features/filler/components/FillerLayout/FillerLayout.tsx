@@ -12,11 +12,11 @@ import styles from './FillerLayout.module.css';
 
 const BASE_SCALE = 1.5;
 const MIN_ZOOM  = 0.25;
-const MAX_ZOOM  = 3.0;
+const MAX_ZOOM  = 3;
 const ZOOM_STEP = 0.1;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// FillerPageSection — renders one PDF page + its live-preview overlay canvas
+// FillerPageSection — one PDF page + live-preview overlay + click targets
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface FillerPageSectionProps {
@@ -26,6 +26,9 @@ interface FillerPageSectionProps {
   renderScale: number;
   fields: AcroFormField[];
   values: Record<string, string>;
+  finalPreview: boolean;
+  jumpedId: string | null;
+  onFocusField: (name: string) => void;
 }
 
 function FillerPageSection({
@@ -35,11 +38,14 @@ function FillerPageSection({
   renderScale,
   fields,
   values,
-}: FillerPageSectionProps) {
+  finalPreview,
+  jumpedId,
+  onFocusField,
+}: Readonly<FillerPageSectionProps>) {
   const canvasRef  = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
 
-  // Render PDF page onto canvas
+  // Render PDF page
   useEffect(() => {
     if (!canvasRef.current) return;
     let cancelled = false;
@@ -54,7 +60,6 @@ function FillerPageSection({
         canvas.width  = Math.round(viewport.width);
         canvas.height = Math.round(viewport.height);
         const ctx = canvas.getContext('2d')!;
-        // annotationMode 2 = ENABLE_FORMS — hides native AcroForm widget boxes
         renderTask = page.render({ canvasContext: ctx, viewport, annotationMode: 2 });
         await renderTask.promise;
       } catch (err: unknown) {
@@ -98,7 +103,7 @@ function FillerPageSection({
       ctx.fillStyle = 'rgba(255, 255, 255, 0.78)';
       ctx.fillRect(cx, cy, cw, ch);
 
-      const fontSize = field.fontSize > 0 ? field.fontSize * s : Math.max(6, ch * 0.80);
+      const fontSize = field.fontSize > 0 ? field.fontSize * s : Math.max(6, ch * 0.8);
       ctx.font = `${fontSize}px Helvetica, Arial, sans-serif`;
       ctx.fillStyle = '#1a1a1a';
       ctx.textBaseline = 'middle';
@@ -116,7 +121,32 @@ function FillerPageSection({
     <div id={`filler-page-${pageNum}`} className={styles['page-section']}>
       <div className={styles['canvas-wrapper']}>
         <canvas ref={canvasRef} className={styles['pdf-canvas']} />
-        <canvas ref={overlayRef} className={styles['field-overlay']} aria-hidden="true" />
+        <canvas ref={overlayRef} className={styles['field-overlay']} />
+        {/* Click targets: transparent buttons over each field rect */}
+        {!finalPreview && fields.map((field) => {
+          const [x1, y1pdf, x2, y2] = field.rect;
+          const s  = renderScale;
+          const ph = pageDimensions.height;
+          const left   = x1 * s;
+          const top    = (ph - y2) * s;
+          const width  = (x2 - x1) * s;
+          const height = (y2 - y1pdf) * s;
+          const isJumped = field.name === jumpedId;
+          return (
+            <button
+              key={field.name}
+              type="button"
+              data-field={field.name}
+              className={[
+                styles['pdf-field-target'],
+                isJumped ? styles['pdf-field-target--jumped'] : '',
+              ].filter(Boolean).join(' ')}
+              style={{ left, top, width, height }}
+              onClick={() => onFocusField(field.name)}
+              aria-label={`Ir al campo: ${field.label ?? field.name}`}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -134,6 +164,20 @@ interface FillerLayoutProps {
   onValueChange: (name: string, value: string) => void;
   onGeneratePdf: () => void;
   onReset: () => void;
+  // T065 state from FillerMode
+  collapsed: Set<string>;
+  lastSaved: number | null;
+  finalPreview: boolean;
+  resetConfirm: boolean;
+  errors: Set<string>;
+  jumpedId: string | null;
+  onToggleCollapse: (group: string) => void;
+  onToggleFinalPreview: () => void;
+  onJumpToNextEmpty: (fromId: string | null) => void;
+  onFocusField: (name: string) => void;
+  onCancelReset: () => void;
+  onConfirmReset: () => void;
+  onValidationError: (errors: Set<string>) => void;
 }
 
 export function FillerLayout({
@@ -144,7 +188,20 @@ export function FillerLayout({
   onValueChange,
   onGeneratePdf,
   onReset,
-}: FillerLayoutProps) {
+  collapsed,
+  lastSaved,
+  finalPreview,
+  resetConfirm,
+  errors,
+  jumpedId,
+  onToggleCollapse,
+  onToggleFinalPreview,
+  onJumpToNextEmpty,
+  onFocusField,
+  onCancelReset,
+  onConfirmReset,
+  onValidationError,
+}: Readonly<FillerLayoutProps>) {
   const [zoom, setZoom] = useState(1);
   const zoomOut = useCallback(() =>
     setZoom((z) => Math.max(MIN_ZOOM, Math.round((z - ZOOM_STEP) * 100) / 100)), []);
@@ -167,6 +224,13 @@ export function FillerLayout({
     return () => el.removeEventListener('wheel', handleWheel);
   }, [zoomIn, zoomOut]);
 
+  // PDF auto-scroll when jumpedId changes (T072)
+  useEffect(() => {
+    if (!jumpedId || !pdfPanelRef.current) return;
+    const btn = pdfPanelRef.current.querySelector(`[data-field="${jumpedId}"]`);
+    btn?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [jumpedId]);
+
   const { pdfDoc, totalPages, pageDimensionsMap, renderScale, isLoading, error } = renderer;
   const dimensionsReady =
     Object.keys(pageDimensionsMap).length === totalPages && totalPages > 0;
@@ -180,8 +244,17 @@ export function FillerLayout({
       {/* Header */}
       <div className={styles['layout-header']}>
         <span className={styles['field-count']}>
-          {fields.length} campo{fields.length !== 1 ? 's' : ''} detectado{fields.length !== 1 ? 's' : ''}
+          {fields.length} campo{fields.length === 1 ? '' : 's'} detectado{fields.length === 1 ? '' : 's'}
         </span>
+
+        {/* Vista final toggle (T073) */}
+        <button
+          type="button"
+          className={[styles['toggle-pill'], finalPreview ? styles['toggle-pill--active'] : ''].filter(Boolean).join(' ')}
+          onClick={onToggleFinalPreview}
+        >
+          {finalPreview ? '◉' : '○'} Vista final
+        </button>
 
         <div className={styles['zoom-controls']}>
           <IconButton icon="−" label="Alejar"  onClick={zoomOut} disabled={zoom <= MIN_ZOOM} />
@@ -196,7 +269,7 @@ export function FillerLayout({
 
       {/* Two-panel body */}
       <div className={styles['layout-body']}>
-        {/* Left: form fields */}
+        {/* Left: form */}
         <div className={styles['form-panel']}>
           <DynamicForm
             fields={fields}
@@ -204,6 +277,16 @@ export function FillerLayout({
             onValueChange={onValueChange}
             onSubmit={onGeneratePdf}
             generating={generating}
+            collapsed={collapsed}
+            lastSaved={lastSaved}
+            resetConfirm={resetConfirm}
+            errors={errors}
+            jumpedId={jumpedId}
+            onToggleCollapse={onToggleCollapse}
+            onJumpToNextEmpty={onJumpToNextEmpty}
+            onCancelReset={onCancelReset}
+            onConfirmReset={onConfirmReset}
+            onValidationError={onValidationError}
           />
         </div>
 
@@ -224,6 +307,9 @@ export function FillerLayout({
                 renderScale={renderScale}
                 fields={fields.filter((f) => f.page === pageNum)}
                 values={values}
+                finalPreview={finalPreview}
+                jumpedId={jumpedId}
+                onFocusField={onFocusField}
               />
             );
           })}

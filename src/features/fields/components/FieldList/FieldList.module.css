@@ -5,6 +5,12 @@
   min-height: 0;
 }
 
+.field-list-ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
 .field-list-empty {
   padding: var(--space-3);
   color: var(--color-neutral-500);
@@ -21,27 +27,140 @@
   cursor: pointer;
   font-size: var(--font-size-sm);
   border: 1px solid transparent;
-  transition: background 0.1s;
+  transition: background 0.15s;
 }
 .field-list-item:hover {
-  background: var(--color-neutral-100);
+  background: rgba(102, 165, 173, 0.08);
 }
 
 .selected {
-  background: rgba(79, 70, 229, 0.08);
+  background: rgba(102, 165, 173, 0.08);
   border-color: var(--color-primary);
+  border-left-width: 2px;
+}
+
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
 
 .item-name {
-  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.lock-icon {
+  font-size: 8px;
+  opacity: 0.7;
+}
+
+.item-group {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .item-page {
   font-size: var(--font-size-xs);
   color: var(--color-neutral-500);
   flex-shrink: 0;
+}
+
+.locked {
+  opacity: 0.65;
+}
+
+/* drag handle */
+.drag-handle {
+  cursor: grab;
+  color: var(--color-text-muted);
+  opacity: 0.35;
+  font-size: 12px;
+  flex-shrink: 0;
+  padding: 0 2px;
+  user-select: none;
+}
+.field-list-item:hover .drag-handle {
+  opacity: 0.65;
+}
+
+/* drop target indicator */
+.drag-over {
+  border-top: 2px solid var(--color-primary);
+}
+
+/* select button (takes up remaining space) */
+.item-select-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  padding: 0;
+}
+
+/* lock toggle button */
+.lock-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  opacity: 0;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  transition: opacity 0.1s, color 0.1s;
+  line-height: 1;
+  color: var(--color-text-muted);
+}
+.field-list-item:hover .lock-btn,
+.lock-btn--active {
+  opacity: 1;
+}
+.lock-btn--active {
+  color: var(--color-text);
+}
+
+.lock-icon-svg {
+  display: flex;
+  align-items: center;
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+.lock-icon-svg svg {
+  width: 100%;
+  height: 100%;
+}
+.lock-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
 }

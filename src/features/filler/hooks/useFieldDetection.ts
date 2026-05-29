@@ -4,6 +4,18 @@ import { useEffect, useState } from 'react';
 import * as pdfjs from 'pdfjs-dist';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { AcroFormField } from '../types';
+import type { FieldTypeId } from '@/types/shared';
+
+function deriveGroup(fieldName: string): string {
+  const prefix = fieldName.split('_')[0];
+  if (!prefix) return 'General';
+  return prefix.charAt(0).toUpperCase() + prefix.slice(1);
+}
+
+function pdfJsTypeToFieldTypeId(fieldType: string | undefined): FieldTypeId | undefined {
+  if (fieldType === 'Tx') return 'text';
+  return undefined;
+}
 
 export async function detectAcroFormFields(
   pdfDoc: PDFDocumentProxy,
@@ -29,11 +41,16 @@ export async function detectAcroFormFields(
           let fontSize = dad?.fontSize ?? 0;
 
           if (!fontSize) {
-            // Raw DA string fallback, e.g. "/Helv 10 Tf 0 g"
             const daMatch = (a.defaultAppearance as string | undefined)
               ?.match(/(\d+(?:\.\d+)?)\s+Tf/);
             fontSize = daMatch ? parseFloat(daMatch[1]) : 0;
           }
+
+          const group = deriveGroup(a.fieldName);
+          const label = `${group} · ${a.fieldName}`;
+          // fieldFlags bit 2 (value 4) = Required
+          const required = typeof a.fieldFlags === 'number' ? (a.fieldFlags & 4) !== 0 : false;
+          const fieldType = pdfJsTypeToFieldTypeId(a.fieldType as string | undefined);
 
           fields.push({
             name: a.fieldName,
@@ -41,6 +58,10 @@ export async function detectAcroFormFields(
             page: pageNum,
             rect: a.rect as [number, number, number, number],
             fontSize,
+            label,
+            group,
+            required,
+            fieldType,
           });
         }
       }

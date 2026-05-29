@@ -2,7 +2,7 @@
 import React from 'react';
 import styles from './Button.module.css';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'navbar';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'navbar' | 'navbar-cta';
 type Size = 'sm' | 'md' | 'lg';
 
 interface ButtonProps {

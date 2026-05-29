@@ -1,3 +1,33 @@
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes backdropOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@keyframes dialogIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes dialogOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+}
+
 .backdrop {
   position: fixed;
   inset: 0;
@@ -6,18 +36,34 @@
   align-items: center;
   justify-content: center;
   z-index: var(--z-modal);
+  animation: backdropIn 0.15s ease;
+}
+.backdrop--out {
+  animation: backdropOut 0.15s ease forwards;
 }
 
 .dialog {
+  position: static;
   background: var(--color-panel-bg);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
+  border: none;
+  padding: 0;
   max-width: 560px;
   width: 90%;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  animation: dialogIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dialog--out {
+  animation: dialogOut 0.15s ease forwards;
+}
+
+.dialog--lg {
+  max-width: 720px;
+  max-height: 88vh;
 }
 
 .header {
@@ -45,8 +91,8 @@
   line-height: 1;
 }
 .closeBtn:hover {
-  color: var(--color-dark-800);
-  background: var(--color-neutral-100);
+  color: var(--color-text);
+  background: var(--border-color);
 }
 
 .body {

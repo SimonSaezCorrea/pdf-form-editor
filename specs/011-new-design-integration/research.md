@@ -1,152 +1,199 @@
-# Research: New Design System Integration
+# Research: New Design System Integration + Feature Enhancements
 
 **Branch**: `011-new-design-integration` | **Date**: 2026-05-27
 
 ---
 
-## R-001: Token Strategy Inversion (Dark-First vs Light-First)
+## Phase A Research (CSS Migration) — COMPLETE
 
-**Decision**: Switch `tokens.css` from light-first (`:root` = light, `@media prefers-color-scheme: dark` + `[data-theme="dark"]` = dark) to dark-first (`:root` = dark, `[data-theme="light"]` = light).
+### R-001: Token Strategy Inversion (Dark-First)
 
-**Rationale**: The new design system is dark-first by design. The existing mechanism uses `[data-theme="dark"]` for manual override — **this attribute is already the hook used by the anti-FOUC inline script in `layout.tsx`**. Switching to dark-first means:
-- The anti-FOUC script does not need to change: it reads `localStorage['pdf-editor-theme']` and sets `document.documentElement.dataset.theme` before first paint. If the user has no preference, no attribute is set → root defaults (now dark) render immediately.
-- The `@media (prefers-color-scheme: dark)` block is **removed**: it was a fallback for OS-level detection, but with dark as default, OS detection is only needed for *light mode* (OS light → do nothing; OS dark → already default).
-- `[data-theme="light"]` replaces the former `[data-theme="dark"]` override block.
+**Decision**: `:root` = dark defaults; `[data-theme="light"]` = light overrides. Anti-FOUC inline script unchanged.
 
-**Compatibility check**:
-- `useTheme` hook reads `localStorage['pdf-editor-theme']` and sets `dataset.theme`. No changes needed to the hook — it already writes the correct `[data-theme="X"]` attribute.
-- Constitution Principle XXIII documents both mechanisms. Dark-first complies: dark is the default, light is the `[data-theme="light"]` override.
-
-**Alternatives considered**:
-- Keep light-first + add `[data-theme="dark"]` override for new tokens: Rejected — would require maintaining two parallel token value sets with no structural gain.
-- Use CSS `color-scheme` property: Rejected — project doesn't use native form controls that benefit from it; adds complexity.
+**Rationale**: New design system is dark-first. The `[data-theme]` attribute is already the hook used by the anti-FOUC script — no conflict. `@media (prefers-color-scheme: dark)` removed because dark is now the root default.
 
 ---
 
-## R-002: Geist Font Integration
+### R-002: Geist Font Integration
 
-**Decision**: Copy `new-design/fonts/Geist_wght_.woff2` to `src/styles/fonts/Geist_wght_.woff2` and declare `@font-face` at the top of `tokens.css`. No npm font package.
+**Decision**: Copy `new-design/fonts/Geist_wght_.woff2` → `public/fonts/Geist_wght_.woff2`. Declare `@font-face` in `tokens.css`. Not `next/font/local`.
 
-**Rationale**:
-- `tokens.css` is imported by `src/app/layout.tsx` (global CSS import). `@font-face` declared here is available to all components with no duplication.
-- The woff2 file is ~70KB (variable font with full weight axis); a single file replaces all weight variants.
-- No CDN dependency at runtime for UI text rendering.
+**Rationale**: Single `@font-face` in `tokens.css` (imported globally by `layout.tsx`). No CDN dependency. `next/font/local` would require modifying `layout.tsx` and could conflict with the existing `@font-face`.
 
-**Wiring detail**:
-```css
-@font-face {
-  font-family: 'Geist';
-  src: url('/fonts/Geist_wght_.woff2') format('woff2');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
+---
+
+### R-003: `showEditorToolbar` App.tsx
+
+**Decision**: Derived boolean `!!pdfBytes && appMode === 'editor'`. NOT new state. ThemeToggle made prop-driven.
+
+**Rationale**: Conditional toolbar visibility required by new design. Derivation is sufficient — no new state needed.
+
+---
+
+### R-004: Kbd Primitive
+
+**Decision**: New primitive at `src/components/ui/Kbd/`. Justified as design-system component (Principle XIII). One call-site (ShortcutsPanel).
+
+---
+
+## Phase B Research (Feature Enhancements)
+
+### R-101: Undo/Redo Architecture
+
+**Decision**: Store snapshots of the full `fields: FormField[]` array in `undoStack` and `redoStack` inside `useFieldStore`. Max depth 50.
+
+**Rationale**: The simplest correct approach for this data size (typical PDF form: 5–30 fields, each ~200 bytes → 50 snapshots ≈ 300KB worst case, acceptable).
+
+**Alternatives rejected**:
+- Command pattern (delta per action): More complex to implement; every action type needs encode/decode. For this field count, snapshot is simpler and equally performant.
+- Zustand temporal middleware (`zustand/middleware/temporal`): Adds a runtime dependency for a single feature; overkill.
+- Immer + patches: Also adds a dependency; same complexity as command pattern.
+
+**Implementation note**: Snapshot is pushed in `recordHistory(fields)` before mutating. `set()` call follows immediately after. `undo()` and `redo()` must update both stacks atomically using Zustand's `set()` — no double-render.
+
+**Drag/resize**: A drag or resize operation produces many micro-mutations. To avoid recording 100 snapshots per drag, record ONE snapshot on `pointerdown` (drag start / resize start) and suppress subsequent recordings during the same gesture. Use a `dragging: boolean` flag in the store that is set on start and cleared on `pointerup`.
+
+---
+
+### R-102: Field Type Color System
+
+**Decision**: Field type colors are hardcoded in `FIELD_TYPE_CONFIG` — not in `tokens.css`. Colors are decorative/categorical, not semantic. They follow the accent palette of the design system but are type-specific constants.
+
+**Rationale**: Semantic tokens are for theme-aware UI. Type colors are categorical constants (like tag colors in a kanban) — they don't change with dark/light mode. Hardcoding avoids adding 5+ tokens to `tokens.css` for a specific feature.
+
+**Type color palette** (consistent with prototype `editor/app.jsx`):
 ```
-The file goes to `src/styles/fonts/` but Next.js serves static assets from `public/`. Two options:
-1. **Option A (chosen)**: Copy to `public/fonts/Geist_wght_.woff2` — served as `/fonts/Geist_wght_.woff2`. Next.js static asset path. URL in `@font-face`: `/fonts/Geist_wght_.woff2`.
-2. Option B: Keep in `src/styles/fonts/` and use a relative CSS `url()` path. Works but Next.js CSS bundler behavior with relative URLs in CSS Modules is less predictable.
-
-**Note**: `public/fonts/` already used by Principle XXVIII for TTF font assets. Geist goes there too. No conflict — different file names.
-
-**Alternatives considered**:
-- Google Fonts CDN for Geist: Rejected — introduces CDN dependency for UI text; also Geist is not on Google Fonts.
-- `next/font/local`: Rejected — requires changing `layout.tsx` and adds Next.js-specific font optimization that may interfere with the `@font-face` in `tokens.css`.
-
----
-
-## R-003: `showEditorToolbar` App.tsx State
-
-**Decision**: Add `showEditorToolbar: boolean` derived state to `App.tsx`, computed as `!!pdfBytes && appMode === 'editor'`. Pass it as a prop to the header area.
-
-**Rationale**:
-- Currently `App.tsx` manages `pdfBytes`, `appMode` ('editor' | 'filler'), and all toolbar state. The new design conditionally renders the second navbar row based on these.
-- Derivation is trivial (`const showEditorToolbar = !!pdfBytes && appMode === 'editor'`), no new state — just a derived boolean.
-- The existing `ThemeToggle` component becomes prop-driven: `App.tsx` passes `theme` (from `useTheme()`) and `onToggleTheme` down to the header section. `useTheme` hook stays as the single owner of localStorage.
-
-**Mode nav conditional**:
-- When `!!pdfBytes && appMode === 'filler'`: show "← Cambiar PDF" button (triggers upload reset).
-- Otherwise: show editor/filler mode tabs.
-- Width of the nav area is fixed (use `min-width` on the nav container) to prevent layout shift.
-
-**Alternatives considered**:
-- Extract navbar to its own component receiving all props: Acceptable future refactor, but out of scope for this migration. Keep changes minimal in App.tsx.
-- Add a React context for toolbar visibility: Rejected — overkill for a single boolean prop, violates Principle VI (YAGNI).
-
----
-
-## R-004: `Kbd` Primitive Design
-
-**Decision**: Create `src/components/ui/Kbd/Kbd.tsx` — a simple `<kbd>` HTML element with key-cap styling.
-
-**API**:
-```tsx
-<Kbd>Ctrl</Kbd>
-<Kbd>S</Kbd>
+text      → #66A5AD (teal primary — already the brand color, most common type)
+number    → #F4A261 (warm coral — the accent color)
+date      → #a78bfa (purple — neutral distinguisher)
+checkbox  → #22c55e (green — positive/boolean association)
+signature → #ec4899 (pink — unique, memorable)
 ```
 
-**Styling** (from new-design ShortcutsPanel):
-- `font-family: var(--font-family-mono)`
-- `font-size: var(--font-size-xs)` (11px)
-- `padding: 1px 5px`
-- `border: 1px solid var(--border-color)`
-- `border-bottom-width: 2px` (key-cap depth effect)
-- `border-radius: var(--radius-sm)` (4px)
-- `background: var(--color-input-bg)`
-- `color: var(--color-text-muted)`
+---
 
-**Constitution VI compliance**: Single call-site (ShortcutsPanel). Justified as a design-system primitive (Principle XIII). Document in Complexity Tracking (done).
+### R-103: Snap Guides Algorithm
+
+**Decision**: Compute candidate axes from all non-dragged fields during `mousemove`. Threshold: 4px in canvas-pixel space. Render as 1px magenta lines on the `FieldOverlay` canvas.
+
+**Rationale**: The prototype's `computeGuides` function is the reference (editor/app.jsx lines 63–89). The approach is O(n×3×3) = O(n) per move event — negligible for typical field counts (<50).
+
+**Implementation detail**:
+- 3 X-axes per field: left edge, center-X, right edge
+- 3 Y-axes per field: top edge, center-Y, bottom edge
+- For the dragged field, check all 3 of its X/Y positions against all candidates
+- If distance ≤ 4px, snap to that candidate and emit a guide line
+- Guides are stored in component state (`useState<{ v: number[]; h: number[] }>`), cleared on `pointerup`
+
+**Scope**: Single-field drags only. Group moves (multi-select) do not show snap guides.
 
 ---
 
-## R-005: `enhancements.css` Keyframes Placement
+### R-104: AlignBar Architecture
 
-**Decision**: Integrate keyframes from `new-design/prototype/editor/enhancements.css` and `new-design/prototype/filler/filler-enhancements.css` into the specific feature `.module.css` files that own the animated elements.
+**Decision**: `AlignBar` is a separate component rendered conditionally in the layout when `selectionIds.size >= 2`. It receives `count`, `onAlign(action)`, `onDistribute(axis)` callbacks.
 
-**Mapping**:
-| Keyframe | Source | Target CSS Module |
-|----------|--------|-------------------|
-| `insertBannerIn` | enhancements.css | `src/features/toolbar/ToolbarModes.module.css` (insert mode banner) |
-| `alignBarIn` | enhancements.css | `src/features/fields/FieldOverlay.module.css` (alignment bar) |
-| `live-pulse` | filler-enhancements.css | `src/features/filler/FillerLayout.module.css` (live indicator) |
-| `jump-pulse` | filler-enhancements.css | `src/features/filler/FillerLayout.module.css` (field highlight) |
+**Placement**: Below the toolbar row in the header area OR as a floating strip above the canvas (similar to a contextual toolbar). Implementation follows the prototype (`editor/app.jsx` AlignBar component).
 
-**Condition**: Only integrate a keyframe if the corresponding DOM element already exists in production. If it doesn't exist yet (e.g., alignment bar is a new UX element), skip the keyframe until that element is implemented.
+**Alignment logic** (ports from prototype):
+```typescript
+// From selected fields bounding box:
+const minL = Math.min(...selected.map(f => f.x));
+const maxR = Math.max(...selected.map(f => f.x + f.width));
+const minT = Math.min(...selected.map(f => f.y));
+const maxB = Math.max(...selected.map(f => f.y + f.height));
+const cx = (minL + maxR) / 2;
+const cy = (minT + maxB) / 2;
 
-**Rationale**: Constitution Principle XI prohibits global CSS files beyond `tokens.css` and `reset.css`. Keyframes must live in the module of the component that uses them.
+// Per action:
+left     → x = minL
+right    → x = maxR - f.width
+center-h → x = cx - f.width / 2
+top      → y = minT
+bottom   → y = maxB - f.height
+center-v → y = cy - f.height / 2
+```
 
----
+**Distribute H** (≥3 fields): Sort by x, compute equal spacing between first and last field centers.
+**Distribute V** (≥3 fields): Sort by y, compute equal spacing.
 
-## R-006: ThumbnailStrip Background Token
-
-**Decision**: Update ThumbnailStrip background from `var(--color-white)` (Constitution Principle XXI) to use the new token. Principle XXI says "background is `var(--color-white)`" — the new design system defines `--color-white: #ffffff` as a token. No conflict: use `var(--color-white)` which resolves to `#ffffff` in both modes.
-
-**Note**: `--color-white` must be defined in the new `tokens.css` (it is in `new-design/colors_and_type.css`). This is an existing constitutional requirement, not a new one.
-
----
-
-## R-007: `--color-primary` Dark Mode Change
-
-**Decision**: Accept the dark-mode primary color change: `#07575B` → `#66A5AD`.
-
-**Impact analysis**:
-- `DraggableField` selected border uses `var(--color-primary)`. In dark mode this becomes a lighter teal (`#66A5AD`) against the white `#fff !important` field background. Contrast: white background + `#66A5AD` border = clearly visible.
-- `FieldList` selected item border: same change. Against panel background `#0d2028`, `#66A5AD` has good contrast.
-- Constitution Principle XII already documents this: "Primary (`--color-primary`) | Light: `#07575B` | Dark: `#66A5AD`".
-
-**No action needed**: The new token values exactly match what the constitution already defines. The current `tokens.css` is the one out of sync — the migration brings it into constitutional compliance.
+All alignment operations go through `updateFields(ids, partial)` — which records a single history snapshot.
 
 ---
 
-## R-008: Filler CSS Token Names (Critical)
+### R-105: Filler Group Derivation
 
-**Decision**: Continue using `--space-N` (not `--spacing-N`) and `--border-color` (not `--color-border`) in all filler CSS files.
+**Decision**: Derive group from `fieldName` prefix by splitting on `_` and taking the first segment, capitalized.
 
-**Source**: CLAUDE.md explicit constraint: "ALL filler CSS files use `--space-N` (NOT `--spacing-N`) and `--border-color` (NOT `--color-border`)."
+**Examples**: `arrendador_nombre` → `Arrendador`, `renta_monto` → `Renta`, `startDate` → `Startdate` (camelCase has no `_` → use `'General'`).
 
-**Verification**: New `tokens.css` from `new-design/colors_and_type.css` defines `--space-1` through `--space-16` (4px grid) and `--border-color`. Compatible.
+**Edge cases**:
+- `fieldName` with no `_`: group = `'General'`
+- `fieldName` that is just one word: group = `'General'`  
+- `fieldName` starts with `_`: skip prefix, use `'General'`
+
+**Why not use PDF AcroForm structure**: PDF AcroForm field hierarchy (field parents) can theoretically provide grouping, but pdfjs annotation extraction doesn't expose parent hierarchy cleanly. Prefix derivation is reliable for the real-world PDFs this app targets (Pawer contracts).
 
 ---
 
-## Resolved Clarifications
+### R-106: Filler Required Field Detection
 
-All NEEDS CLARIFICATION items from spec: none remained. All decisions above were derivable from reading `new-design/` + `src/` source files.
+**Decision**: Extract `required` flag from `annotation.fieldFlags` in `useFieldDetection`. Bit 2 (value `0x4` or `4`) of the FieldFlags integer indicates "Required".
+
+```typescript
+const required = Boolean(annotation.fieldFlags & 4);
+```
+
+**Reference**: PDF spec §12.7.3.1, Table 221 — Bit position 3 (1-indexed) = Required. In 0-indexed bit arithmetic: `fieldFlags & 0x4`.
+
+**Fallback**: If `annotation.fieldFlags` is undefined or 0, `required` = false.
+
+---
+
+### R-107: Filler Autosave Strategy
+
+**Decision**: 400ms debounce on `values` change → localStorage write. Matches the prototype implementation.
+
+**Key**: `'pdf-filler-draft-v1'` — the `v1` suffix allows future schema changes without reading stale data.
+
+**Draft shape**: `{ values: Record<string, string>, ts: number }`. `ts` = `Date.now()` at save time.
+
+**Restore**: On `FillerMode` mount, read and parse the key. If `saved.values` exists, use it as initial values for `useState(initialValues)`. The `useMemo` approach ensures this runs once (not on re-renders).
+
+**relTime display** (matches prototype):
+- `< 5s`: "recién"
+- `< 60s`: "hace N s"
+- `< 3600s`: "hace N min"
+- `>= 3600s`: "hace N h"
+
+A `setInterval` of 10s forces re-render to keep the pill text fresh.
+
+---
+
+### R-108: Landing Screen Architecture
+
+**Decision**: Modify `PdfUploader.tsx` to accept `appMode: 'editor' | 'filler'` prop and render the hero section + adapted copy. The dropzone area gets a `<Button>` CTA that triggers the hidden file `<input>`.
+
+**Scope**: `PdfUploader` (editor entry, `src/features/pdf/components/PdfUploader/PdfUploader.tsx`) and `PdfUploadScreen` (filler entry, `src/features/filler/components/PdfUploadScreen/PdfUploadScreen.tsx`) are both updated — they are separate components.
+
+**Vignette**: CSS `radial-gradient` on the `.upload-screen` wrapper: `radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.18) 100%)`. No image needed.
+
+**Copy per mode**:
+
+| Element | Editor | Filler |
+|---------|--------|--------|
+| Eyebrow | "Editor de plantilla" | "Rellenar PDF" |
+| Headline | "Coloca campos de formulario sobre cualquier PDF." | "Rellena cualquier formulario PDF, sin imprimirlo." |
+| Subhead | "Importa un PDF, dibuja los campos donde los necesites y exporta el archivo listo para firmar." | "Sube un PDF con campos AcroForm, complétalos con vista previa en vivo y descarga el resultado." |
+| CTA | "Seleccionar PDF" | "Seleccionar PDF" |
+
+---
+
+### R-109: Insert Mode Keyboard Shortcuts for Field Types
+
+**Current**: `I` switches to insert mode; `S/M/H` switch other modes.
+**New**: `T/N/D/C/F` activate the corresponding field type AND switch to insert mode. `I` activates insert with the previously selected type (or 'text' as default).
+
+**Conflict check**: None of T/N/D/C/F conflict with existing shortcuts (S=Select, M=Move, H=Pan, I=Insert, Ctrl+A=selectAll, Ctrl+D=duplicate, Ctrl+Z=undo, Ctrl+Shift+Z=redo, Delete/Backspace=delete, Escape=deselect).
+
+**Handler location**: `App.tsx` keyboard `keydown` handler — same place as existing S/I/M/H shortcuts.
