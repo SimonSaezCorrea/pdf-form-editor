@@ -255,7 +255,7 @@ export default function App() {
     store.deleteField,
     store.duplicateField,
     handleDuplicate,
-  ]);
+  ]); 
 
   const hasThumbnails = !!pdfRenderer.pdfDoc && pdfRenderer.totalPages > 1;
 
