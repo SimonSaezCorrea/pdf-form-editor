@@ -3,7 +3,7 @@ export type FontFamily = 'Helvetica' | 'TimesRoman' | 'Courier';
 export interface FormField {
   /** Client-side UUID — used for React keying; ignored by the server */
   id: string;
-  /** AcroForm field name — must be unique within the document */
+  /** Display label shown in the UI and canvas overlay. Does not need to be unique. */
   name: string;
   /** 1-indexed page number */
   page: number;

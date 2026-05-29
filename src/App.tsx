@@ -59,21 +59,14 @@ export default function App() {
   const store = useFieldStore();
   const { mode, setMode } = useInteractionMode();
 
-  const hasDuplicateNames = (() => {
-    const names = store.fields.map((f) => f.name);
-    return names.length !== new Set(names).size;
-  })();
-
   const canExport =
     !!pdfBytes &&
     store.fields.length > 0 &&
-    !hasDuplicateNames &&
     !isExporting &&
     !pdfRenderer.isLoading;
 
   let exportButtonTitle: string | undefined;
   if (store.fields.length === 0) exportButtonTitle = 'Add at least one field before exporting';
-  else if (hasDuplicateNames) exportButtonTitle = 'Fix duplicate field names before exporting';
 
   const handlePdfLoaded = useCallback(
     (bytes: ArrayBuffer, filename: string) => {

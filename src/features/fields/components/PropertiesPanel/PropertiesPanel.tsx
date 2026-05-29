@@ -102,10 +102,6 @@ export function PropertiesPanel({
     );
   }
 
-  const hasDuplicate = fields.some(
-    (f) => f.id !== field.id && f.name === field.name,
-  );
-
   const update = <K extends keyof Omit<FormField, 'id'>>(key: K, value: FormField[K]) =>
     onUpdate(field.id, { [key]: value } as Partial<Omit<FormField, 'id'>>);
 
@@ -119,7 +115,6 @@ export function PropertiesPanel({
         type="text"
         value={field.name}
         onChange={(e) => update('name', e.target.value)}
-        error={hasDuplicate ? '⚠ Duplicate name — must be unique' : undefined}
         className={styles['prop-group']}
       />
 

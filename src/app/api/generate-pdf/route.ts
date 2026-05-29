@@ -105,19 +105,6 @@ export async function POST(request: Request): Promise<Response> {
     }
   }
 
-  // Validate duplicate names
-  const names = (fields as FormField[]).map((f) => f.name);
-  const nameSet = new Set(names);
-  if (nameSet.size !== names.length) {
-    const dups = names.filter((n, i) => names.indexOf(n) !== i);
-    return Response.json(
-      {
-        error: `Duplicate field name(s): ${[...new Set(dups)].map((n) => `'${n}'`).join(', ')}. Field names must be unique.`,
-      },
-      { status: 400 },
-    );
-  }
-
   try {
     const pdfBuffer = Buffer.from(await pdfFile.arrayBuffer());
     const pdfBytes = await generatePdf(pdfBuffer, fields as FormField[]);

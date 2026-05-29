@@ -27,7 +27,6 @@ let extractCounter = 0;
  */
 export async function extractFieldsFromPdf(pdfDoc: PDFDocumentProxy): Promise<FormField[]> {
   const fields: FormField[] = [];
-  const usedNames = new Set<string>();
 
   for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
     const page = await pdfDoc.getPage(pageNum);
@@ -44,19 +43,11 @@ export async function extractFieldsFromPdf(pdfDoc: PDFDocumentProxy): Promise<Fo
       const height = y2 - y1;
       if (width <= 0 || height <= 0) continue;
 
-      // Build a unique field name
-      const rawName =
+      const name =
         typeof ann['fieldName'] === 'string' && ann['fieldName'].trim()
           ? ann['fieldName'].trim()
           : `field_${++extractCounter}`;
 
-      let name = rawName;
-      if (usedNames.has(name)) {
-        let suffix = 2;
-        while (usedNames.has(`${rawName}_${suffix}`)) suffix++;
-        name = `${rawName}_${suffix}`;
-      }
-      usedNames.add(name);
       extractCounter++;
 
       const fontSize =

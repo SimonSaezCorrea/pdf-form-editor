@@ -1,6 +1,6 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { PDFDocument, PDFFont, PDFName, PDFDict, PDFArray, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, PDFFont, PDFTextField, PDFName, PDFDict, PDFArray, StandardFonts, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import type { FormField, FontFamily } from '@/types/shared';
 import { FONT_CATALOG } from '@/features/pdf/config/fonts';
@@ -49,13 +49,6 @@ function computeFitFontSize(
 }
 
 function validateFields(fields: FormField[], totalPages: number): void {
-  const names = fields.map((f) => f.name);
-  const nameSet = new Set(names);
-  if (nameSet.size !== names.length) {
-    const duplicates = names.filter((n, i) => names.indexOf(n) !== i);
-    const quoted = [...new Set(duplicates)].map((n) => `'${n}'`).join(', ');
-    throw new Error(`Duplicate field name(s): ${quoted}. Field names must be unique.`);
-  }
   for (const field of fields) {
     if (field.page < 1 || field.page > totalPages) {
       throw new Error(
@@ -74,14 +67,23 @@ function addTextField(
   fieldDef: FormField,
   embeddedFonts: EmbeddedFonts,
   ttfFonts: EmbeddedTTFFonts,
+  fieldByName: Map<string, PDFTextField>,
 ): void {
   const page = pdfDoc.getPages()[fieldDef.page - 1];
   const font =
     (fieldDef.displayFont && ttfFonts[fieldDef.displayFont]) ||
     embeddedFonts[fieldDef.fontFamily]!;
-  const textField = form.createTextField(fieldDef.name);
+  const acroName = fieldDef.name || fieldDef.id;
 
-  textField.addToPage(page, {
+  const isNew = !fieldByName.has(acroName);
+  let textField = fieldByName.get(acroName);
+  if (isNew) {
+    textField = form.createTextField(acroName);
+    fieldByName.set(acroName, textField);
+  }
+
+  // addToPage must run before setFontSize/setText — it creates the /DA entry.
+  textField!.addToPage(page, {
     x: fieldDef.x,
     y: fieldDef.y,
     width: fieldDef.width,
@@ -91,29 +93,27 @@ function addTextField(
     backgroundColor: rgb(1, 1, 1),
   });
 
-  if (fieldDef.multiline) {
-    textField.enableMultiline();
-  }
+  if (isNew) {
+    // Field-level properties: set once after /DA exists.
+    if (fieldDef.multiline) textField!.enableMultiline();
 
-  const effectiveFontSize = fieldDef.autoFitFont && fieldDef.value
-    ? computeFitFontSize(
-        fieldDef.value,
-        fieldDef.width,
-        fieldDef.height,
-        fieldDef.fontSize,
-        font,
-        fieldDef.multiline ?? false,
-      )
-    : fieldDef.fontSize;
+    const effectiveFontSize = fieldDef.autoFitFont && fieldDef.value
+      ? computeFitFontSize(
+          fieldDef.value,
+          fieldDef.width,
+          fieldDef.height,
+          fieldDef.fontSize,
+          font,
+          fieldDef.multiline ?? false,
+        )
+      : fieldDef.fontSize;
+    textField!.setFontSize(effectiveFontSize);
 
-  textField.setFontSize(effectiveFontSize);
-
-  if (fieldDef.value) {
-    textField.setText(fieldDef.value);
+    if (fieldDef.value) textField!.setText(fieldDef.value);
   }
 
   // updateAppearances is mandatory — omitting it leaves fields invisible in most readers
-  textField.updateAppearances(font);
+  textField!.updateAppearances(font);
 }
 
 /**
@@ -172,8 +172,9 @@ export async function generatePdf(
     ttfFonts[displayFontName] = await pdfDoc.embedFont(readFileSync(ttfPath));
   }
 
+  const fieldByName = new Map<string, PDFTextField>();
   for (const fieldDef of fields) {
-    addTextField(pdfDoc, form, fieldDef, embeddedFonts, ttfFonts);
+    addTextField(pdfDoc, form, fieldDef, embeddedFonts, ttfFonts, fieldByName);
   }
 
   return pdfDoc.save();
