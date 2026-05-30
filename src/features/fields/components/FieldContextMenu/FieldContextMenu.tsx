@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { modShortcut } from '@/hooks/useModKey';
 import styles from './FieldContextMenu.module.css';
 
 export interface FieldContextMenuProps {
@@ -54,11 +55,11 @@ export function FieldContextMenu({
     >
       <button className={styles['item']} onClick={act(onDuplicate)}>
         <span>Duplicar</span>
-        <span className={styles['hint']}>⌘D</span>
+        <span className={styles['hint']}>{modShortcut('D')}</span>
       </button>
       <button className={styles['item']} onClick={act(onCopyProps)}>
         <span>Copiar propiedades</span>
-        <span className={styles['hint']}>⌘⇧C</span>
+        <span className={styles['hint']}>{modShortcut('⇧C')}</span>
       </button>
       <hr className={styles['sep']} />
       <button className={styles['item']} onClick={act(onBringToFront)}>Traer al frente</button>

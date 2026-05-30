@@ -18,6 +18,7 @@ import { exportPdf } from '@/features/pdf/utils/export';
 import type { FormField, FieldTypeId } from '@/types/shared';
 import { canvasToPdf } from '@/features/pdf/utils/coordinates';
 import { Button, IconButton, Kbd } from '@/components/ui';
+import { modShortcut } from '@/hooks/useModKey';
 
 const ICON_ARROW_LEFT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>`;
 const ICON_ARROW_RIGHT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>`;
@@ -348,8 +349,8 @@ export default function App() {
             {showEditorToolbar && (store.canUndo || store.canRedo || store.isDirty) && (
               <>
                 {store.isDirty && <span className={styles['dirty-pill']}>sin guardar</span>}
-                <IconButton icon={<SvgIcon svg={ICON_ARROW_LEFT} />} label="Deshacer (Ctrl+Z)" variant="navbar" onClick={store.undo} disabled={!store.canUndo} />
-                <IconButton icon={<SvgIcon svg={ICON_ARROW_RIGHT} />} label="Rehacer (Ctrl+Shift+Z)" variant="navbar" onClick={store.redo} disabled={!store.canRedo} />
+                <IconButton icon={<SvgIcon svg={ICON_ARROW_LEFT} />} label={`Deshacer (${modShortcut('Z')})`} variant="navbar" onClick={store.undo} disabled={!store.canUndo} />
+                <IconButton icon={<SvgIcon svg={ICON_ARROW_RIGHT} />} label={`Rehacer (${modShortcut('⇧Z')})`} variant="navbar" onClick={store.redo} disabled={!store.canRedo} />
               </>
             )}
             {pdfBytes && (
