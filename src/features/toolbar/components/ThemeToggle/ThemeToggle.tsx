@@ -35,6 +35,7 @@ export function ThemeToggle({ theme, onToggleTheme }: Readonly<ThemeToggleProps>
     <IconButton
       icon={isDark ? <SunIcon /> : <MoonIcon />}
       label={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+      variant="navbar"
       onClick={onToggleTheme}
       size="md"
     />

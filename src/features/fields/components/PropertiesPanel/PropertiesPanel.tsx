@@ -32,7 +32,11 @@ function Section({ title, open, onToggle, children }: Readonly<SectionProps>) {
         onClick={onToggle}
         aria-expanded={open}
       >
-        <span className={styles['prop-section__indicator']}>{open ? '−' : '+'}</span>
+        <span
+          className={styles['prop-section__indicator']}
+          dangerouslySetInnerHTML={{ __html: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>' }}
+          style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+        />
         <span>{title}</span>
       </button>
       {open && <div className={styles['prop-section__body']}>{children}</div>}

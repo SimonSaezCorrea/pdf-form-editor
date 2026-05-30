@@ -18,6 +18,14 @@ import { exportPdf } from '@/features/pdf/utils/export';
 import type { FormField, FieldTypeId } from '@/types/shared';
 import { canvasToPdf } from '@/features/pdf/utils/coordinates';
 import { Button, IconButton, Kbd } from '@/components/ui';
+
+const ICON_ARROW_LEFT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>`;
+const ICON_ARROW_RIGHT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>`;
+const ICON_DOWNLOAD = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
+
+function SvgIcon({ svg }: { svg: string }) {
+  return <span style={{ display: 'inline-flex', width: '1em', height: '1em' }} dangerouslySetInnerHTML={{ __html: svg }} />;
+}
 import { getFieldTypeConfig } from '@/features/fields/config/fieldTypes';
 import { ThemeToggle } from '@/features/toolbar/components/ThemeToggle/ThemeToggle';
 import { useTheme } from '@/hooks/useTheme';
@@ -340,8 +348,8 @@ export default function App() {
             {showEditorToolbar && (store.canUndo || store.canRedo || store.isDirty) && (
               <>
                 {store.isDirty && <span className={styles['dirty-pill']}>sin guardar</span>}
-                <IconButton icon="↩" label="Deshacer (Ctrl+Z)" variant="navbar" onClick={store.undo} disabled={!store.canUndo} />
-                <IconButton icon="↪" label="Rehacer (Ctrl+Shift+Z)" variant="navbar" onClick={store.redo} disabled={!store.canRedo} />
+                <IconButton icon={<SvgIcon svg={ICON_ARROW_LEFT} />} label="Deshacer (Ctrl+Z)" variant="navbar" onClick={store.undo} disabled={!store.canUndo} />
+                <IconButton icon={<SvgIcon svg={ICON_ARROW_RIGHT} />} label="Rehacer (Ctrl+Shift+Z)" variant="navbar" onClick={store.redo} disabled={!store.canRedo} />
               </>
             )}
             {pdfBytes && (
@@ -356,7 +364,7 @@ export default function App() {
                   loading={isExporting}
                   title={exportButtonTitle}
                 >
-                  {isExporting ? 'Exportando…' : '↓ Exportar PDF'}
+                  {isExporting ? 'Exportando…' : <><SvgIcon svg={ICON_DOWNLOAD} /> Exportar PDF</>}
                 </Button>
               </>
             )}
