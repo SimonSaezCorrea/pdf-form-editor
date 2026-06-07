@@ -8,7 +8,7 @@ export interface TemplateFileV1 {
   fields: FormField[];
 }
 
-// ── v2: nested sub-objects ─────────────────────────────────────────────────
+// ── v2: nested sub-objects with a single `behavior` block (legacy, read-only) ─
 export interface TemplateFieldV2 {
   id: string;
   name: string;
@@ -43,10 +43,48 @@ export interface TemplateFileV2 {
   fields: TemplateFieldV2[];
 }
 
-export type TemplateFile = TemplateFileV1 | TemplateFileV2;
+// ── v3: behavior props folded into their matching UI section ────────────────
+// Mirrors the editor's PropertiesPanel layout/order: General → Posición y
+// tamaño → Tipografía. There is no standalone `behavior` block — each flag
+// lives in the section it belongs to.
+export interface TemplateFieldV3 {
+  id: string;
+  general: {
+    name: string;
+    fieldType: FieldTypeId;
+    group: string;
+    value: string;
+    required: boolean;
+    multiline: boolean;
+    locked: boolean;
+  };
+  position: {
+    page: number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    showBorder: boolean;
+  };
+  typography: {
+    fontFamily: FontFamily;
+    fontSize: number;
+    displayFont?: string;
+    autoFitFont: boolean;
+  };
+}
+
+export interface TemplateFileV3 {
+  schemaVersion: 3;
+  name: string;
+  createdAt: string;
+  fields: TemplateFieldV3[];
+}
+
+export type TemplateFile = TemplateFileV1 | TemplateFileV2 | TemplateFileV3;
 
 export interface ParsedTemplate {
-  schemaVersion: 1 | 2;
+  schemaVersion: 1 | 2 | 3;
   name: string;
   createdAt: string;
   fields: FormField[];
@@ -88,17 +126,36 @@ function isValidFieldV2(value: unknown): value is TemplateFieldV2 {
   return true;
 }
 
+function isValidFieldV3(value: unknown): value is TemplateFieldV3 {
+  if (typeof value !== 'object' || value === null) return false;
+  const f = value as Record<string, unknown>;
+  if (typeof f.id !== 'string') return false;
+  const general = f.general as Record<string, unknown> | undefined;
+  if (typeof general !== 'object' || general === null) return false;
+  if (typeof general.name !== 'string' || general.name.length === 0) return false;
+  const pos = f.position as Record<string, unknown> | undefined;
+  if (typeof pos !== 'object' || pos === null) return false;
+  if (typeof pos.page !== 'number' || typeof pos.x !== 'number' || typeof pos.y !== 'number') return false;
+  if (typeof pos.width !== 'number' || typeof pos.height !== 'number') return false;
+  const typo = f.typography as Record<string, unknown> | undefined;
+  if (typeof typo !== 'object' || typo === null) return false;
+  if (!VALID_FONT_FAMILIES.has(typo.fontFamily as string)) return false;
+  if (typeof typo.fontSize !== 'number') return false;
+  return true;
+}
+
 export function isValidTemplateFile(data: unknown): data is TemplateFile {
   if (typeof data !== 'object' || data === null) return false;
   const d = data as Record<string, unknown>;
   if (typeof d.name !== 'string' || d.name.length === 0) return false;
   if (typeof d.createdAt !== 'string' || d.createdAt.length === 0) return false;
   if (!Array.isArray(d.fields)) return false;
+  if (d.schemaVersion === 3) return d.fields.every(isValidFieldV3);
   if (d.schemaVersion === 2) return d.fields.every(isValidFieldV2);
   return d.fields.every(isValidFieldV1);
 }
 
-// ── Flatten v2 → FormField ─────────────────────────────────────────────────
+// ── Flatten v2 / v3 → FormField ────────────────────────────────────────────
 
 function flattenV2Field(f: TemplateFieldV2): FormField {
   return {
@@ -123,6 +180,29 @@ function flattenV2Field(f: TemplateFieldV2): FormField {
   };
 }
 
+function flattenV3Field(f: TemplateFieldV3): FormField {
+  return {
+    id: f.id,
+    name: f.general.name,
+    fieldType: f.general.fieldType ?? 'text',
+    group: f.general.group ?? '',
+    value: f.general.value ?? '',
+    required: f.general.required ?? false,
+    multiline: f.general.multiline ?? false,
+    locked: f.general.locked ?? false,
+    page: f.position.page,
+    x: f.position.x,
+    y: f.position.y,
+    width: f.position.width,
+    height: f.position.height,
+    showBorder: f.position.showBorder ?? false,
+    fontFamily: f.typography.fontFamily,
+    fontSize: f.typography.fontSize,
+    ...(f.typography.displayFont ? { displayFont: f.typography.displayFont } : {}),
+    autoFitFont: f.typography.autoFitFont ?? false,
+  };
+}
+
 // ── Parse ──────────────────────────────────────────────────────────────────
 
 function invalidFieldProp(f: Record<string, unknown>): string {
@@ -135,6 +215,13 @@ function invalidFieldProp(f: Record<string, unknown>): string {
   if (typeof f.height !== 'number') return 'height';
   if (typeof f.fontSize !== 'number') return 'fontSize';
   return 'fontFamily';
+}
+
+function parseV3Fields(raw: unknown[]): FormField[] {
+  return raw.map((item, i) => {
+    if (!isValidFieldV3(item)) throw new TypeError(`Campo v3 [${i}] inválido`);
+    return flattenV3Field(item);
+  });
 }
 
 function parseV2Fields(raw: unknown[]): FormField[] {
@@ -174,6 +261,9 @@ export function parseTemplateFile(json: string): ParsedTemplate {
     throw new TypeError("Plantilla inválida: falta el campo 'fields'");
   }
 
+  if (d.schemaVersion === 3) {
+    return { schemaVersion: 3, name, createdAt, fields: parseV3Fields(d.fields) };
+  }
   if (d.schemaVersion === 2) {
     return { schemaVersion: 2, name, createdAt, fields: parseV2Fields(d.fields) };
   }
@@ -181,43 +271,43 @@ export function parseTemplateFile(json: string): ParsedTemplate {
   return { schemaVersion: 1, name, createdAt, fields: parseV1Fields(d.fields) };
 }
 
-// ── Serialize → v2 ────────────────────────────────────────────────────────
+// ── Serialize → v3 ─────────────────────────────────────────────────────────
 
-function toV2Field(f: FormField): TemplateFieldV2 {
+function toV3Field(f: FormField): TemplateFieldV3 {
   return {
     id: f.id,
-    name: f.name,
-    fieldType: f.fieldType ?? 'text',
-    group: f.group?.trim() || 'General',
+    general: {
+      name: f.name,
+      fieldType: f.fieldType ?? 'text',
+      group: f.group?.trim() || 'General',
+      value: f.value ?? '',
+      required: f.required ?? false,
+      multiline: f.multiline ?? false,
+      locked: f.locked ?? false,
+    },
     position: {
       page: f.page,
       x: f.x,
       y: f.y,
       width: f.width,
       height: f.height,
+      showBorder: f.showBorder ?? false,
     },
     typography: {
       fontFamily: f.fontFamily,
       fontSize: f.fontSize,
       ...(f.displayFont ? { displayFont: f.displayFont } : {}),
-    },
-    behavior: {
-      value: f.value ?? '',
-      required: f.required ?? false,
-      locked: f.locked ?? false,
-      showBorder: f.showBorder ?? false,
       autoFitFont: f.autoFitFont ?? false,
-      multiline: f.multiline ?? false,
     },
   };
 }
 
 export function serializeTemplateFile(name: string, fields: FormField[]): string {
-  const file: TemplateFileV2 = {
-    schemaVersion: 2,
+  const file: TemplateFileV3 = {
+    schemaVersion: 3,
     name,
     createdAt: new Date().toISOString(),
-    fields: fields.map(toV2Field),
+    fields: fields.map(toV3Field),
   };
   return JSON.stringify(file, null, 2);
 }

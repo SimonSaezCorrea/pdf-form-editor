@@ -223,8 +223,9 @@ function addSignatureField(
 ): void {
   const page = pdfDoc.getPages()[fieldDef.page - 1];
   // Signature zone: an interactive push button that acts as a click-to-place
-  // image/drawing target. Rendered with a visible border + a baseline so it
-  // reads as a signature area in any PDF reader.
+  // image/drawing target. The button's own border marks the area and moves with
+  // the field — we do NOT draw a baseline into the page content (it would be
+  // permanent, decoupled from the field, and survive re-edits as an artifact).
   const button = form.createButton(fieldDef.name);
   button.addToPage('', page, {
     x: fieldDef.x,
@@ -235,16 +236,6 @@ function addSignatureField(
     borderColor: rgb(0.4, 0.4, 0.4),
     backgroundColor: rgb(1, 1, 1),
     font,
-  });
-
-  // Signature baseline near the bottom of the zone.
-  const pad = Math.min(8, fieldDef.width * 0.1);
-  const lineY = fieldDef.y + Math.min(14, fieldDef.height * 0.25);
-  page.drawLine({
-    start: { x: fieldDef.x + pad, y: lineY },
-    end: { x: fieldDef.x + fieldDef.width - pad, y: lineY },
-    thickness: 0.75,
-    color: rgb(0.55, 0.55, 0.55),
   });
 
   if (fieldDef.required) button.enableRequired();

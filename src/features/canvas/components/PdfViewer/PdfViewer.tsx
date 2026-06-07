@@ -133,9 +133,10 @@ function PageSection({
         const ctx = canvas.getContext('2d')!;
         canvas.width = viewport.width;
         canvas.height = viewport.height;
-        // annotationMode: 2 = ENABLE_FORMS — hides native widget annotations
-        // (form fields) from the canvas so only our interactive overlay shows
-        renderTask = page.render({ canvasContext: ctx, viewport, annotationMode: 2 });
+        // annotationMode: 0 = DISABLE — paints NO native annotations (form
+        // widgets, squares, stamps, etc.) onto the canvas. The app draws its own
+        // interactive overlays, so any native annotation box is just an artifact.
+        renderTask = page.render({ canvasContext: ctx, viewport, annotationMode: 0 });
         await renderTask.promise;
       } catch (err: unknown) {
         if ((err as { name?: string }).name === 'RenderingCancelledException') return;

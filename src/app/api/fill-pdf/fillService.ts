@@ -1,4 +1,4 @@
-import { PDFDocument, PDFButton, PDFCheckBox, PDFTextField, StandardFonts } from 'pdf-lib';
+import { PDFDocument, PDFButton, PDFCheckBox, PDFTextField, StandardFonts, rgb } from 'pdf-lib';
 
 // Values that mark a checkbox as checked.
 const CHECKBOX_TRUTHY = new Set(['true', '1', 'x', '✓', 'si', 'sí', 'yes', 'on', 'checked']);
@@ -41,6 +41,16 @@ async function stampSignature(
     y: rect.y + (rect.height - drawH) / 2,
     width: drawW,
     height: drawH,
+  });
+
+  // Signature baseline, anchored to the field rect (drawn at fill time, not in
+  // the editor) — matches the guide shown in the filler preview.
+  const lineY = rect.y + rect.height * 0.2;
+  page.drawLine({
+    start: { x: rect.x + rect.width * 0.06, y: lineY },
+    end: { x: rect.x + rect.width * 0.94, y: lineY },
+    thickness: 0.75,
+    color: rgb(0.35, 0.35, 0.35),
   });
   return true;
 }

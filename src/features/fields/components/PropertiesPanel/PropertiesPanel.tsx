@@ -375,7 +375,8 @@ export function PropertiesPanel({
             ))}
           </select>
         </div>
-        {/* Valor predeterminado + multi-línea (solo para tipo Texto) */}
+        {/* Valor predeterminado + multi-línea — la firma no admite valor por defecto */}
+        {field.fieldType !== 'signature' && (
         <div className={styles['field-with-badge']}>
           <Input
             id="prop-value"
@@ -394,6 +395,7 @@ export function PropertiesPanel({
             >{MultilineIcon}</ToggleBadge>
           )}
         </div>
+        )}
       </Section>
 
       <Section

@@ -123,7 +123,9 @@ function FillerPageSection({
         canvas.width  = Math.round(viewport.width);
         canvas.height = Math.round(viewport.height);
         const ctx = canvas.getContext('2d')!;
-        renderTask = page.render({ canvasContext: ctx, viewport, annotationMode: 2 });
+        // annotationMode: 0 = DISABLE — no native annotation boxes on canvas
+        // (the live-preview overlay draws values). Avoids stray widget/square borders.
+        renderTask = page.render({ canvasContext: ctx, viewport, annotationMode: 0 });
         await renderTask.promise;
       } catch (err: unknown) {
         if ((err as { name?: string }).name === 'RenderingCancelledException') return;
@@ -158,7 +160,6 @@ function FillerPageSection({
 
     for (const field of fields) {
       const value = values[field.name];
-      if (!value) continue;
 
       const [x1, y1pdf, x2, y2] = field.rect;
       const cx = x1 * s;
@@ -166,19 +167,32 @@ function FillerPageSection({
       const cw = (x2 - x1) * s;
       const ch = (y2 - y1pdf) * s;
 
-      // Signature: draw the captured PNG, fitted inside the rect (aspect preserved).
+      // Signature: a baseline guide is always drawn (so the user sees where to
+      // sign); the captured PNG is layered on top once drawn. The line lives only
+      // in this preview — it is NOT baked into the PDF in the editor.
       if (field.type === 'signature') {
-        const img = new Image();
-        img.onload = () => {
-          if (cancelled) return;
-          const scale = Math.min(cw / img.width, ch / img.height);
-          const dw = img.width * scale;
-          const dh = img.height * scale;
-          ctx.drawImage(img, cx + (cw - dw) / 2, cy + (ch - dh) / 2, dw, dh);
-        };
-        img.src = value;
+        const lineY = cy + ch * 0.8;
+        ctx.strokeStyle = 'rgba(90, 90, 90, 0.7)';
+        ctx.lineWidth = Math.max(1, ch * 0.012);
+        ctx.beginPath();
+        ctx.moveTo(cx + cw * 0.06, lineY);
+        ctx.lineTo(cx + cw * 0.94, lineY);
+        ctx.stroke();
+        if (value) {
+          const img = new Image();
+          img.onload = () => {
+            if (cancelled) return;
+            const scale = Math.min(cw / img.width, ch / img.height);
+            const dw = img.width * scale;
+            const dh = img.height * scale;
+            ctx.drawImage(img, cx + (cw - dw) / 2, cy + (ch - dh) / 2, dw, dh);
+          };
+          img.src = value;
+        }
         continue;
       }
+
+      if (!value) continue;
 
       if (field.type === 'checkbox') {
         // Centered checkmark sized to the box.
