@@ -163,25 +163,6 @@ export const FillerMode = forwardRef<FillerModeHandle, FillerModeProps>(
       setJumpedId(null);
     }, [store]);
 
-    // ── Auto-collapse: when all fields in a group are filled, collapse it ─────
-    useEffect(() => {
-      const fields = store.fields;
-      if (fields.length === 0) return;
-      const groupNames = [...new Set(fields.map((f) => f.group ?? 'General'))];
-      for (const group of groupNames) {
-        const groupFields = fields.filter((f) => (f.group ?? 'General') === group);
-        const allFilled = groupFields.every((f) => !!store.values[f.name]);
-        if (allFilled) {
-          setCollapsed((prev) => {
-            if (prev.has(group)) return prev;
-            const next = new Set(prev);
-            next.add(group);
-            return next;
-          });
-        }
-      }
-    }, [store.values, store.fields]);
-
     // ── Autosave: 400ms debounce to localStorage ──────────────────────────────
     const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     useEffect(() => {
