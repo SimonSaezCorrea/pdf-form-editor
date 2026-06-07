@@ -17,6 +17,8 @@ export interface AcroFormField {
   group?: string;
   /** Whether the field has the Required bit set (fieldFlags & 4) */
   required?: boolean;
+  /** Whether the field has the Multiline bit set (fieldFlags & 4096) */
+  multiline?: boolean;
   /** Field type derived from pdfjs annotation fieldType ('Tx' → 'text') */
   fieldType?: FieldTypeId;
 }

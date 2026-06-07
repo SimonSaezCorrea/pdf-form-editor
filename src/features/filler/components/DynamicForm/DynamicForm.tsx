@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/Input/Input';
 import { Button } from '@/components/ui/Button/Button';
 import { Kbd } from '@/components/ui/Kbd/Kbd';
 import type { AcroFormField } from '../../types';
+import { orderGroups } from '../../config/groups';
 import styles from './DynamicForm.module.css';
 
 function relTime(ts: number): string {
@@ -37,6 +38,7 @@ interface DynamicFormProps {
   onCancelReset: () => void;
   onConfirmReset: () => void;
   onValidationError: (errors: Set<string>) => void;
+  onImportMetadata: () => void;
 }
 
 export function DynamicForm({
@@ -55,9 +57,10 @@ export function DynamicForm({
   onCancelReset,
   onConfirmReset,
   onValidationError,
+  onImportMetadata,
 }: Readonly<DynamicFormProps>) {
-  // Group fields
-  const groupNames = [...new Set(fields.map((f) => f.group ?? 'General'))];
+  // Group fields — orden lógico explícito (GROUP_ORDER), no orden de aparición
+  const groupNames = orderGroups([...new Set(fields.map((f) => f.group ?? 'General'))]);
   const fieldsByGroup: Record<string, AcroFormField[]> = {};
   for (const g of groupNames) {
     fieldsByGroup[g] = fields.filter((f) => (f.group ?? 'General') === g);
@@ -118,6 +121,14 @@ export function DynamicForm({
         <span className={styles['fill-progress']}>
           {filledCount}/{fields.length} campos
         </span>
+        <button
+          type="button"
+          className={styles['import-meta-btn']}
+          onClick={onImportMetadata}
+          title="Importar categorías desde plantilla JSON"
+        >
+          Importar categorías
+        </button>
       </div>
 
       {/* Reset confirmation banner */}
@@ -201,7 +212,7 @@ export function DynamicForm({
                           htmlFor={`filler-field-${field.name}`}
                           className={styles['field-label']}
                         >
-                          {field.label ?? field.name}
+                          {field.name}
                           {field.required ? (
                             <span className={styles['required-mark']}> *</span>
                           ) : (

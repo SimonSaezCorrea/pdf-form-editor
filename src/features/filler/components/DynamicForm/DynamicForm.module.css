@@ -45,6 +45,22 @@
   opacity: 0.65;
 }
 
+.import-meta-btn {
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 var(--space-1);
+  opacity: 0.8;
+  font-family: var(--font-family);
+  white-space: nowrap;
+}
+.import-meta-btn:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
 /* ── Banners ── */
 .filler-banner {
   display: flex;

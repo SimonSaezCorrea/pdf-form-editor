@@ -178,6 +178,7 @@ interface FillerLayoutProps {
   onCancelReset: () => void;
   onConfirmReset: () => void;
   onValidationError: (errors: Set<string>) => void;
+  onImportMetadata: () => void;
 }
 
 export function FillerLayout({
@@ -201,6 +202,7 @@ export function FillerLayout({
   onCancelReset,
   onConfirmReset,
   onValidationError,
+  onImportMetadata,
 }: Readonly<FillerLayoutProps>) {
   const [zoom, setZoom] = useState(1);
   const zoomOut = useCallback(() =>
@@ -287,6 +289,7 @@ export function FillerLayout({
             onCancelReset={onCancelReset}
             onConfirmReset={onConfirmReset}
             onValidationError={onValidationError}
+            onImportMetadata={onImportMetadata}
           />
         </div>
 

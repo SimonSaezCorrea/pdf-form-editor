@@ -6,15 +6,39 @@ import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { AcroFormField } from '../types';
 import type { FieldTypeId } from '@/types/shared';
 
-function deriveGroup(fieldName: string): string {
-  const prefix = fieldName.split('_')[0];
-  if (!prefix) return 'General';
-  return prefix.charAt(0).toUpperCase() + prefix.slice(1);
-}
-
 function pdfJsTypeToFieldTypeId(fieldType: string | undefined): FieldTypeId | undefined {
   if (fieldType === 'Tx') return 'text';
   return undefined;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractFontSize(a: any): number {
+  const dad = a.defaultAppearanceData as { fontSize?: number } | undefined;
+  if (dad?.fontSize) return dad.fontSize;
+  const daMatch = (a.defaultAppearance as string | undefined)?.match(/(\d+(?:\.\d+)?)\s+Tf/);
+  return daMatch ? Number.parseFloat(daMatch[1]) : 0;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildField(a: any, pageNum: number): AcroFormField {
+  const fontSize = extractFontSize(a);
+  // pdfjs maps the /TU (alternate name) entry to `alternativeText` — NOT `tooltip`.
+  // (see pdf.worker: `data.alternativeText = stringToPDFString(dict.get("TU"))`).
+  // Strict read: /TU or 'General'. No prefix-guessing.
+  const group = (a.alternativeText as string | undefined)?.trim() || 'General';
+  const flags = typeof a.fieldFlags === 'number' ? (a.fieldFlags as number) : 0;
+  return {
+    name: a.fieldName as string,
+    type: 'text',
+    page: pageNum,
+    rect: a.rect as [number, number, number, number],
+    fontSize,
+    label: `${group} · ${a.fieldName}`,
+    group,
+    required: (flags & 4) !== 0,
+    multiline: (flags & 4096) !== 0,
+    fieldType: pdfJsTypeToFieldTypeId(a.fieldType as string | undefined),
+  };
 }
 
 export async function detectAcroFormFields(
@@ -28,43 +52,10 @@ export async function detectAcroFormFields(
     const annotations = await page.getAnnotations();
 
     for (const a of annotations) {
-      if (a.subtype === 'Widget' && a.fieldType === 'Tx' && a.fieldName) {
-        if (!seen.has(a.fieldName)) {
-          seen.add(a.fieldName);
-
-          // pdfjs v4 exposes defaultAppearanceData with fontSize already parsed.
-          // Fall back to parsing the raw DA string for older PDFs.
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const dad = (a as any).defaultAppearanceData as
-            | { fontSize?: number }
-            | undefined;
-          let fontSize = dad?.fontSize ?? 0;
-
-          if (!fontSize) {
-            const daMatch = (a.defaultAppearance as string | undefined)
-              ?.match(/(\d+(?:\.\d+)?)\s+Tf/);
-            fontSize = daMatch ? parseFloat(daMatch[1]) : 0;
-          }
-
-          const group = deriveGroup(a.fieldName);
-          const label = `${group} · ${a.fieldName}`;
-          // fieldFlags bit 2 (value 4) = Required
-          const required = typeof a.fieldFlags === 'number' ? (a.fieldFlags & 4) !== 0 : false;
-          const fieldType = pdfJsTypeToFieldTypeId(a.fieldType as string | undefined);
-
-          fields.push({
-            name: a.fieldName,
-            type: 'text',
-            page: pageNum,
-            rect: a.rect as [number, number, number, number],
-            fontSize,
-            label,
-            group,
-            required,
-            fieldType,
-          });
-        }
-      }
+      if (a.subtype !== 'Widget' || a.fieldType !== 'Tx' || !a.fieldName) continue;
+      if (seen.has(a.fieldName)) continue;
+      seen.add(a.fieldName);
+      fields.push(buildField(a, pageNum));
     }
   }
 

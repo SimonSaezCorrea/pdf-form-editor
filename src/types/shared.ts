@@ -36,6 +36,10 @@ export interface FormField {
   fieldType?: FieldTypeId;
   /** When true, field cannot be dragged, resized, or deleted via keyboard. */
   locked?: boolean;
-  /** Optional grouping label (e.g. "Arrendador"). UI-only, not exported to PDF. */
+  /**
+   * Optional grouping label (e.g. "Arrendador"). Se exporta y persiste en el
+   * documento PDF estándar usando el atributo Alternate Name (/TU) — lo escribe
+   * pdfService.ts y lo lee pdfjs como `tooltip` en el filler.
+   */
   group?: string;
 }

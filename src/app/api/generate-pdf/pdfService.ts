@@ -1,6 +1,6 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { PDFDocument, PDFFont, PDFName, PDFDict, PDFArray, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, PDFFont, PDFName, PDFHexString, PDFDict, PDFArray, StandardFonts, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import type { FormField, FontFamily } from '@/types/shared';
 import { FONT_CATALOG } from '@/features/pdf/config/fonts';
@@ -99,6 +99,19 @@ function addTextField(
   }
   if (fieldDef.locked) {
     textField.enableReadOnly();
+  }
+  // Embed group/category in /TU (alternate name). pdfjs reads it back as `alternativeText`
+  // from the WIDGET annotation dict, NOT the field dict — and does NOT inherit via /Parent.
+  // pdf-lib keeps field and widget as separate dicts, so we MUST set /TU on every widget
+  // (field dict too, for spec-compliant readers).
+  if (fieldDef.group?.trim()) {
+    const tu = PDFHexString.fromText(fieldDef.group.trim());
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const acro = (textField as any).acroField;
+    acro.dict.set(PDFName.of('TU'), tu);
+    for (const widget of acro.getWidgets()) {
+      widget.dict.set(PDFName.of('TU'), tu);
+    }
   }
 
   const effectiveFontSize = fieldDef.autoFitFont && fieldDef.value

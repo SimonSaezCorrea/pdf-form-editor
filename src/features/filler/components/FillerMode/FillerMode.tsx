@@ -10,6 +10,33 @@ import styles from './FillerMode.module.css';
 const AUTOSAVE_KEY = 'pdf-filler-autosave';
 const AUTOSAVE_DELAY_MS = 400;
 
+function parseGroupMap(jsonText: string): Record<string, string> | null {
+  try {
+    const data = JSON.parse(jsonText);
+    const map: Record<string, string> = {};
+    // v2: { groups: [{ name, fields: [{ name }] }] }
+    if (Array.isArray(data.groups)) {
+      for (const g of data.groups) {
+        if (typeof g.name !== 'string' || !Array.isArray(g.fields)) continue;
+        for (const f of g.fields) {
+          if (typeof f.name === 'string') map[f.name] = g.name;
+        }
+      }
+    }
+    // v1: { fields: [{ name, group }] }
+    if (Array.isArray(data.fields)) {
+      for (const f of data.fields) {
+        if (typeof f.name === 'string' && typeof f.group === 'string') {
+          map[f.name] = f.group;
+        }
+      }
+    }
+    return Object.keys(map).length > 0 ? map : null;
+  } catch {
+    return null;
+  }
+}
+
 export interface FillerModeHandle {
   reset: () => void;
 }
@@ -57,6 +84,21 @@ export const FillerMode = forwardRef<FillerModeHandle, FillerModeProps>(
     const toggleFinalPreview = useCallback(() => {
       setFinalPreview((v) => !v);
     }, []);
+
+    const handleImportMetadata = useCallback(() => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = () => {
+        const file = input.files?.[0];
+        if (!file) return;
+        file.text().then((text) => {
+          const groupMap = parseGroupMap(text);
+          if (groupMap) void store.applyMetadata(groupMap);
+        }).catch(() => {});
+      };
+      input.click();
+    }, [store]);
 
     const handleChange = useCallback((name: string, value: string) => {
       store.setValue(name, value);
@@ -234,6 +276,7 @@ export const FillerMode = forwardRef<FillerModeHandle, FillerModeProps>(
         onCancelReset={cancelReset}
         onConfirmReset={confirmReset}
         onValidationError={setErrors}
+        onImportMetadata={handleImportMetadata}
       />
     );
   },

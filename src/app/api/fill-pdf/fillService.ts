@@ -15,12 +15,16 @@ export function isPdf(bytes: Uint8Array): boolean {
     bytes[3] === 0x46;
 }
 
+type FieldMeta = { fontSize: number; multiline: boolean };
+
 export async function fillPdf(
   fileBytes: Uint8Array,
   fields: Record<string, string>,
+  metadata: Record<string, FieldMeta> = {},
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(fileBytes);
   const form = pdfDoc.getForm();
+  const helvetica = pdfDoc.embedStandardFont(StandardFonts.Helvetica);
 
   // Build set of available field names for O(1) lookup
   const availableNames = new Set(form.getFields().map((f) => f.getName()));
@@ -32,15 +36,19 @@ export async function fillPdf(
     }
   }
 
-  // Write values
+  // Write values with per-field metadata
   for (const [name, value] of Object.entries(fields)) {
-    form.getTextField(name).setText(value);
+    const textField = form.getTextField(name);
+    const meta = metadata[name];
+
+    if (meta?.multiline) textField.enableMultiline();
+
+    textField.setText(value);
+    // 0 = auto-size (preserve original field sizing)
+    textField.setFontSize(meta?.fontSize ?? 0);
+    textField.updateAppearances(helvetica);
   }
 
-  // Principle XXXI: updateFieldAppearances → flatten → save
-  const helvetica = await pdfDoc.embedStandardFont(StandardFonts.Helvetica);
-  form.updateFieldAppearances(helvetica);
   form.flatten();
-
   return pdfDoc.save();
 }

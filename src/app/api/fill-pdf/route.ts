@@ -37,8 +37,15 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: 'INVALID_FIELDS' }, { status: 400 });
   }
 
+  type FieldMeta = { fontSize: number; multiline: boolean };
+  let metadata: Record<string, FieldMeta> = {};
+  const metaRaw = formData.get('metadata');
+  if (typeof metaRaw === 'string') {
+    try { metadata = JSON.parse(metaRaw) as Record<string, FieldMeta>; } catch { /* ignore */ }
+  }
+
   try {
-    const result = await fillPdf(fileBytes, fields);
+    const result = await fillPdf(fileBytes, fields, metadata);
     return new Response(Buffer.from(result), {
       status: 200,
       headers: {

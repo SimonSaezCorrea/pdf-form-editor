@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import type { AcroFormField, FillerStatus } from '../types';
 import { detectAcroFormFields } from './useFieldDetection';
+import { writeGroupsToPdf } from '../utils/writeGroupsToPdf';
 import * as pdfjs from 'pdfjs-dist';
 
 interface FillerStore {
@@ -15,6 +16,7 @@ interface FillerStore {
   handleFileSelected: (file: File) => Promise<void>;
   setValue: (name: string, value: string) => void;
   generatePdf: () => Promise<void>;
+  applyMetadata: (groupMap: Record<string, string>) => Promise<void>;
   reset: () => void;
 }
 
@@ -71,9 +73,16 @@ export function useFillerStore(): FillerStore {
         Object.entries(values).filter(([, v]) => v !== ''),
       );
 
+      // Build metadata map: fieldName → { fontSize, multiline }
+      const metadata: Record<string, { fontSize: number; multiline: boolean }> = {};
+      for (const f of fields) {
+        metadata[f.name] = { fontSize: f.fontSize, multiline: f.multiline ?? false };
+      }
+
       const formData = new FormData();
       formData.append('file', pdfFile);
       formData.append('fields', JSON.stringify(nonEmpty));
+      formData.append('metadata', JSON.stringify(metadata));
 
       const res = await fetch('/api/fill-pdf', { method: 'POST', body: formData });
 
@@ -99,6 +108,30 @@ export function useFillerStore(): FillerStore {
     }
   }, [pdfFile, values]);
 
+  const applyMetadata = useCallback(async (groupMap: Record<string, string>) => {
+    // 1. Update React state (optimista — refleja en la UI de inmediato)
+    setFields((prev) => prev.map((f) =>
+      groupMap[f.name] ? { ...f, group: groupMap[f.name] } : f,
+    ));
+
+    // 2. Persistir las categorías en el binario del PDF (/TU) para que sobrevivan
+    //    al guardado/exportación. Sin esto el cambio sería efímero (solo estado React).
+    if (!pdfBytes) return;
+    try {
+      const updated = await writeGroupsToPdf(pdfBytes, groupMap);
+      // Copia limpia a ArrayBuffer para el estado / usePdfRenderer
+      const updatedBuffer = updated.slice().buffer;
+      setPdfBytes(updatedBuffer);
+      // Mantener pdfFile en sync — es lo que generatePdf() sube al backend
+      setPdfFile((prev) => {
+        const name = prev?.name ?? 'document.pdf';
+        return new File([updatedBuffer], name, { type: 'application/pdf' });
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudieron persistir las categorías');
+    }
+  }, [pdfBytes]);
+
   const reset = useCallback(() => {
     setStatus('idle');
     setPdfBytes(null);
@@ -118,6 +151,7 @@ export function useFillerStore(): FillerStore {
     handleFileSelected,
     setValue,
     generatePdf,
+    applyMetadata,
     reset,
   };
 }
