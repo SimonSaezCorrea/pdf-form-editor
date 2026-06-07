@@ -8,14 +8,14 @@
   padding: var(--space-12) var(--space-6);
   overflow: auto;
   background:
-    radial-gradient(circle 480px at 50% -60px, rgba(244, 162, 97, 0.18), transparent 100%),
+    radial-gradient(circle 480px at 50% -60px, rgba(244, 162, 97, 0.09), transparent 100%),
     radial-gradient(ellipse 70% 50% at 50% 0%, rgba(102, 165, 173, 0.10), transparent 70%),
     var(--color-surface);
 }
 
 [data-theme="light"] .upload-screen {
   background:
-    radial-gradient(circle 480px at 50% -60px, rgba(231, 111, 81, 0.18), transparent 100%),
+    radial-gradient(circle 480px at 50% -60px, rgba(231, 111, 81, 0.09), transparent 100%),
     radial-gradient(ellipse 70% 50% at 50% 0%, rgba(7, 87, 91, 0.10), transparent 70%),
     var(--color-surface);
 }
