@@ -113,6 +113,42 @@ function FieldLabel({ field, renderScale, canvasWidth, canvasHeight }: Readonly<
   );
 }
 
+interface TypeGlyphProps {
+  field: FormField;
+  typeColor: string;
+  canvasWidth: number;
+  canvasHeight: number;
+}
+
+/** Centered square checkbox — the editor preview of an exported AcroForm checkbox. */
+function CheckboxGlyph({ field, typeColor, canvasWidth, canvasHeight }: Readonly<TypeGlyphProps>) {
+  const size = Math.max(8, Math.min(canvasWidth, canvasHeight) - 4);
+  const checked = !!field.value &&
+    ['true', '1', 'x', '✓', 'si', 'sí', 'yes', 'on', 'checked'].includes(field.value.trim().toLowerCase());
+  return (
+    <span className={styles['checkbox-glyph']}>
+      <span
+        className={styles['checkbox-box']}
+        style={{ width: size, height: size, borderColor: typeColor }}
+      >
+        {checked && <span style={{ color: typeColor, fontSize: size * 0.8, lineHeight: 1 }}>✓</span>}
+      </span>
+    </span>
+  );
+}
+
+/** Signature zone preview: baseline + label. */
+function SignatureGlyph({ field, typeColor }: Readonly<TypeGlyphProps>) {
+  return (
+    <span className={styles['signature-glyph']}>
+      <span className={styles['signature-name']} style={{ color: typeColor }}>
+        {field.name}
+      </span>
+      <span className={styles['signature-line']} style={{ borderColor: typeColor }} />
+    </span>
+  );
+}
+
 interface DraggableFieldProps {
   field: FormField;
   pdfPageHeight: number;
@@ -262,13 +298,27 @@ export function DraggableField({
         {...listeners}
         {...attributes}
       >
-        <div className={styles['field-bg']} />
+        {field.fieldType !== 'checkbox' && <div className={styles['field-bg']} />}
 
         {renaming ? (
           <RenameInput
             defaultValue={field.name}
             onCommit={commitRename}
             onCancel={() => setRenaming(false)}
+          />
+        ) : field.fieldType === 'checkbox' ? (
+          <CheckboxGlyph
+            field={field}
+            typeColor={typeColor}
+            canvasWidth={canvasPos.width}
+            canvasHeight={canvasPos.height}
+          />
+        ) : field.fieldType === 'signature' ? (
+          <SignatureGlyph
+            field={field}
+            typeColor={typeColor}
+            canvasWidth={canvasPos.width}
+            canvasHeight={canvasPos.height}
           />
         ) : (
           <FieldLabel

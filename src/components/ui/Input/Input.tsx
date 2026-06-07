@@ -9,7 +9,7 @@ interface InputProps {
   error?: string;
   hint?: string;
   disabled?: boolean;
-  type?: 'text' | 'number';
+  type?: 'text' | 'number' | 'date';
   placeholder?: string;
   id?: string;
   min?: number;

@@ -1,5 +1,5 @@
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import type { FormField, FontFamily } from '@/types/shared';
+import type { FormField, FontFamily, FieldTypeId } from '@/types/shared';
 
 const FONT_NAME_MAP: Array<[string, FontFamily]> = [
   ['Helv', 'Helvetica'],
@@ -35,6 +35,20 @@ function readDaFontSize(ann: Record<string, unknown>): number | null {
   return m ? Number.parseFloat(m[1]) : null;
 }
 
+/**
+ * Infer a typed text field from its AcroForm JS actions. pdf-lib/Acrobat write
+ * `AFNumber_*` / `AFDate_*` helpers into the field actions, which pdfjs exposes
+ * as `actions: Record<string, string[]>`. Returns 'text' when no marker matches.
+ */
+function textFieldKind(ann: Record<string, unknown>): 'text' | 'number' | 'date' {
+  const actions = ann['actions'] as Record<string, string[]> | undefined;
+  if (!actions) return 'text';
+  const all = Object.values(actions).flat();
+  if (all.some((js) => typeof js === 'string' && js.includes('AFNumber'))) return 'number';
+  if (all.some((js) => typeof js === 'string' && js.includes('AFDate'))) return 'date';
+  return 'text';
+}
+
 let extractCounter = 0;
 
 /**
@@ -51,7 +65,18 @@ export async function extractFieldsFromPdf(pdfDoc: PDFDocumentProxy): Promise<Fo
     const annotations = await page.getAnnotations();
 
     for (const ann of annotations as Record<string, unknown>[]) {
-      if (ann['subtype'] !== 'Widget' || ann['fieldType'] !== 'Tx') continue;
+      if (ann['subtype'] !== 'Widget') continue;
+
+      // Map the AcroForm widget to a UI field type. Only text (Tx) and button
+      // (Btn → checkbox / signature push-button) widgets are editable here.
+      let fieldType: FieldTypeId;
+      if (ann['fieldType'] === 'Tx') {
+        fieldType = textFieldKind(ann);
+      } else if (ann['fieldType'] === 'Btn') {
+        fieldType = ann['pushButton'] === true ? 'signature' : 'checkbox';
+      } else {
+        continue;
+      }
 
       const rect = ann['rect'] as [number, number, number, number] | undefined;
       if (!Array.isArray(rect) || rect.length < 4) continue;
@@ -82,8 +107,13 @@ export async function extractFieldsFromPdf(pdfDoc: PDFDocumentProxy): Promise<Fo
       const autoFitFont = daSize === 0;
       const fontSize = daSize && daSize > 0 ? daSize : 12;
 
-      const value =
-        typeof ann['fieldValue'] === 'string' ? ann['fieldValue'] : '';
+      let value = typeof ann['fieldValue'] === 'string' ? ann['fieldValue'] : '';
+      if (fieldType === 'checkbox') {
+        // pdfjs reports the on-state name (e.g. 'Yes') or 'Off' for checkboxes.
+        value = value && value !== 'Off' ? '✓' : '';
+      } else if (fieldType === 'signature') {
+        value = '';
+      }
 
       // Category lives in /TU, which pdfjs exposes as `alternativeText`.
       // Undefined when absent — editor treats empty group as "no category".
@@ -115,6 +145,7 @@ export async function extractFieldsFromPdf(pdfDoc: PDFDocumentProxy): Promise<Fo
         multiline: ann['multiLine'] === true,
         locked: ann['readOnly'] === true,
         showBorder: borderWidth > 0,
+        fieldType,
       });
     }
   }

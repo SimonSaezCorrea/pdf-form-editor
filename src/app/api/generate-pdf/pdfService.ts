@@ -154,6 +154,104 @@ function addTextField(
 }
 
 /**
+ * Bake AcroForm JavaScript field actions (/AA) into a text field. Readers that
+ * run AcroForm JS (Acrobat) enforce them; in any reader the action strings also
+ * survive as a persistent marker that pdfjs reads back (`annotation.actions`),
+ * so the editor and filler can re-detect the field type on round-trip.
+ *
+ * - K (keystroke) validates input as it is typed.
+ * - F (format) normalizes the displayed value on commit. Omit it to avoid
+ *   reformatting (e.g. numbers must NOT be rounded), include it for dates.
+ */
+function setFieldJsActions(
+  pdfDoc: PDFDocument,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  textField: any,
+  actions: { K?: string; F?: string },
+): void {
+  const ctx = pdfDoc.context;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const aa: Record<string, any> = {};
+  if (actions.K) aa.K = ctx.obj({ S: PDFName.of('JavaScript'), JS: PDFString.of(actions.K) });
+  if (actions.F) aa.F = ctx.obj({ S: PDFName.of('JavaScript'), JS: PDFString.of(actions.F) });
+  textField.acroField.dict.set(PDFName.of('AA'), ctx.obj(aa));
+}
+
+// Values that mark a checkbox as checked when present in `value`.
+const CHECKBOX_TRUTHY = new Set(['true', '1', 'x', 'X', '✓', 'si', 'sí', 'yes', 'on', 'checked']);
+
+function isCheckboxChecked(value: string | undefined): boolean {
+  if (!value) return false;
+  return CHECKBOX_TRUTHY.has(value.trim().toLowerCase());
+}
+
+function addCheckBox(
+  pdfDoc: PDFDocument,
+  form: ReturnType<PDFDocument['getForm']>,
+  fieldDef: FormField,
+): void {
+  const page = pdfDoc.getPages()[fieldDef.page - 1];
+  const checkBox = form.createCheckBox(fieldDef.name);
+  // Checkboxes render as a square. Use the smaller dimension so the box is never
+  // a stretched rectangle, centered within the field's bounding box.
+  const size = Math.min(fieldDef.width, fieldDef.height);
+  const offsetX = fieldDef.x + (fieldDef.width - size) / 2;
+  const offsetY = fieldDef.y + (fieldDef.height - size) / 2;
+
+  checkBox.addToPage(page, {
+    x: offsetX,
+    y: offsetY,
+    width: size,
+    height: size,
+    borderWidth: 1,
+    borderColor: rgb(0.4, 0.4, 0.4),
+    backgroundColor: rgb(1, 1, 1),
+  });
+
+  if (isCheckboxChecked(fieldDef.value)) {
+    checkBox.check();
+  }
+  if (fieldDef.required) checkBox.enableRequired();
+  if (fieldDef.locked) checkBox.enableReadOnly();
+}
+
+function addSignatureField(
+  pdfDoc: PDFDocument,
+  form: ReturnType<PDFDocument['getForm']>,
+  fieldDef: FormField,
+  font: PDFFont,
+): void {
+  const page = pdfDoc.getPages()[fieldDef.page - 1];
+  // Signature zone: an interactive push button that acts as a click-to-place
+  // image/drawing target. Rendered with a visible border + a baseline so it
+  // reads as a signature area in any PDF reader.
+  const button = form.createButton(fieldDef.name);
+  button.addToPage('', page, {
+    x: fieldDef.x,
+    y: fieldDef.y,
+    width: fieldDef.width,
+    height: fieldDef.height,
+    borderWidth: 1,
+    borderColor: rgb(0.4, 0.4, 0.4),
+    backgroundColor: rgb(1, 1, 1),
+    font,
+  });
+
+  // Signature baseline near the bottom of the zone.
+  const pad = Math.min(8, fieldDef.width * 0.1);
+  const lineY = fieldDef.y + Math.min(14, fieldDef.height * 0.25);
+  page.drawLine({
+    start: { x: fieldDef.x + pad, y: lineY },
+    end: { x: fieldDef.x + fieldDef.width - pad, y: lineY },
+    thickness: 0.75,
+    color: rgb(0.55, 0.55, 0.55),
+  });
+
+  if (fieldDef.required) button.enableRequired();
+  if (fieldDef.locked) button.enableReadOnly();
+}
+
+/**
  * Embed AcroForm text fields into an existing PDF and return the modified bytes.
  *
  * @throws {Error} if field names are not unique, page numbers are out of range,
@@ -210,7 +308,37 @@ export async function generatePdf(
   }
 
   for (const fieldDef of fields) {
-    addTextField(pdfDoc, form, fieldDef, embeddedFonts, ttfFonts);
+    switch (fieldDef.fieldType) {
+      case 'checkbox':
+        addCheckBox(pdfDoc, form, fieldDef);
+        break;
+      case 'signature':
+        addSignatureField(pdfDoc, form, fieldDef, embeddedFonts[fieldDef.fontFamily]!);
+        break;
+      case 'number': {
+        // Text field + numeric keystroke action: restricts input to numbers in
+        // readers that run AcroForm JS, and marks the field for round-trip detection.
+        addTextField(pdfDoc, form, fieldDef, embeddedFonts, ttfFonts);
+        setFieldJsActions(pdfDoc, form.getField(fieldDef.name), {
+          K: 'AFNumber_Keystroke(0, 0, 0, 0, "", true);',
+        });
+        break;
+      }
+      case 'date': {
+        // Text field + ISO date keystroke/format actions. Matches the HTML
+        // <input type="date"> value (yyyy-mm-dd) used in the editor and filler.
+        addTextField(pdfDoc, form, fieldDef, embeddedFonts, ttfFonts);
+        setFieldJsActions(pdfDoc, form.getField(fieldDef.name), {
+          K: 'AFDate_KeystrokeEx("yyyy-mm-dd");',
+          F: 'AFDate_FormatEx("yyyy-mm-dd");',
+        });
+        break;
+      }
+      case 'text':
+      default:
+        addTextField(pdfDoc, form, fieldDef, embeddedFonts, ttfFonts);
+        break;
+    }
   }
 
   return pdfDoc.save();

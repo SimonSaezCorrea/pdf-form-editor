@@ -1,4 +1,4 @@
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFDict, PDFString } from 'pdf-lib';
 import { generatePdf } from '@/app/api/generate-pdf/pdfService';
 import type { FormField } from '@/types/shared';
 
@@ -76,6 +76,50 @@ describe('generatePdf', () => {
     const buf = await createTestPdf();
     const fields: FormField[] = [{ ...baseField, page: 0 }];
     await expect(generatePdf(buf, fields)).rejects.toThrow(/page/i);
+  });
+
+  test('checkbox field exports as a real AcroForm checkbox', async () => {
+    const buf = await createTestPdf();
+    const result = await generatePdf(buf, [
+      { ...baseField, name: 'agree', fieldType: 'checkbox', value: '✓' },
+    ]);
+    const doc = await PDFDocument.load(result);
+    const checkBox = doc.getForm().getCheckBox('agree');
+    expect(checkBox).toBeDefined();
+    expect(checkBox.isChecked()).toBe(true);
+  });
+
+  test('number field bakes an AFNumber keystroke action into the PDF', async () => {
+    const buf = await createTestPdf();
+    const result = await generatePdf(buf, [
+      { ...baseField, name: 'amount', fieldType: 'number' },
+    ]);
+    const doc = await PDFDocument.load(result);
+    // Still a fillable text field.
+    const field = doc.getForm().getTextField('amount');
+    expect(field).toBeDefined();
+    // The keystroke (/AA /K) JavaScript action is present and numeric.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const aa = (field as any).acroField.dict.lookup(PDFName.of('AA'), PDFDict);
+    const k = aa.lookup(PDFName.of('K'), PDFDict);
+    const js = k.lookup(PDFName.of('JS'), PDFString);
+    expect(js.asString()).toContain('AFNumber_Keystroke');
+  });
+
+  test('date field bakes AFDate keystroke + format actions into the PDF', async () => {
+    const buf = await createTestPdf();
+    const result = await generatePdf(buf, [
+      { ...baseField, name: 'birth', fieldType: 'date' },
+    ]);
+    const doc = await PDFDocument.load(result);
+    const field = doc.getForm().getTextField('birth');
+    expect(field).toBeDefined();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const aa = (field as any).acroField.dict.lookup(PDFName.of('AA'), PDFDict);
+    const k = aa.lookup(PDFName.of('K'), PDFDict);
+    const f = aa.lookup(PDFName.of('F'), PDFDict);
+    expect(k.lookup(PDFName.of('JS'), PDFString).asString()).toContain('AFDate');
+    expect(f.lookup(PDFName.of('JS'), PDFString).asString()).toContain('AFDate');
   });
 
   test('works with multi-page PDF and fields on different pages', async () => {

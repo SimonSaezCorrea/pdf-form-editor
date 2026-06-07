@@ -4,9 +4,77 @@ import { useEffect } from 'react';
 import { Input } from '@/components/ui/Input/Input';
 import { Button } from '@/components/ui/Button/Button';
 import { Kbd } from '@/components/ui/Kbd/Kbd';
+import { SignaturePad } from '../SignaturePad/SignaturePad';
 import type { AcroFormField } from '../../types';
 import { orderGroups } from '../../config/groups';
 import styles from './DynamicForm.module.css';
+
+interface FieldControlProps {
+  field: AcroFormField;
+  value: string;
+  hasError: boolean;
+  generating: boolean;
+  onValueChange: (name: string, value: string) => void;
+}
+
+/** Renders the correct input control for a field based on its type. */
+function FieldControl({ field, value, hasError, generating, onValueChange }: Readonly<FieldControlProps>) {
+  const id = `filler-field-${field.name}`;
+
+  if (field.type === 'checkbox') {
+    const isFilled = !!value;
+    return (
+      <label className={styles['checkbox-control']}>
+        <input
+          id={id}
+          type="checkbox"
+          checked={isFilled}
+          disabled={generating}
+          onChange={(e) => onValueChange(field.name, e.target.checked ? '✓' : '')}
+        />
+        <span>{isFilled ? 'Marcado' : 'Sin marcar'}</span>
+      </label>
+    );
+  }
+
+  if (field.type === 'signature') {
+    return (
+      <SignaturePad
+        value={value}
+        rect={field.rect}
+        disabled={generating}
+        onChange={(dataUrl) => onValueChange(field.name, dataUrl)}
+      />
+    );
+  }
+
+  if (field.type === 'text' && field.multiline) {
+    return (
+      <textarea
+        id={id}
+        className={styles['multiline-input']}
+        value={value}
+        rows={4}
+        disabled={generating}
+        placeholder="Escribe aquí… (Enter para salto de línea)"
+        onChange={(e) => onValueChange(field.name, e.target.value)}
+      />
+    );
+  }
+
+  const inputType = field.type === 'number' || field.type === 'date' ? field.type : 'text';
+  return (
+    <Input
+      id={id}
+      type={inputType}
+      value={value}
+      onChange={(e) => onValueChange(field.name, e.target.value)}
+      placeholder={field.type === 'number' ? 'Solo números…' : 'Escribe aquí…'}
+      disabled={generating}
+      error={hasError ? 'Campo requerido' : undefined}
+    />
+  );
+}
 
 function relTime(ts: number): string {
   const secs = Math.round((Date.now() - ts) / 1000);
@@ -220,13 +288,12 @@ export function DynamicForm({
                           )}
                         </label>
                         <div className={styles['field-input-row']}>
-                          <Input
-                            id={`filler-field-${field.name}`}
+                          <FieldControl
+                            field={field}
                             value={value}
-                            onChange={(e) => onValueChange(field.name, e.target.value)}
-                            placeholder="Escribe aquí…"
-                            disabled={generating}
-                            error={hasError ? 'Campo requerido' : undefined}
+                            hasError={hasError}
+                            generating={generating}
+                            onValueChange={onValueChange}
                           />
                           <span className={styles['filler-field-status']}>
                             {fieldStatus(isFilled, hasError)}

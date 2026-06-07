@@ -380,9 +380,9 @@ export function PropertiesPanel({
           <Input
             id="prop-value"
             label="Valor predeterminado"
-            type="text"
+            type={field.fieldType === 'number' || field.fieldType === 'date' ? field.fieldType : 'text'}
             value={field.value ?? ''}
-            placeholder="Texto que aparecerá en el PDF."
+            placeholder={field.fieldType === 'number' ? 'Solo números.' : 'Texto que aparecerá en el PDF.'}
             onChange={(e) => update('value', e.target.value)}
             className={styles['prop-group']}
           />

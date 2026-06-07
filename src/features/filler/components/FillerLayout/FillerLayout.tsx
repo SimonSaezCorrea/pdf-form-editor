@@ -15,6 +15,70 @@ const MIN_ZOOM  = 0.25;
 const MAX_ZOOM  = 3;
 const ZOOM_STEP = 0.1;
 
+const OVERLAY_FONT = 'Helvetica, Arial, sans-serif';
+const LINE_HEIGHT_RATIO = 1.2;
+
+/**
+ * Word-wrap `text` to `maxWidth` (canvas px) at the font currently set on `ctx`.
+ * Honors explicit "\n" breaks; long words that exceed the width are broken by
+ * character (mirrors how a PDF multiline field reflows long tokens).
+ */
+function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const lines: string[] = [];
+  for (const para of text.split('\n')) {
+    let line = '';
+    for (const word of para.split(' ')) {
+      const candidate = line ? `${line} ${word}` : word;
+      if (line && ctx.measureText(candidate).width > maxWidth) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = candidate;
+      }
+      // Break a single word that is itself wider than the box.
+      while (ctx.measureText(line).width > maxWidth && line.length > 1) {
+        let cut = line.length - 1;
+        while (cut > 1 && ctx.measureText(line.slice(0, cut)).width > maxWidth) cut--;
+        lines.push(line.slice(0, cut));
+        line = line.slice(cut);
+      }
+    }
+    lines.push(line);
+  }
+  return lines;
+}
+
+/**
+ * Lay out text for the preview overlay, mirroring how pdf-lib renders the field
+ * on download:
+ *  - fixed size (DA size > 0): use it as-is; multiline wraps, single line clips.
+ *  - auto-size (DA size 0): shrink the font until the (wrapped) text fits the box.
+ */
+function layoutOverlayText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  opts: { maxWidth: number; maxHeight: number; basePx: number; multiline: boolean; autoFit: boolean },
+): { fontPx: number; lines: string[] } {
+  const { maxWidth, maxHeight, basePx, multiline, autoFit } = opts;
+  const setFont = (px: number) => { ctx.font = `${px}px ${OVERLAY_FONT}`; };
+
+  if (!autoFit) {
+    setFont(basePx);
+    return { fontPx: basePx, lines: multiline ? wrapText(ctx, text, maxWidth) : [text] };
+  }
+
+  // Auto-size: largest font (starting near box height) whose content fits.
+  for (let px = Math.min(basePx, maxHeight); px > 6; px -= 0.5) {
+    setFont(px);
+    const lines = multiline ? wrapText(ctx, text, maxWidth) : [text];
+    const widthFits = lines.every((l) => ctx.measureText(l).width <= maxWidth);
+    const heightFits = lines.length * px * LINE_HEIGHT_RATIO <= maxHeight;
+    if (widthFits && (heightFits || !multiline)) return { fontPx: px, lines };
+  }
+  setFont(6);
+  return { fontPx: 6, lines: multiline ? wrapText(ctx, text, maxWidth) : [text] };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // FillerPageSection — one PDF page + live-preview overlay + click targets
 // ─────────────────────────────────────────────────────────────────────────────
@@ -90,6 +154,9 @@ function FillerPageSection({
     if (!ctx) return;
     ctx.clearRect(0, 0, w, h);
 
+    // Async signature image draws must not paint onto a later (re-run) frame.
+    let cancelled = false;
+
     for (const field of fields) {
       const value = values[field.name];
       if (!value) continue;
@@ -100,21 +167,64 @@ function FillerPageSection({
       const cw = (x2 - x1) * s;
       const ch = (y2 - y1pdf) * s;
 
+      // Signature: draw the captured PNG, fitted inside the rect (aspect preserved).
+      if (field.type === 'signature') {
+        const img = new Image();
+        img.onload = () => {
+          if (cancelled) return;
+          const scale = Math.min(cw / img.width, ch / img.height);
+          const dw = img.width * scale;
+          const dh = img.height * scale;
+          ctx.drawImage(img, cx + (cw - dw) / 2, cy + (ch - dh) / 2, dw, dh);
+        };
+        img.src = value;
+        continue;
+      }
+
+      if (field.type === 'checkbox') {
+        // Centered checkmark sized to the box.
+        const mark = Math.min(cw, ch) * 0.8;
+        ctx.font = `${mark}px Helvetica, Arial, sans-serif`;
+        ctx.fillStyle = '#1a1a1a';
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
+        ctx.fillText('✓', cx + cw / 2, cy + ch / 2);
+        ctx.textAlign = 'start';
+        continue;
+      }
+
       ctx.fillStyle = 'rgba(255, 255, 255, 0.78)';
       ctx.fillRect(cx, cy, cw, ch);
 
-      const fontSize = field.fontSize > 0 ? field.fontSize * s : Math.max(6, ch * 0.8);
-      ctx.font = `${fontSize}px Helvetica, Arial, sans-serif`;
-      ctx.fillStyle = '#1a1a1a';
-      ctx.textBaseline = 'middle';
+      const multiline = field.multiline ?? false;
+      const autoFit = field.fontSize <= 0; // DA size 0 = AcroForm auto-size sentinel
+      const { fontPx, lines } = layoutOverlayText(ctx, value, {
+        maxWidth: cw - 8,
+        maxHeight: ch - 4,
+        basePx: autoFit ? ch : field.fontSize * s,
+        multiline,
+        autoFit,
+      });
 
+      ctx.fillStyle = '#1a1a1a';
       ctx.save();
       ctx.beginPath();
       ctx.rect(cx + 2, cy, cw - 4, ch);
       ctx.clip();
-      ctx.fillText(value, cx + 4, cy + ch / 2);
+      if (lines.length > 1 || multiline) {
+        ctx.textBaseline = 'top';
+        const lineHeight = fontPx * LINE_HEIGHT_RATIO;
+        lines.forEach((line, i) => ctx.fillText(line, cx + 4, cy + 2 + i * lineHeight));
+      } else {
+        ctx.textBaseline = 'middle';
+        ctx.fillText(lines[0], cx + 4, cy + ch / 2);
+      }
       ctx.restore();
     }
+
+    return () => {
+      cancelled = true;
+    };
   }, [values, fields, renderScale, pageDimensions]);
 
   return (

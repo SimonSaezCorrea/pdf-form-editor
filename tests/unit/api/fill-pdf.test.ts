@@ -73,6 +73,27 @@ describe('POST /api/fill-pdf', () => {
     expect(body.field).toBe('nonexistent');
   });
 
+  test('200: checkbox marcado + firma estampada (sin crash en getTextField)', async () => {
+    const doc = await PDFDocument.create();
+    const page = doc.addPage([612, 792]);
+    const form = doc.getForm();
+    const cb = form.createCheckBox('acepto');
+    cb.addToPage(page, { x: 72, y: 700, width: 16, height: 16 });
+    const btn = form.createButton('firma');
+    btn.addToPage('', page, { x: 72, y: 580, width: 200, height: 80 });
+    const pdf = Buffer.from(await doc.save());
+
+    // 1×1 transparent PNG
+    const png =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/IhfAAAAAElFTkSuQmCC';
+    const res = await makeRequest(pdf, { acepto: '✓', firma: png });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toMatch(/application\/pdf/);
+    const out = await PDFDocument.load(await res.arrayBuffer());
+    // Signature button was removed after stamping; form is flattened.
+    expect(out.getForm().getFields().length).toBe(0);
+  });
+
   test('200: fields={} → PDF original aplanado (sin valores)', async () => {
     const pdf = await createEmptyPdf();
     const res = await makeRequest(pdf, {});

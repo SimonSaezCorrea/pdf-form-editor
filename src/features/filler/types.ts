@@ -2,7 +2,7 @@ import type { FieldTypeId } from '@/types/shared';
 
 export interface AcroFormField {
   name: string;
-  type: 'text';
+  type: 'text' | 'number' | 'date' | 'checkbox' | 'signature';
   page: number;
   /** Field bounding box in PDF user-space coords [x1, y1, x2, y2], bottom-left origin */
   rect: [number, number, number, number];

@@ -246,6 +246,55 @@
   min-width: 0;
 }
 
+.checkbox-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  cursor: pointer;
+  padding: var(--space-2) 0;
+}
+
+.checkbox-control input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.signature-note {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  font-style: italic;
+  padding: var(--space-2) 0;
+}
+
+.multiline-input {
+  width: 100%;
+  min-height: 88px;
+  resize: vertical;
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  background: var(--color-input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  line-height: 1.4;
+  box-sizing: border-box;
+}
+
+.multiline-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.multiline-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .filler-field-status {
   width: 16px;
   flex-shrink: 0;
