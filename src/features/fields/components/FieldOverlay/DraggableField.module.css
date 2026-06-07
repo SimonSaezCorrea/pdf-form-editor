@@ -69,6 +69,11 @@
   display: block;
 }
 
+/* Required fields: red text to match the red border (wins over has-value/locked) */
+.field-label--required {
+  color: var(--color-danger) !important;
+}
+
 .field-delete-btn {
   position: absolute;
   top: -8px;

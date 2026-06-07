@@ -1,9 +1,99 @@
 .properties-panel {
+  --toggle-fluor: #b9ff3d;
   padding: var(--space-3);
   border-top: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+/* Input + toggle badge side-by-side, badge aligned to the input box (not the label) */
+.field-with-badge {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-end;
+}
+.field-with-badge .prop-group {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Square toggle button: neutral off, fluor on */
+.toggle-badge {
+  flex-shrink: 0;
+  align-self: flex-end;
+  box-sizing: border-box;
+  min-width: 40px;
+  padding: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--color-input-bg);
+  color: var(--color-text-muted);
+  font: 700 var(--font-size-base) / 1.2 var(--font-family);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  position: relative;
+}
+.toggle-badge:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
+}
+.toggle-badge svg {
+  display: block;
+}
+.toggle-badge--active {
+  color: var(--toggle-fluor);
+  border-color: var(--toggle-fluor);
+  background: color-mix(in srgb, var(--toggle-fluor) 16%, transparent);
+  box-shadow: 0 0 7px color-mix(in srgb, var(--toggle-fluor) 55%, transparent);
+  z-index: 1;
+}
+.toggle-badge--active:hover {
+  color: var(--toggle-fluor);
+  border-color: var(--toggle-fluor);
+}
+/* Partial state (multi-selection: some on, some off) */
+.toggle-badge--mixed {
+  color: var(--toggle-fluor);
+  border-color: color-mix(in srgb, var(--toggle-fluor) 50%, var(--border-color));
+  background: color-mix(in srgb, var(--toggle-fluor) 7%, transparent);
+}
+
+/* Hover legend — portaled to <body>, positioned with fixed coords, so the
+   scrolling/overflow-clipping properties panel can never cut it off. */
+.toggle-tooltip {
+  position: fixed;
+  transform: translate(-100%, 0);
+  max-width: 200px;
+  width: max-content;
+  background: var(--color-text);
+  color: var(--color-panel-bg);
+  font: var(--font-weight-medium) var(--font-size-xs) / 1.3 var(--font-family);
+  text-align: left;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Segmented group of contiguous toggles (multi-selection behavior) */
+.badge-row {
+  display: inline-flex;
+}
+.badge-row .toggle-badge {
+  border-radius: 0;
+  margin-left: -1px;
+}
+.badge-row .toggle-badge:first-child {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  margin-left: 0;
+}
+.badge-row .toggle-badge:last-child {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
 .panel-header {
@@ -94,6 +184,15 @@
 
 .prop-section {
   border-bottom: 1px solid var(--border-color);
+}
+
+.prop-section__head-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.prop-section__head-row .prop-section__head {
+  flex: 1;
 }
 
 .prop-section__head {

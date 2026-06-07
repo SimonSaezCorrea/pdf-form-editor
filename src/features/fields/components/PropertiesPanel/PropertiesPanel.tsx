@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { FormField } from '@/types/shared';
 import { FONT_CATALOG, FONT_CATEGORIES, loadFont, getFontByName } from '@/features/pdf/config/fonts';
 import { FIELD_TYPE_CONFIG, getFieldTypeConfig } from '@/features/fields/config/fieldTypes';
@@ -21,26 +22,132 @@ interface SectionProps {
   open: boolean;
   onToggle: () => void;
   children: React.ReactNode;
+  /** Optional control rendered at the right edge of the section header. */
+  action?: React.ReactNode;
 }
 
-function Section({ title, open, onToggle, children }: Readonly<SectionProps>) {
+function Section({ title, open, onToggle, children, action }: Readonly<SectionProps>) {
   return (
     <div className={styles['prop-section']}>
-      <button
-        type="button"
-        className={styles['prop-section__head']}
-        onClick={onToggle}
-        aria-expanded={open}
-      >
-        <span
-          className={styles['prop-section__indicator']}
-          dangerouslySetInnerHTML={{ __html: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>' }}
-          style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}
-        />
-        <span>{title}</span>
-      </button>
+      <div className={styles['prop-section__head-row']}>
+        <button
+          type="button"
+          className={styles['prop-section__head']}
+          onClick={onToggle}
+          aria-expanded={open}
+        >
+          <span
+            className={styles['prop-section__indicator']}
+            dangerouslySetInnerHTML={{ __html: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>' }}
+            style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+          />
+          <span>{title}</span>
+        </button>
+        {action}
+      </div>
       {open && <div className={styles['prop-section__body']}>{children}</div>}
     </div>
+  );
+}
+
+const svgBase = {
+  viewBox: '0 0 24 24',
+  width: 16,
+  height: 16,
+  fill: 'none',
+  stroke: 'currentColor',
+  'aria-hidden': true,
+} as const;
+
+/** Asterisk — required field. */
+const RequiredIcon = (
+  <svg {...svgBase} strokeWidth={2.2} strokeLinecap="round">
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5.5" y1="8.5" x2="18.5" y2="15.5" />
+    <line x1="18.5" y1="8.5" x2="5.5" y2="15.5" />
+  </svg>
+);
+
+/** Stacked lines — multiline text. */
+const MultilineIcon = (
+  <svg {...svgBase} strokeWidth={2} strokeLinecap="round">
+    <line x1="5" y1="8" x2="19" y2="8" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+    <line x1="5" y1="16" x2="14" y2="16" />
+  </svg>
+);
+
+/** Rectangle outline — visible PDF border. */
+const BorderIcon = (
+  <svg {...svgBase} strokeWidth={2}>
+    <rect x="4.5" y="6" width="15" height="12" rx="1.5" />
+  </svg>
+);
+
+interface ToggleBadgeProps {
+  active: boolean;
+  /** Partial state for multi-selection (some on, some off). */
+  mixed?: boolean;
+  tooltip: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}
+
+/**
+ * Square toggle button: neutral off, fluor on, partial when mixed.
+ * The hover legend is rendered through a portal to <body> so the scrolling,
+ * overflow-clipping properties panel can never cut it off.
+ */
+function ToggleBadge({ active, mixed, tooltip, onClick, children }: Readonly<ToggleBadgeProps>) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const [tipPos, setTipPos] = useState<{ x: number; y: number } | null>(null);
+
+  // Static placement: BELOW the button, right-aligned to its right edge so it
+  // extends leftward — the panel sits at the screen's right edge, so there is
+  // always room to the left and it never clips at the right border.
+  const showTip = () => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setTipPos({ x: r.right, y: r.bottom + 6 });
+  };
+  const hideTip = () => setTipPos(null);
+
+  return (
+    <>
+      <button
+        ref={ref}
+        type="button"
+        className={[
+          styles['toggle-badge'],
+          active ? styles['toggle-badge--active'] : '',
+          mixed ? styles['toggle-badge--mixed'] : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        onClick={onClick}
+        onMouseEnter={showTip}
+        onMouseLeave={hideTip}
+        onFocus={showTip}
+        onBlur={hideTip}
+        aria-pressed={active}
+        aria-label={tooltip}
+      >
+        {children}
+      </button>
+      {tipPos &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className={styles['toggle-tooltip']}
+            style={{ left: tipPos.x, top: tipPos.y }}
+            role="tooltip"
+          >
+            {tooltip}
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }
 
@@ -119,8 +226,9 @@ export function PropertiesPanel({
           <Input
             id="multi-size"
             label="Tamaño (pt)"
-            type="number"
-            value={sharedSize}
+            type={allAutoFit ? 'text' : 'number'}
+            value={allAutoFit ? 'Automático' : sharedSize}
+            disabled={allAutoFit}
             placeholder={mixedSize ? '—' : undefined}
             min={6} max={72} step={1}
             onChange={(e) => {
@@ -157,24 +265,28 @@ export function PropertiesPanel({
         </Section>
 
         <Section title="Comportamiento" open={!collapsedMulti.has('beh')} onToggle={() => toggleMulti('beh')}>
-          {(
-            [
-              { key: 'required',    label: 'Rellenado obligatorio',     all: allRequired,  some: someRequired  },
-              { key: 'showBorder',  label: 'Mostrar borde en PDF',      all: allBorder,    some: someBorder    },
-              { key: 'autoFitFont', label: 'Ajustar fuente al contenido', all: allAutoFit, some: someAutoFit   },
-              { key: 'multiline',   label: 'Texto multi-línea',         all: allMultiline, some: someMultiline },
-            ] as const
-          ).map(({ key, label, all, some }) => (
-            <label key={key} className={styles['prop-checkbox']}>
-              <input
-                type="checkbox"
-                checked={all}
-                ref={(el) => { if (el) el.indeterminate = !all && some; }}
-                onChange={(e) => onUpdateFields(ids, { [key]: e.target.checked })}
-              />
-              {label}
-            </label>
-          ))}
+          <div className={styles['badge-row']}>
+            <ToggleBadge
+              active={allRequired} mixed={!allRequired && someRequired}
+              tooltip="Rellenado obligatorio"
+              onClick={() => onUpdateFields(ids, { required: !allRequired })}
+            >{RequiredIcon}</ToggleBadge>
+            <ToggleBadge
+              active={allBorder} mixed={!allBorder && someBorder}
+              tooltip="Mostrar borde en el PDF"
+              onClick={() => onUpdateFields(ids, { showBorder: !allBorder })}
+            >{BorderIcon}</ToggleBadge>
+            <ToggleBadge
+              active={allAutoFit} mixed={!allAutoFit && someAutoFit}
+              tooltip="Ajuste automático de la fuente al contenido"
+              onClick={() => onUpdateFields(ids, { autoFitFont: !allAutoFit })}
+            >A</ToggleBadge>
+            <ToggleBadge
+              active={allMultiline} mixed={!allMultiline && someMultiline}
+              tooltip="Texto multilínea"
+              onClick={() => onUpdateFields(ids, { multiline: !allMultiline })}
+            >{MultilineIcon}</ToggleBadge>
+          </div>
         </Section>
 
         <div className={styles['prop-footer']}>
@@ -222,15 +334,23 @@ export function PropertiesPanel({
       </div>
 
       <Section title="General" open={!collapsed.has('general')} onToggle={() => toggle('general')}>
-        <Input
-          id="prop-name"
-          label="Nombre / ID"
-          type="text"
-          value={field.name}
-          onChange={(e) => update('name', e.target.value)}
-          error={hasDuplicate ? '⚠ Nombre duplicado' : undefined}
-          className={styles['prop-group']}
-        />
+        {/* Nombre/ID + obligatorio (toggle no bloquea el campo) */}
+        <div className={styles['field-with-badge']}>
+          <Input
+            id="prop-name"
+            label="Nombre / ID"
+            type="text"
+            value={field.name}
+            onChange={(e) => update('name', e.target.value)}
+            error={hasDuplicate ? '⚠ Nombre duplicado' : undefined}
+            className={styles['prop-group']}
+          />
+          <ToggleBadge
+            active={field.required ?? false}
+            tooltip="Rellenado obligatorio"
+            onClick={() => update('required', !(field.required ?? false))}
+          >{RequiredIcon}</ToggleBadge>
+        </div>
         <div className={styles['prop-group']}>
           <Input
             id="prop-group"
@@ -255,18 +375,39 @@ export function PropertiesPanel({
             ))}
           </select>
         </div>
-        <Input
-          id="prop-value"
-          label="Valor predeterminado"
-          type="text"
-          value={field.value ?? ''}
-          placeholder="Texto que aparecerá en el PDF."
-          onChange={(e) => update('value', e.target.value)}
-          className={styles['prop-group']}
-        />
+        {/* Valor predeterminado + multi-línea (solo para tipo Texto) */}
+        <div className={styles['field-with-badge']}>
+          <Input
+            id="prop-value"
+            label="Valor predeterminado"
+            type="text"
+            value={field.value ?? ''}
+            placeholder="Texto que aparecerá en el PDF."
+            onChange={(e) => update('value', e.target.value)}
+            className={styles['prop-group']}
+          />
+          {(field.fieldType ?? 'text') === 'text' && (
+            <ToggleBadge
+              active={field.multiline ?? false}
+              tooltip="Texto multilínea"
+              onClick={() => update('multiline', !(field.multiline ?? false))}
+            >{MultilineIcon}</ToggleBadge>
+          )}
+        </div>
       </Section>
 
-      <Section title="Posición y tamaño" open={!collapsed.has('position')} onToggle={() => toggle('position')}>
+      <Section
+        title="Posición y tamaño"
+        open={!collapsed.has('position')}
+        onToggle={() => toggle('position')}
+        action={
+          <ToggleBadge
+            active={field.showBorder ?? false}
+            tooltip="Mostrar borde en el PDF"
+            onClick={() => update('showBorder', !(field.showBorder ?? false))}
+          >{BorderIcon}</ToggleBadge>
+        }
+      >
         <div className={styles['prop-row']}>
           <Input id="prop-x" label="X (pt)" type="number" value={field.x.toFixed(2)} min={0} step={0.5}
             onChange={(e) => update('x', Number(e.target.value))} className={styles['prop-group']} />
@@ -306,40 +447,27 @@ export function PropertiesPanel({
             ))}
           </select>
         </div>
-        <Input
-          id="prop-size"
-          label="Tamaño (pt)"
-          type="number"
-          value={String(field.fontSize)}
-          min={6}
-          max={72}
-          step={1}
-          onChange={(e) => update('fontSize', Number(e.target.value))}
-          className={styles['prop-group']}
-        />
-      </Section>
-
-      <Section title="Comportamiento" open={!collapsed.has('comportamiento')} onToggle={() => toggle('comportamiento')}>
-        <label className={styles['prop-checkbox']}>
-          <input type="checkbox" checked={field.required ?? false}
-            onChange={(e) => update('required', e.target.checked)} />
-          Rellenado obligatorio
-        </label>
-        <label className={styles['prop-checkbox']}>
-          <input type="checkbox" checked={field.showBorder ?? false}
-            onChange={(e) => update('showBorder', e.target.checked)} />
-          Mostrar borde en PDF
-        </label>
-        <label className={styles['prop-checkbox']}>
-          <input type="checkbox" checked={field.autoFitFont ?? false}
-            onChange={(e) => update('autoFitFont', e.target.checked)} />
-          Ajustar fuente al contenido
-        </label>
-        <label className={styles['prop-checkbox']}>
-          <input type="checkbox" checked={field.multiline ?? false}
-            onChange={(e) => update('multiline', e.target.checked)} />
-          Texto multi-línea
-        </label>
+        {/* Tamaño + ajuste automático. Mismo Input siempre montado (sin remontar → sin
+            saltos): al activar auto-fit se deshabilita y muestra "Automático". */}
+        <div className={styles['field-with-badge']}>
+          <Input
+            id="prop-size"
+            label="Tamaño (pt)"
+            type={field.autoFitFont ? 'text' : 'number'}
+            value={field.autoFitFont ? 'Automático' : String(field.fontSize)}
+            disabled={field.autoFitFont ?? false}
+            min={6}
+            max={72}
+            step={1}
+            onChange={(e) => update('fontSize', Number(e.target.value))}
+            className={styles['prop-group']}
+          />
+          <ToggleBadge
+            active={field.autoFitFont ?? false}
+            tooltip="Ajuste automático de la fuente al contenido"
+            onClick={() => update('autoFitFont', !(field.autoFitFont ?? false))}
+          >A</ToggleBadge>
+        </div>
       </Section>
 
       <div className={styles['prop-footer']}>

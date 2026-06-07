@@ -2,7 +2,14 @@
 
 import { useRef, useState, useEffect } from 'react';
 
-function fieldBorderColor(isSelected: boolean, locked: boolean, typeColor: string): string {
+function fieldBorderColor(
+  isSelected: boolean,
+  locked: boolean,
+  required: boolean,
+  typeColor: string,
+): string {
+  // Required always shows red — even while selected.
+  if (required) return 'var(--color-danger)';
   if (isSelected) return 'var(--color-primary)';
   if (locked) return 'rgba(150,150,150,0.5)';
   return typeColor;
@@ -94,6 +101,7 @@ function FieldLabel({ field, renderScale, canvasWidth, canvasHeight }: Readonly<
         field.value ? styles['field-label--has-value'] : '',
         field.value && field.multiline ? styles['field-label--multiline'] : '',
         field.locked ? styles['field-label--locked'] : '',
+        field.required ? styles['field-label--required'] : '',
       ].filter(Boolean).join(' ')}
       style={{
         fontSize: `${fontSize}px`,
@@ -190,11 +198,12 @@ export function DraggableField({
     ? `translate(${delta.x}px, ${delta.y}px)`
     : CSS.Translate.toString(transform);
 
-  const borderColor = fieldBorderColor(isSelected, field.locked ?? false, typeColor);
+  const borderColor = fieldBorderColor(isSelected, field.locked ?? false, field.required ?? false, typeColor);
   const bgColor = fieldBgColor(isSelected, field.locked ?? false, typeColor);
-  const boxShadow = isSelected
-    ? '0 0 0 2px var(--color-primary), 0 0 8px rgba(102, 165, 173, 0.35)'
-    : undefined;
+  const selectionRing = field.required
+    ? '0 0 0 2px var(--color-danger), 0 0 8px rgba(220, 38, 38, 0.35)'
+    : '0 0 0 2px var(--color-primary), 0 0 8px rgba(102, 165, 173, 0.35)';
+  const boxShadow = isSelected ? selectionRing : undefined;
 
   const style: React.CSSProperties = {
     left: canvasPos.left,

@@ -1,6 +1,6 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { PDFDocument, PDFFont, PDFName, PDFHexString, PDFDict, PDFArray, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, PDFFont, PDFName, PDFHexString, PDFString, PDFDict, PDFArray, StandardFonts, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import type { FormField, FontFamily } from '@/types/shared';
 import { FONT_CATALOG } from '@/features/pdf/config/fonts';
@@ -133,6 +133,24 @@ function addTextField(
 
   // updateAppearances is mandatory — omitting it leaves fields invisible in most readers
   textField.updateAppearances(font);
+
+  // Persist the "auto-fit" intent. pdf-lib bakes a concrete size into the appearance
+  // stream (good for fidelity), so we mark the /DA font size as 0 — the AcroForm
+  // auto-size sentinel — AFTER baking. pdfjs reads it back as fontSize 0, which both
+  // the editor (autoFitFont) and the filler interpret as auto-size. Visual stream is
+  // untouched; only the DA metadata signals the intent.
+  if (fieldDef.autoFitFont) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const acro = (textField as any).acroField;
+    const currentDA: string = acro.getDefaultAppearance() ?? '';
+    const autoDA = currentDA
+      ? currentDA.replace(/(\d+(?:\.\d+)?)\s+Tf/, '0 Tf')
+      : '0 0 0 rg\n/Helvetica 0 Tf';
+    acro.setDefaultAppearance(autoDA);
+    for (const widget of acro.getWidgets()) {
+      widget.dict.set(PDFName.of('DA'), PDFString.of(autoDA));
+    }
+  }
 }
 
 /**
