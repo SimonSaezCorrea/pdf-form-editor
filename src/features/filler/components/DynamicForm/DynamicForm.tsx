@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react';
 import { Input } from '@/components/ui/Input/Input';
-import { Button } from '@/components/ui/Button/Button';
 import { Kbd } from '@/components/ui/Kbd/Kbd';
 import { SignaturePad } from '../SignaturePad/SignaturePad';
 import type { AcroFormField } from '../../types';
@@ -94,7 +93,6 @@ interface DynamicFormProps {
   fields: AcroFormField[];
   values: Record<string, string>;
   onValueChange: (name: string, value: string) => void;
-  onSubmit: () => void;
   generating: boolean;
   collapsed: Set<string>;
   lastSaved: number | null;
@@ -105,7 +103,6 @@ interface DynamicFormProps {
   onJumpToNextEmpty: (fromId: string | null) => void;
   onCancelReset: () => void;
   onConfirmReset: () => void;
-  onValidationError: (errors: Set<string>) => void;
   onImportMetadata: () => void;
 }
 
@@ -113,7 +110,6 @@ export function DynamicForm({
   fields,
   values,
   onValueChange,
-  onSubmit,
   generating,
   collapsed,
   lastSaved,
@@ -124,7 +120,6 @@ export function DynamicForm({
   onJumpToNextEmpty,
   onCancelReset,
   onConfirmReset,
-  onValidationError,
   onImportMetadata,
 }: Readonly<DynamicFormProps>) {
   // Group fields — orden lógico explícito (GROUP_ORDER), no orden de aparición
@@ -145,32 +140,6 @@ export function DynamicForm({
 
   // Find currently focused field id for "jump to next empty"
   const lastFilledField = [...fields].reverse().find((f) => !!values[f.name]);
-
-  const handleSubmit = () => {
-    const missing = new Set(
-      fields.filter((f) => f.required && !values[f.name]).map((f) => f.name),
-    );
-    if (missing.size > 0) {
-      onValidationError(missing);
-      // Expand collapsed groups that contain missing fields
-      for (const name of missing) {
-        const field = fields.find((f) => f.name === name);
-        if (field?.group && collapsed.has(field.group)) {
-          onToggleCollapse(field.group);
-        }
-      }
-      // Focus first missing
-      const firstMissing = fields.find((f) => missing.has(f.name));
-      if (firstMissing) {
-        setTimeout(() => {
-          document.getElementById(`filler-field-${firstMissing.name}`)?.focus();
-        }, 150);
-      }
-      return;
-    }
-    onValidationError(new Set());
-    onSubmit();
-  };
 
   const hasErrors = errors.size > 0;
   const filledCount = fields.filter((f) => !!values[f.name]).length;
@@ -309,7 +278,7 @@ export function DynamicForm({
         })}
       </div>
 
-      {/* Footer: next empty button + generate */}
+      {/* Footer: jump to next empty (Generar PDF vive en la barra superior) */}
       <div className={styles['form-footer']}>
         <button
           type="button"
@@ -319,14 +288,6 @@ export function DynamicForm({
         >
           ↓ Siguiente vacío <Kbd>Enter</Kbd>
         </button>
-        <Button
-          variant="primary"
-          onClick={handleSubmit}
-          disabled={generating}
-          loading={generating}
-        >
-          {generating ? 'Generando…' : 'Generar PDF'}
-        </Button>
       </div>
     </div>
   );

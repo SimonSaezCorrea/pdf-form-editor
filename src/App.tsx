@@ -17,7 +17,7 @@ import { extractFieldsFromPdf } from '@/features/pdf/utils/extractFields';
 import { exportPdf } from '@/features/pdf/utils/export';
 import type { FormField, FieldTypeId } from '@/types/shared';
 import { canvasToPdf } from '@/features/pdf/utils/coordinates';
-import { Button, IconButton, Kbd } from '@/components/ui';
+import { Button, IconButton, Kbd, ConfirmDialog } from '@/components/ui';
 import { modShortcut } from '@/hooks/useModKey';
 
 const ICON_ARROW_LEFT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>`;
@@ -46,6 +46,7 @@ export default function App() {
   const [appMode, setAppMode] = useState<AppMode>('editor');
   const [fillerHasFile, setFillerHasFile] = useState(false);
   const [fillerFilename, setFillerFilename] = useState('');
+  const [fillerGenerating, setFillerGenerating] = useState(false);
   const fillerRef = useRef<FillerModeHandle>(null);
   const [pdfBytes, setPdfBytes] = useState<ArrayBuffer | null>(null);
   const [pdfFilename, setPdfFilename] = useState('');
@@ -53,6 +54,7 @@ export default function App() {
   const [exportError, setExportError] = useState<string | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showNewDocConfirm, setShowNewDocConfirm] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [clipboard, setClipboard] = useState<FormField[]>([]);
   const [propClipboard, setPropClipboard] = useState<Partial<FormField> | null>(null);
@@ -101,6 +103,31 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [store.resetFields],
   );
+
+  const openPdfPicker = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.pdf,application/pdf';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
+        setExportError('Selecciona un archivo PDF válido.');
+        return;
+      }
+      file.arrayBuffer().then((bytes) => handlePdfLoaded(bytes, file.name));
+    };
+    input.click();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handlePdfLoaded]);
+
+  const handleNewDocument = useCallback(() => {
+    if (store.isDirty) {
+      setShowNewDocConfirm(true);
+      return;
+    }
+    openPdfPicker();
+  }, [store.isDirty, openPdfPicker]);
 
   const handleExport = async () => {
     if (!pdfBytes || !canExport) return;
@@ -310,34 +337,23 @@ export default function App() {
               PDF Form Editor
             </button>
           </h1>
-          {/* Mode nav: only when no file loaded in editor */}
-          {!pdfBytes && (
+          {/* Mode nav: only when no file loaded in either mode */}
+          {!pdfBytes && !fillerHasFile && (
             <nav className={styles['mode-nav']} aria-label="Modo de la aplicación">
-              {(appMode === 'filler' && fillerHasFile) ? (
-                <button
-                  className={styles['mode-btn-back']}
-                  onClick={() => fillerRef.current?.reset()}
-                >
-                  ← Cambiar PDF
-                </button>
-              ) : (
-                <>
-                  <button
-                    className={`${styles['mode-btn']} ${appMode === 'editor' ? styles['mode-btn--active'] : ''}`}
-                    onClick={() => setAppMode('editor')}
-                    aria-pressed={appMode === 'editor'}
-                  >
-                    Editor de plantilla
-                  </button>
-                  <button
-                    className={`${styles['mode-btn']} ${appMode === 'filler' ? styles['mode-btn--active'] : ''}`}
-                    onClick={() => setAppMode('filler')}
-                    aria-pressed={appMode === 'filler'}
-                  >
-                    Rellenar PDF
-                  </button>
-                </>
-              )}
+              <button
+                className={`${styles['mode-btn']} ${appMode === 'editor' ? styles['mode-btn--active'] : ''}`}
+                onClick={() => setAppMode('editor')}
+                aria-pressed={appMode === 'editor'}
+              >
+                Editor de plantilla
+              </button>
+              <button
+                className={`${styles['mode-btn']} ${appMode === 'filler' ? styles['mode-btn--active'] : ''}`}
+                onClick={() => setAppMode('filler')}
+                aria-pressed={appMode === 'filler'}
+              >
+                Rellenar PDF
+              </button>
             </nav>
           )}
           {(pdfBytes || fillerHasFile) && (
@@ -355,6 +371,7 @@ export default function App() {
             )}
             {pdfBytes && (
               <>
+                <Button variant="navbar" onClick={handleNewDocument}>Cambiar PDF</Button>
                 <Button variant="navbar" onClick={() => setShowImportModal(true)}>Importar</Button>
                 <Button variant="navbar" onClick={() => setShowExportModal(true)}>Exportar</Button>
                 <Button
@@ -366,6 +383,19 @@ export default function App() {
                   title={exportButtonTitle}
                 >
                   {isExporting ? 'Exportando…' : <><SvgIcon svg={ICON_DOWNLOAD} /> Exportar PDF</>}
+                </Button>
+              </>
+            )}
+            {appMode === 'filler' && fillerHasFile && (
+              <>
+                <Button variant="navbar" onClick={() => fillerRef.current?.changeDocument()}>Cambiar PDF</Button>
+                <Button
+                  variant="navbar-cta"
+                  size="sm"
+                  onClick={() => fillerRef.current?.generate()}
+                  loading={fillerGenerating}
+                >
+                  {fillerGenerating ? 'Generando…' : <><SvgIcon svg={ICON_DOWNLOAD} /> Generar PDF</>}
                 </Button>
               </>
             )}
@@ -426,6 +456,7 @@ export default function App() {
           ref={fillerRef}
           onHasFileChange={setFillerHasFile}
           onFilenameChange={setFillerFilename}
+          onGeneratingChange={setFillerGenerating}
         />
       ) : !pdfBytes ? (
         <div className={styles['upload-area']}>
@@ -536,6 +567,17 @@ export default function App() {
           onClose={() => setShowImportModal(false)}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={showNewDocConfirm}
+        title="Cambiar de documento"
+        message={'Tienes cambios sin guardar. Si cambias de documento se perderán los campos a menos que primero los exportes (Exportar PDF) o guardes la plantilla (Exportar → JSON).\n\n¿Cambiar de documento de todas formas?'}
+        confirmLabel="Cambiar documento"
+        cancelLabel="Cancelar"
+        variant="danger"
+        onConfirm={() => { setShowNewDocConfirm(false); openPdfPicker(); }}
+        onCancel={() => setShowNewDocConfirm(false)}
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { usePdfRenderer } from '@/features/canvas';
 import type { PageDimensions } from '@/features/canvas';
 import { Button } from '@/components/ui/Button/Button';
 import { IconButton } from '@/components/ui/IconButton/IconButton';
+import { ThumbnailStrip } from '@/features/canvas/components/ThumbnailStrip/ThumbnailStrip';
 import { DynamicForm } from '../DynamicForm/DynamicForm';
 import type { AcroFormField } from '../../types';
 import styles from './FillerLayout.module.css';
@@ -90,7 +91,6 @@ interface FillerPageSectionProps {
   renderScale: number;
   fields: AcroFormField[];
   values: Record<string, string>;
-  finalPreview: boolean;
   jumpedId: string | null;
   onFocusField: (name: string) => void;
 }
@@ -102,7 +102,6 @@ function FillerPageSection({
   renderScale,
   fields,
   values,
-  finalPreview,
   jumpedId,
   onFocusField,
 }: Readonly<FillerPageSectionProps>) {
@@ -233,7 +232,7 @@ function FillerPageSection({
         <canvas ref={canvasRef} className={styles['pdf-canvas']} />
         <canvas ref={overlayRef} className={styles['field-overlay']} />
         {/* Click targets: transparent buttons over each field rect */}
-        {!finalPreview && fields.map((field) => {
+        {fields.map((field) => {
           const [x1, y1pdf, x2, y2] = field.rect;
           const s  = renderScale;
           const ph = pageDimensions.height;
@@ -272,22 +271,17 @@ interface FillerLayoutProps {
   values: Record<string, string>;
   generating: boolean;
   onValueChange: (name: string, value: string) => void;
-  onGeneratePdf: () => void;
-  onReset: () => void;
   // T065 state from FillerMode
   collapsed: Set<string>;
   lastSaved: number | null;
-  finalPreview: boolean;
   resetConfirm: boolean;
   errors: Set<string>;
   jumpedId: string | null;
   onToggleCollapse: (group: string) => void;
-  onToggleFinalPreview: () => void;
   onJumpToNextEmpty: (fromId: string | null) => void;
   onFocusField: (name: string) => void;
   onCancelReset: () => void;
   onConfirmReset: () => void;
-  onValidationError: (errors: Set<string>) => void;
   onImportMetadata: () => void;
 }
 
@@ -297,24 +291,21 @@ export function FillerLayout({
   values,
   generating,
   onValueChange,
-  onGeneratePdf,
-  onReset,
   collapsed,
   lastSaved,
-  finalPreview,
   resetConfirm,
   errors,
   jumpedId,
   onToggleCollapse,
-  onToggleFinalPreview,
   onJumpToNextEmpty,
   onFocusField,
   onCancelReset,
   onConfirmReset,
-  onValidationError,
   onImportMetadata,
 }: Readonly<FillerLayoutProps>) {
   const [zoom, setZoom] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [thumbnailsVisible, setThumbnailsVisible] = useState(true);
   const zoomOut = useCallback(() =>
     setZoom((z) => Math.max(MIN_ZOOM, Math.round((z - ZOOM_STEP) * 100) / 100)), []);
   const zoomIn  = useCallback(() =>
@@ -343,6 +334,29 @@ export function FillerLayout({
     btn?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [jumpedId]);
 
+  // Track which page is most visible to highlight it in the thumbnail strip
+  const handlePanelScroll = useCallback(() => {
+    const container = pdfPanelRef.current;
+    if (!container) return;
+    const cRect = container.getBoundingClientRect();
+    let bestPage = 1;
+    let bestOverlap = -1;
+    for (const el of container.querySelectorAll('[id^="filler-page-"]')) {
+      const r = el.getBoundingClientRect();
+      const overlap = Math.min(r.bottom, cRect.bottom) - Math.max(r.top, cRect.top);
+      if (overlap > bestOverlap) {
+        bestOverlap = overlap;
+        bestPage = Number(el.id.replace('filler-page-', ''));
+      }
+    }
+    setCurrentPage((prev) => (prev === bestPage ? prev : bestPage));
+  }, []);
+
+  const handlePageSelect = useCallback((page: number) => {
+    setCurrentPage(page);
+    document.getElementById(`filler-page-${page}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
   const { pdfDoc, totalPages, pageDimensionsMap, renderScale, isLoading, error } = renderer;
   const dimensionsReady =
     Object.keys(pageDimensionsMap).length === totalPages && totalPages > 0;
@@ -353,20 +367,9 @@ export function FillerLayout({
 
   return (
     <div className={styles['filler-layout']}>
-      {/* Header */}
+      {/* Header — 3-column toolbar (left info · center zoom · right) mirrors editor */}
       <div className={styles['layout-header']}>
-        <span className={styles['field-count']}>
-          {fields.length} campo{fields.length === 1 ? '' : 's'} detectado{fields.length === 1 ? '' : 's'}
-        </span>
-
-        {/* Vista final toggle (T073) */}
-        <button
-          type="button"
-          className={[styles['toggle-pill'], finalPreview ? styles['toggle-pill--active'] : ''].filter(Boolean).join(' ')}
-          onClick={onToggleFinalPreview}
-        >
-          {finalPreview ? '◉' : '○'} Vista final
-        </button>
+        <div className={styles['header-left']} />
 
         <div className={styles['zoom-controls']}>
           <IconButton icon="−" label="Alejar"  onClick={zoomOut} disabled={zoom <= MIN_ZOOM} />
@@ -374,20 +377,33 @@ export function FillerLayout({
           <IconButton icon="+" label="Acercar" onClick={zoomIn}  disabled={zoom >= MAX_ZOOM} />
         </div>
 
-        <Button variant="ghost" size="sm" onClick={onReset} disabled={generating}>
-          Subir otro PDF
-        </Button>
+        <div className={styles['header-right']}>
+          {pdfDoc && totalPages > 1 && (
+            <Button variant="navbar" onClick={() => setThumbnailsVisible((v) => !v)}>
+              {thumbnailsVisible ? 'Ocultar páginas' : 'Ver páginas'}
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Two-panel body */}
+      {/* Body: thumbnails · form · cascading PDF */}
       <div className={styles['layout-body']}>
-        {/* Left: form */}
+        {pdfDoc && totalPages > 1 && (
+          <ThumbnailStrip
+            pdfDoc={pdfDoc}
+            totalPages={totalPages}
+            currentPage={currentPage}
+            onPageSelect={handlePageSelect}
+            hidden={!thumbnailsVisible}
+          />
+        )}
+
+        {/* Form */}
         <div className={styles['form-panel']}>
           <DynamicForm
             fields={fields}
             values={values}
             onValueChange={onValueChange}
-            onSubmit={onGeneratePdf}
             generating={generating}
             collapsed={collapsed}
             lastSaved={lastSaved}
@@ -398,13 +414,12 @@ export function FillerLayout({
             onJumpToNextEmpty={onJumpToNextEmpty}
             onCancelReset={onCancelReset}
             onConfirmReset={onConfirmReset}
-            onValidationError={onValidationError}
             onImportMetadata={onImportMetadata}
           />
         </div>
 
         {/* Right: cascading PDF pages */}
-        <div ref={pdfPanelRef} className={styles['pdf-panel']}>
+        <div ref={pdfPanelRef} className={styles['pdf-panel']} onScroll={handlePanelScroll}>
           {isLoading && <div className={styles['pdf-loading']}>Cargando previsualización…</div>}
           {error    && <div className={styles['pdf-error']}>{error}</div>}
 
@@ -420,7 +435,6 @@ export function FillerLayout({
                 renderScale={renderScale}
                 fields={fields.filter((f) => f.page === pageNum)}
                 values={values}
-                finalPreview={finalPreview}
                 jumpedId={jumpedId}
                 onFocusField={onFocusField}
               />

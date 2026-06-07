@@ -5,6 +5,7 @@ import { useFillerStore } from '../../hooks/useFillerStore';
 import { PdfUploadScreen } from '../PdfUploadScreen/PdfUploadScreen';
 import { FillerLayout } from '../FillerLayout/FillerLayout';
 import { Button } from '@/components/ui/Button/Button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import styles from './FillerMode.module.css';
 
 const AUTOSAVE_KEY = 'pdf-filler-autosave';
@@ -39,38 +40,39 @@ function parseGroupMap(jsonText: string): Record<string, string> | null {
 
 export interface FillerModeHandle {
   reset: () => void;
+  /** Open the file picker to swap the document (warns if data was entered). */
+  changeDocument: () => void;
+  /** Validate required fields and generate (download) the filled PDF. */
+  generate: () => void;
 }
 
 interface FillerModeProps {
   onHasFileChange?: (hasFile: boolean) => void;
   onFilenameChange?: (filename: string) => void;
+  onGeneratingChange?: (generating: boolean) => void;
 }
 
 export const FillerMode = forwardRef<FillerModeHandle, FillerModeProps>(
-  function FillerMode({ onHasFileChange, onFilenameChange }, ref) {
+  function FillerMode({ onHasFileChange, onFilenameChange, onGeneratingChange }, ref) {
     const store = useFillerStore();
 
     // ── UI state (T065) ──────────────────────────────────────────────────────
     const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
     const [lastSaved, setLastSaved] = useState<number | null>(null);
-    const [finalPreview, setFinalPreview] = useState(false);
     const [resetConfirm, setResetConfirm] = useState(false);
     const [errors, setErrors] = useState<Set<string>>(new Set());
     const [jumpedId, setJumpedId] = useState<string | null>(null);
+    const [showChangeConfirm, setShowChangeConfirm] = useState(false);
     // ticker state to force re-render for relative time display
 
-    // Expose reset() via ref
-    useImperativeHandle(ref, () => ({
-      reset: () => {
-        store.reset();
-        setCollapsed(new Set());
-        setLastSaved(null);
-        setFinalPreview(false);
-        setResetConfirm(false);
-        setErrors(new Set());
-        setJumpedId(null);
-      },
-    }), [store]);
+    const handleReset = useCallback(() => {
+      store.reset();
+      setCollapsed(new Set());
+      setLastSaved(null);
+      setResetConfirm(false);
+      setErrors(new Set());
+      setJumpedId(null);
+    }, [store]);
 
     // ── Handlers ─────────────────────────────────────────────────────────────
     const toggleCollapse = useCallback((group: string) => {
@@ -79,10 +81,6 @@ export const FillerMode = forwardRef<FillerModeHandle, FillerModeProps>(
         if (next.has(group)) next.delete(group); else next.add(group);
         return next;
       });
-    }, []);
-
-    const toggleFinalPreview = useCallback(() => {
-      setFinalPreview((v) => !v);
     }, []);
 
     const handleImportMetadata = useCallback(() => {
@@ -145,9 +143,68 @@ export const FillerMode = forwardRef<FillerModeHandle, FillerModeProps>(
       }
     }, [store.fields]);
 
-    const handleResetConfirm = useCallback(() => {
-      setResetConfirm(true);
-    }, []);
+    // Cambiar de documento: abre el selector de archivos directamente. Si hay
+    // datos rellenados, avisa (modal) de que se perderán si no se ha descargado el PDF.
+    const openPdfPicker = useCallback(() => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.pdf,application/pdf';
+      input.onchange = () => {
+        const file = input.files?.[0];
+        if (file) void store.handleFileSelected(file);
+      };
+      input.click();
+    }, [store]);
+
+    const handleChangeDocument = useCallback(() => {
+      const hasValues = Object.values(store.values).some((v) => v !== '');
+      if (hasValues) {
+        setShowChangeConfirm(true);
+        return;
+      }
+      openPdfPicker();
+    }, [store.values, openPdfPicker]);
+
+    // Validate required fields, then generate. Moved up from DynamicForm so the
+    // "Generar PDF" button can live in the top navbar (App header).
+    const handleGenerate = useCallback(() => {
+      const missing = new Set(
+        store.fields.filter((f) => f.required && !store.values[f.name]).map((f) => f.name),
+      );
+      if (missing.size > 0) {
+        setErrors(missing);
+        // Expand any collapsed group that contains a missing field
+        setCollapsed((prev) => {
+          const next = new Set(prev);
+          for (const name of missing) {
+            const f = store.fields.find((x) => x.name === name);
+            next.delete(f?.group ?? 'General');
+          }
+          return next;
+        });
+        const firstMissing = store.fields.find((f) => missing.has(f.name));
+        if (firstMissing) {
+          setTimeout(() => {
+            document.getElementById(`filler-field-${firstMissing.name}`)?.focus();
+          }, 150);
+        }
+        return;
+      }
+      setErrors(new Set());
+      void store.generatePdf();
+    }, [store.fields, store.values, store.generatePdf]);
+
+    // Expose actions to the App top navbar (Cambiar PDF / Generar PDF)
+    useImperativeHandle(ref, () => ({
+      reset: handleReset,
+      changeDocument: handleChangeDocument,
+      generate: handleGenerate,
+    }), [handleReset, handleChangeDocument, handleGenerate]);
+
+    // Report generating state so the top-navbar button can show its loading state
+    useEffect(() => {
+      onGeneratingChange?.(store.status === 'generating');
+    }, [store.status, onGeneratingChange]);
 
     const cancelReset = useCallback(() => {
       setResetConfirm(false);
@@ -158,7 +215,6 @@ export const FillerMode = forwardRef<FillerModeHandle, FillerModeProps>(
       store.reset();
       setCollapsed(new Set());
       setLastSaved(null);
-      setFinalPreview(false);
       setErrors(new Set());
       setJumpedId(null);
     }, [store]);
@@ -236,29 +292,36 @@ export const FillerMode = forwardRef<FillerModeHandle, FillerModeProps>(
     }
 
     return (
-      <FillerLayout
-        pdfBytes={store.pdfBytes!}
-        fields={store.fields}
-        values={store.values}
-        generating={store.status === 'generating'}
-        onValueChange={handleChange}
-        onGeneratePdf={store.generatePdf}
-        onReset={handleResetConfirm}
-        collapsed={collapsed}
-        lastSaved={lastSaved}
-        finalPreview={finalPreview}
-        resetConfirm={resetConfirm}
-        errors={errors}
-        jumpedId={jumpedId}
-        onToggleCollapse={toggleCollapse}
-        onToggleFinalPreview={toggleFinalPreview}
-        onJumpToNextEmpty={jumpToNextEmpty}
-        onFocusField={focusField}
-        onCancelReset={cancelReset}
-        onConfirmReset={confirmReset}
-        onValidationError={setErrors}
-        onImportMetadata={handleImportMetadata}
-      />
+      <>
+        <FillerLayout
+          pdfBytes={store.pdfBytes!}
+          fields={store.fields}
+          values={store.values}
+          generating={store.status === 'generating'}
+          onValueChange={handleChange}
+          collapsed={collapsed}
+          lastSaved={lastSaved}
+          resetConfirm={resetConfirm}
+          errors={errors}
+          jumpedId={jumpedId}
+          onToggleCollapse={toggleCollapse}
+          onJumpToNextEmpty={jumpToNextEmpty}
+          onFocusField={focusField}
+          onCancelReset={cancelReset}
+          onConfirmReset={confirmReset}
+          onImportMetadata={handleImportMetadata}
+        />
+        <ConfirmDialog
+          isOpen={showChangeConfirm}
+          title="Cambiar de documento"
+          message={'Tienes datos rellenados sin descargar. Si cambias de documento se perderán a menos que primero generes (descargues) el PDF.\n\n¿Cambiar de documento de todas formas?'}
+          confirmLabel="Cambiar documento"
+          cancelLabel="Cancelar"
+          variant="danger"
+          onConfirm={() => { setShowChangeConfirm(false); openPdfPicker(); }}
+          onCancel={() => setShowChangeConfirm(false)}
+        />
+      </>
     );
   },
 );
