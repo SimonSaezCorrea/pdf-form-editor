@@ -17,7 +17,7 @@ import { extractFieldsFromPdf } from '@/features/pdf/utils/extractFields';
 import { exportPdf } from '@/features/pdf/utils/export';
 import type { FormField, FieldTypeId } from '@/types/shared';
 import { canvasToPdf } from '@/features/pdf/utils/coordinates';
-import { Button, IconButton, Kbd, ConfirmDialog } from '@/components/ui';
+import { Button, IconButton, Kbd, ConfirmDialog, NoDocScreen } from '@/components/ui';
 import { modShortcut } from '@/hooks/useModKey';
 
 const ICON_ARROW_LEFT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>`;
@@ -36,6 +36,10 @@ import type { FillerModeHandle } from '@/features/filler';
 import styles from './App.module.css';
 
 type AppMode = 'editor' | 'filler';
+type View = 'main' | 'editor' | 'filler';
+
+const pathToView = (path: string): View =>
+  path === '/editor' ? 'editor' : path === '/filler' ? 'filler' : 'main';
 
 const BASE_SCALE = 1.5;
 const MIN_ZOOM = 0.25;
@@ -43,6 +47,7 @@ const MAX_ZOOM = 3.0;
 const ZOOM_STEP = 0.1;
 
 export default function App() {
+  const [view, setView] = useState<View>('main');
   const [appMode, setAppMode] = useState<AppMode>('editor');
   const [fillerHasFile, setFillerHasFile] = useState(false);
   const [fillerFilename, setFillerFilename] = useState('');
@@ -75,7 +80,47 @@ export default function App() {
   const store = useFieldStore();
   const { mode, setMode } = useInteractionMode();
   const { theme, toggle: toggleTheme } = useTheme();
-  const showEditorToolbar = !!pdfBytes && appMode === 'editor';
+  const showEditorToolbar = !!pdfBytes && view === 'editor';
+
+  // URL ⇄ view: push a history entry on navigation so the browser Back button
+  // returns to the previous view (e.g. /editor → /). Direct URLs are served by
+  // the rewrites in next.config.ts.
+  const navigate = useCallback((v: View) => {
+    const path = v === 'main' ? '/' : `/${v}`;
+    // Pass null state: Next 15 patches history.pushState for shallow routing and
+    // chokes on a custom state object (TypeError in its popstate handler).
+    if (window.location.pathname !== path) {
+      window.history.pushState(null, '', path);
+    }
+    setView(v);
+  }, []);
+
+  // Returning to main is a fresh start: drop the loaded PDF / filler data so the
+  // landing (mode tabs + upload hero) shows instead of a stale workspace.
+  const resetWorkspace = useCallback(() => {
+    setPdfBytes(null);
+    setPdfFilename('');
+    setExportError(null);
+    store.resetFields();
+    fillerRef.current?.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.resetFields]);
+
+  useEffect(() => {
+    // Adopt the view (and matching mode) from the URL on mount and on Back/Forward.
+    const sync = () => {
+      const v = pathToView(window.location.pathname);
+      setView(v);
+      if (v === 'editor') setAppMode('editor');
+      else if (v === 'filler') setAppMode('filler');
+      else resetWorkspace();
+      return v;
+    };
+    sync();
+    window.addEventListener('popstate', sync);
+    return () => window.removeEventListener('popstate', sync);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resetWorkspace]);
 
   const hasDuplicateNames = (() => {
     const names = store.fields.map((f) => f.name);
@@ -99,9 +144,10 @@ export default function App() {
       setPdfFilename(filename);
       store.resetFields();
       setExportError(null);
+      navigate('editor');
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [store.resetFields],
+    [store.resetFields, navigate],
   );
 
   const openPdfPicker = useCallback(() => {
@@ -236,7 +282,7 @@ export default function App() {
 
   // Keyboard shortcuts
   useEffect(() => {
-    if (!pdfBytes) return;
+    if (!pdfBytes || view !== 'editor') return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (showExportModal || showImportModal) return;
@@ -291,6 +337,7 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
     pdfBytes,
+    view,
     clipboard,
     showExportModal,
     showImportModal,
@@ -322,23 +369,14 @@ export default function App() {
           <h1>
             <button
               className={styles['title-btn']}
-              onClick={() => {
-                if (appMode === 'editor') {
-                  setPdfBytes(null);
-                  setPdfFilename('');
-                  store.resetFields();
-                  setExportError(null);
-                } else {
-                  fillerRef.current?.reset();
-                }
-              }}
+              onClick={() => { resetWorkspace(); navigate('main'); }}
               title="Volver al inicio"
             >
               PDF Form Editor
             </button>
           </h1>
-          {/* Mode nav: only when no file loaded in either mode */}
-          {!pdfBytes && !fillerHasFile && (
+          {/* Mode tabs: on the main landing only */}
+          {view === 'main' && (
             <nav className={styles['mode-nav']} aria-label="Modo de la aplicación">
               <button
                 className={`${styles['mode-btn']} ${appMode === 'editor' ? styles['mode-btn--active'] : ''}`}
@@ -356,7 +394,7 @@ export default function App() {
               </button>
             </nav>
           )}
-          {(pdfBytes || fillerHasFile) && (
+          {view !== 'main' && (pdfBytes || fillerHasFile) && (
             <span className={styles.filename} title={appMode === 'filler' ? fillerFilename : pdfFilename}>
               {appMode === 'filler' ? fillerFilename : pdfFilename}
             </span>
@@ -369,7 +407,7 @@ export default function App() {
                 <IconButton icon={<SvgIcon svg={ICON_ARROW_RIGHT} />} label={`Rehacer (${modShortcut('⇧Z')})`} variant="navbar" onClick={store.redo} disabled={!store.canRedo} />
               </>
             )}
-            {pdfBytes && (
+            {pdfBytes && view === 'editor' && (
               <>
                 <Button variant="navbar" onClick={handleNewDocument}>Cambiar PDF</Button>
                 <Button variant="navbar" onClick={() => setShowImportModal(true)}>Importar</Button>
@@ -454,15 +492,12 @@ export default function App() {
       {appMode === 'filler' ? (
         <FillerMode
           ref={fillerRef}
-          onHasFileChange={setFillerHasFile}
+          compactWhenEmpty={view === 'filler'}
+          onHasFileChange={(has) => { setFillerHasFile(has); if (has) navigate('filler'); }}
           onFilenameChange={setFillerFilename}
           onGeneratingChange={setFillerGenerating}
         />
-      ) : !pdfBytes ? (
-        <div className={styles['upload-area']}>
-          <PdfUploader onPdfLoaded={handlePdfLoaded} appMode={appMode} />
-        </div>
-      ) : (
+      ) : view === 'editor' && pdfBytes ? (
         <div className={styles['editor-layout']}>
           {hasThumbnails && (
             <ThumbnailStrip
@@ -546,6 +581,16 @@ export default function App() {
               onDelete={store.deleteField}
             />
           </aside>
+        </div>
+      ) : view === 'editor' ? (
+        <NoDocScreen
+          eyebrow="Editor de plantilla"
+          description="Carga un PDF para empezar a colocar campos de formulario. Arrástralo aquí o selecciónalo desde tu equipo."
+          onFile={(file) => { void file.arrayBuffer().then((b) => handlePdfLoaded(b, file.name)); }}
+        />
+      ) : (
+        <div className={styles['upload-area']}>
+          <PdfUploader onPdfLoaded={handlePdfLoaded} appMode={appMode} />
         </div>
       )}
       <IconButton

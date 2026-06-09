@@ -6,6 +6,7 @@ import { PdfUploadScreen } from '../PdfUploadScreen/PdfUploadScreen';
 import { FillerLayout } from '../FillerLayout/FillerLayout';
 import { Button } from '@/components/ui/Button/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import { NoDocScreen } from '@/components/ui/NoDocScreen/NoDocScreen';
 import styles from './FillerMode.module.css';
 
 const AUTOSAVE_KEY = 'pdf-filler-autosave';
@@ -42,6 +43,8 @@ export interface FillerModeHandle {
   reset: () => void;
   /** Open the file picker to swap the document (warns if data was entered). */
   changeDocument: () => void;
+  /** Open the file picker to load a PDF (no warning — used when none is loaded). */
+  openPicker: () => void;
   /** Validate required fields and generate (download) the filled PDF. */
   generate: () => void;
 }
@@ -50,10 +53,13 @@ interface FillerModeProps {
   onHasFileChange?: (hasFile: boolean) => void;
   onFilenameChange?: (filename: string) => void;
   onGeneratingChange?: (generating: boolean) => void;
+  /** When opened directly (deep link), show a centered "load a PDF" notice
+   *  instead of the full upload hero (which is reserved for the landing). */
+  compactWhenEmpty?: boolean;
 }
 
 export const FillerMode = forwardRef<FillerModeHandle, FillerModeProps>(
-  function FillerMode({ onHasFileChange, onFilenameChange, onGeneratingChange }, ref) {
+  function FillerMode({ onHasFileChange, onFilenameChange, onGeneratingChange, compactWhenEmpty }, ref) {
     const store = useFillerStore();
 
     // ── UI state (T065) ──────────────────────────────────────────────────────
@@ -198,8 +204,9 @@ export const FillerMode = forwardRef<FillerModeHandle, FillerModeProps>(
     useImperativeHandle(ref, () => ({
       reset: handleReset,
       changeDocument: handleChangeDocument,
+      openPicker: openPdfPicker,
       generate: handleGenerate,
-    }), [handleReset, handleChangeDocument, handleGenerate]);
+    }), [handleReset, handleChangeDocument, openPdfPicker, handleGenerate]);
 
     // Report generating state so the top-navbar button can show its loading state
     useEffect(() => {
@@ -252,6 +259,17 @@ export const FillerMode = forwardRef<FillerModeHandle, FillerModeProps>(
 
     // ── Render ────────────────────────────────────────────────────────────────
     if (store.status === 'idle' || store.status === 'loading' || store.status === 'error') {
+      // Deep link to /filler without a document: centered card, not the hero.
+      if (compactWhenEmpty && store.status !== 'loading') {
+        return (
+          <NoDocScreen
+            eyebrow="Rellenar PDF"
+            description="Carga un PDF con campos AcroForm para rellenarlo. Arrástralo aquí o selecciónalo desde tu equipo."
+            onFile={store.handleFileSelected}
+            error={store.status === 'error' ? store.error : null}
+          />
+        );
+      }
       return (
         <PdfUploadScreen
           onFileSelected={store.handleFileSelected}
