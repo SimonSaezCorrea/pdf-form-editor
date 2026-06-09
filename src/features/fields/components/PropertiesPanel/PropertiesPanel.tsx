@@ -84,6 +84,24 @@ const BorderIcon = (
   </svg>
 );
 
+/** Document with a fixed line of text — value baked as non-editable content. */
+const BakeIcon = (
+  <svg {...svgBase} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <rect x="5" y="4" width="14" height="16" rx="1.5" />
+    <line x1="8" y1="9" x2="16" y2="9" />
+    <line x1="8" y1="13" x2="16" y2="13" />
+    <line x1="8" y1="17" x2="13" y2="17" />
+  </svg>
+);
+
+/** Fillable input — value shown in an editable field on download. */
+const InputIcon = (
+  <svg {...svgBase} strokeWidth={2} strokeLinecap="round">
+    <rect x="3.5" y="8" width="17" height="8" rx="1.5" />
+    <line x1="7" y1="12" x2="7" y2="12.01" />
+  </svg>
+);
+
 interface ToggleBadgeProps {
   active: boolean;
   /** Partial state for multi-selection (some on, some off). */
@@ -203,6 +221,16 @@ export function PropertiesPanel({
     const someAutoFit  = selected.some((f) => f.autoFitFont);
     const allMultiline = selected.every((f) => f.multiline);
     const someMultiline = selected.some((f) => f.multiline);
+    const allBold = selected.every((f) => f.bold);
+    const someBold = selected.some((f) => f.bold);
+    const allItalic = selected.every((f) => f.italic);
+    const someItalic = selected.some((f) => f.italic);
+    const allStrike = selected.every((f) => f.strikethrough);
+    const someStrike = selected.some((f) => f.strikethrough);
+    const allUnderline = selected.every((f) => f.underline);
+    const someUnderline = selected.some((f) => f.underline);
+    const allBake = selected.every((f) => f.bakeValue ?? true);
+    const someBake = selected.some((f) => f.bakeValue ?? true);
 
     return (
       <div className={styles['properties-panel']}>
@@ -286,6 +314,31 @@ export function PropertiesPanel({
               tooltip="Texto multilínea"
               onClick={() => onUpdateFields(ids, { multiline: !allMultiline })}
             >{MultilineIcon}</ToggleBadge>
+          </div>
+          <div className={styles['badge-row']}>
+            <ToggleBadge active={allBold} mixed={!allBold && someBold} tooltip="Negrita"
+              onClick={() => onUpdateFields(ids, { bold: !allBold })}>
+              <span style={{ fontWeight: 800 }}>B</span>
+            </ToggleBadge>
+            <ToggleBadge active={allItalic} mixed={!allItalic && someItalic} tooltip="Cursiva"
+              onClick={() => onUpdateFields(ids, { italic: !allItalic })}>
+              <span style={{ fontStyle: 'italic', fontFamily: 'serif' }}>I</span>
+            </ToggleBadge>
+            <ToggleBadge active={allStrike} mixed={!allStrike && someStrike} tooltip="Tachado (raya en medio)"
+              onClick={() => onUpdateFields(ids, { strikethrough: !allStrike })}>
+              <span style={{ textDecoration: 'line-through' }}>S</span>
+            </ToggleBadge>
+            <ToggleBadge active={allUnderline} mixed={!allUnderline && someUnderline} tooltip="Subrayado (raya debajo)"
+              onClick={() => onUpdateFields(ids, { underline: !allUnderline })}>
+              <span style={{ textDecoration: 'underline' }}>U</span>
+            </ToggleBadge>
+            <span className={styles['badge-divider']} />
+            <ToggleBadge active={allBake} mixed={!allBake && someBake}
+              tooltip={allBake
+                ? 'Reemplaza y elimina el input: el valor queda como texto fijo no editable'
+                : 'Mantiene un input rellenable con el valor en la descarga'}
+              onClick={() => onUpdateFields(ids, { bakeValue: !allBake })}
+            >{allBake ? BakeIcon : InputIcon}</ToggleBadge>
           </div>
         </Section>
 
@@ -395,6 +448,34 @@ export function PropertiesPanel({
             >{MultilineIcon}</ToggleBadge>
           )}
         </div>
+        )}
+        {field.fieldType !== 'signature' && field.fieldType !== 'checkbox' && (
+          <div className={styles['badge-row']}>
+            <ToggleBadge active={field.bold ?? false} tooltip="Negrita"
+              onClick={() => update('bold', !(field.bold ?? false))}>
+              <span style={{ fontWeight: 800 }}>B</span>
+            </ToggleBadge>
+            <ToggleBadge active={field.italic ?? false} tooltip="Cursiva"
+              onClick={() => update('italic', !(field.italic ?? false))}>
+              <span style={{ fontStyle: 'italic', fontFamily: 'serif' }}>I</span>
+            </ToggleBadge>
+            <ToggleBadge active={field.strikethrough ?? false} tooltip="Tachado (raya en medio)"
+              onClick={() => update('strikethrough', !(field.strikethrough ?? false))}>
+              <span style={{ textDecoration: 'line-through' }}>S</span>
+            </ToggleBadge>
+            <ToggleBadge active={field.underline ?? false} tooltip="Subrayado (raya debajo)"
+              onClick={() => update('underline', !(field.underline ?? false))}>
+              <span style={{ textDecoration: 'underline' }}>U</span>
+            </ToggleBadge>
+            <span className={styles['badge-divider']} />
+            <ToggleBadge
+              active={(field.bakeValue ?? true)}
+              tooltip={(field.bakeValue ?? true)
+                ? 'Reemplaza y elimina el input: el valor queda como texto fijo no editable'
+                : 'Mantiene un input rellenable con el valor en la descarga'}
+              onClick={() => update('bakeValue', !(field.bakeValue ?? true))}
+            >{(field.bakeValue ?? true) ? BakeIcon : InputIcon}</ToggleBadge>
+          </div>
         )}
       </Section>
 

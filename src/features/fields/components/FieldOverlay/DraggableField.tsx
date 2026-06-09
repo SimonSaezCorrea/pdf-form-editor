@@ -106,6 +106,18 @@ function FieldLabel({ field, renderScale, canvasWidth, canvasHeight }: Readonly<
       style={{
         fontSize: `${fontSize}px`,
         ...(field.displayFont ? { fontFamily: field.displayFont } : {}),
+        ...(field.value && field.bold ? { fontWeight: 700 } : {}),
+        ...(field.value && field.italic ? { fontStyle: 'italic' } : {}),
+        ...(field.value && (field.underline || field.strikethrough)
+          ? {
+              textDecorationLine: [
+                field.underline ? 'underline' : '',
+                field.strikethrough ? 'line-through' : '',
+              ]
+                .filter(Boolean)
+                .join(' '),
+            }
+          : {}),
       }}
     >
       {field.value || field.name}

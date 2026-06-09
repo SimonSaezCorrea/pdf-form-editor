@@ -22,6 +22,21 @@ export interface FormField {
   fontFamily: FontFamily;
   /** Default text value pre-filled in the exported PDF field. Empty string = no pre-fill. */
   value?: string;
+  /** Bold style for the default value text. */
+  bold?: boolean;
+  /** Italic style for the default value text. */
+  italic?: boolean;
+  /** Underline style for the default value text. */
+  underline?: boolean;
+  /** Strikethrough (line-through) style for the default value text. */
+  strikethrough?: boolean;
+  /**
+   * How a field with a default `value` is exported:
+   * - `true` (default): bake the value as fixed, non-editable text and remove the input.
+   * - `false`: keep a fillable AcroForm input pre-filled with the value.
+   * Only applies to text/number/date fields.
+   */
+  bakeValue?: boolean;
   /** Whether the field border is visible in the exported PDF. Defaults to false (no border). */
   showBorder?: boolean;
   /** Auto-shrink font to fit content (sets fontSize=0 in PDF). Overrides fontSize on export. */

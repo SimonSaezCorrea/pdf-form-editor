@@ -57,6 +57,11 @@ export interface TemplateFieldV3 {
     required: boolean;
     multiline: boolean;
     locked: boolean;
+    bold?: boolean;
+    italic?: boolean;
+    underline?: boolean;
+    strikethrough?: boolean;
+    bakeValue?: boolean;
   };
   position: {
     page: number;
@@ -190,6 +195,11 @@ function flattenV3Field(f: TemplateFieldV3): FormField {
     required: f.general.required ?? false,
     multiline: f.general.multiline ?? false,
     locked: f.general.locked ?? false,
+    bold: f.general.bold ?? false,
+    italic: f.general.italic ?? false,
+    underline: f.general.underline ?? false,
+    strikethrough: f.general.strikethrough ?? false,
+    bakeValue: f.general.bakeValue ?? true,
     page: f.position.page,
     x: f.position.x,
     y: f.position.y,
@@ -284,6 +294,11 @@ function toV3Field(f: FormField): TemplateFieldV3 {
       required: f.required ?? false,
       multiline: f.multiline ?? false,
       locked: f.locked ?? false,
+      bold: f.bold ?? false,
+      italic: f.italic ?? false,
+      underline: f.underline ?? false,
+      strikethrough: f.strikethrough ?? false,
+      bakeValue: f.bakeValue ?? true,
     },
     position: {
       page: f.page,

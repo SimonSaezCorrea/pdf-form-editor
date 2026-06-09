@@ -96,6 +96,22 @@
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
+/* Divider between the style group (B/I/S/U) and the bake-mode toggle. */
+.badge-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: var(--space-1) var(--space-2);
+  background: var(--border-color);
+}
+/* Each group reads as a separate pill: round the segments touching the divider. */
+.badge-row .toggle-badge:has(+ .badge-divider) {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.badge-row .badge-divider + .toggle-badge {
+  border-radius: var(--radius-sm);
+  margin-left: 0;
+}
+
 .panel-header {
   display: flex;
   align-items: center;
