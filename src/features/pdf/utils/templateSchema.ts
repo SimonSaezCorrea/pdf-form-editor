@@ -1,5 +1,7 @@
 import type { FormField, FontFamily, FieldTypeId } from '@/types/shared';
 
+type TextAlign = 'left' | 'center' | 'right';
+
 // ── v1: flat (legacy, read-only) ───────────────────────────────────────────
 export interface TemplateFileV1 {
   schemaVersion: 1;
@@ -49,21 +51,25 @@ export interface TemplateFileV2 {
 // lives in the section it belongs to.
 export interface TemplateFieldV3 {
   id: string;
+  // Group order is semantic; within a group, primary keys are pinned first and
+  // the rest are alphabetical (stable diffs). `position` keeps geometric order.
   general: {
+    // pinned
     name: string;
     fieldType: FieldTypeId;
-    group: string;
     value: string;
     required: boolean;
-    multiline: boolean;
-    locked: boolean;
+    // alphabetical
     bakeValue?: boolean;
+    group: string;
+    locked: boolean;
+    multiline: boolean;
     /** @deprecated Legacy location — text styles now live in `typography`. Read-only fallback. */
     bold?: boolean;
     italic?: boolean;
     underline?: boolean;
     strikethrough?: boolean;
-    align?: 'left' | 'center' | 'right';
+    align?: TextAlign;
   };
   position: {
     page: number;
@@ -71,18 +77,24 @@ export interface TemplateFieldV3 {
     y: number;
     width: number;
     height: number;
-    showBorder: boolean;
+    /** @deprecated Moved to `appearance.showBorder`. Read-only fallback. */
+    showBorder?: boolean;
   };
   typography: {
+    // pinned
     fontFamily: FontFamily;
     fontSize: number;
     displayFont?: string;
+    // alphabetical
+    align?: TextAlign;
     autoFitFont: boolean;
     bold?: boolean;
     italic?: boolean;
-    underline?: boolean;
     strikethrough?: boolean;
-    align?: 'left' | 'center' | 'right';
+    underline?: boolean;
+  };
+  appearance: {
+    showBorder: boolean;
   };
 }
 
@@ -93,10 +105,60 @@ export interface TemplateFileV3 {
   fields: TemplateFieldV3[];
 }
 
-export type TemplateFile = TemplateFileV1 | TemplateFileV2 | TemplateFileV3;
+// ── v4: flat identity at top + scalable semantic groups (current) ────────────
+// id/name/type/value/group live at the top (the essence of a field). Everything
+// else is grouped by intent so each group can grow without reshuffling:
+//   - validation: input constraints (required, …future: minLength, pattern, range)
+//   - behavior:   field mechanics (locked, multiline, bakeValue, …)
+//   - geometry:   page + box (kept in geometric order, not alphabetical)
+//   - style:      everything visual (font, text styles, alignment, border, …)
+// Within groups: primary keys pinned first, rest alphabetical.
+export interface TemplateFieldV4 {
+  id: string;
+  name: string;
+  type: FieldTypeId;
+  value: string;
+  group: string;
+  validation: {
+    required: boolean;
+  };
+  behavior: {
+    bakeValue: boolean;
+    locked: boolean;
+    multiline: boolean;
+  };
+  geometry: {
+    page: number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  style: {
+    fontFamily: FontFamily;
+    fontSize: number;
+    displayFont?: string;
+    align: TextAlign;
+    autoFitFont: boolean;
+    bold: boolean;
+    italic: boolean;
+    showBorder: boolean;
+    strikethrough: boolean;
+    underline: boolean;
+  };
+}
+
+export interface TemplateFileV4 {
+  schemaVersion: 4;
+  name: string;
+  createdAt: string;
+  fields: TemplateFieldV4[];
+}
+
+export type TemplateFile = TemplateFileV1 | TemplateFileV2 | TemplateFileV3 | TemplateFileV4;
 
 export interface ParsedTemplate {
-  schemaVersion: 1 | 2 | 3;
+  schemaVersion: 1 | 2 | 3 | 4;
   name: string;
   createdAt: string;
   fields: FormField[];
@@ -156,12 +218,29 @@ function isValidFieldV3(value: unknown): value is TemplateFieldV3 {
   return true;
 }
 
+function isValidFieldV4(value: unknown): value is TemplateFieldV4 {
+  if (typeof value !== 'object' || value === null) return false;
+  const f = value as Record<string, unknown>;
+  if (typeof f.id !== 'string') return false;
+  if (typeof f.name !== 'string' || f.name.length === 0) return false;
+  const geo = f.geometry as Record<string, unknown> | undefined;
+  if (typeof geo !== 'object' || geo === null) return false;
+  if (typeof geo.page !== 'number' || typeof geo.x !== 'number' || typeof geo.y !== 'number') return false;
+  if (typeof geo.width !== 'number' || typeof geo.height !== 'number') return false;
+  const style = f.style as Record<string, unknown> | undefined;
+  if (typeof style !== 'object' || style === null) return false;
+  if (!VALID_FONT_FAMILIES.has(style.fontFamily as string)) return false;
+  if (typeof style.fontSize !== 'number') return false;
+  return true;
+}
+
 export function isValidTemplateFile(data: unknown): data is TemplateFile {
   if (typeof data !== 'object' || data === null) return false;
   const d = data as Record<string, unknown>;
   if (typeof d.name !== 'string' || d.name.length === 0) return false;
   if (typeof d.createdAt !== 'string' || d.createdAt.length === 0) return false;
   if (!Array.isArray(d.fields)) return false;
+  if (d.schemaVersion === 4) return d.fields.every(isValidFieldV4);
   if (d.schemaVersion === 3) return d.fields.every(isValidFieldV3);
   if (d.schemaVersion === 2) return d.fields.every(isValidFieldV2);
   return d.fields.every(isValidFieldV1);
@@ -208,7 +287,8 @@ function flattenV3Field(f: TemplateFieldV3): FormField {
     y: f.position.y,
     width: f.position.width,
     height: f.position.height,
-    showBorder: f.position.showBorder ?? false,
+    // showBorder now lives in `appearance`; fall back to the legacy position slot.
+    showBorder: f.appearance?.showBorder ?? f.position.showBorder ?? false,
     fontFamily: f.typography.fontFamily,
     fontSize: f.typography.fontSize,
     ...(f.typography.displayFont ? { displayFont: f.typography.displayFont } : {}),
@@ -219,6 +299,35 @@ function flattenV3Field(f: TemplateFieldV3): FormField {
     underline: f.typography.underline ?? f.general.underline ?? false,
     strikethrough: f.typography.strikethrough ?? f.general.strikethrough ?? false,
     align: f.typography.align ?? f.general.align ?? 'left',
+  };
+}
+
+function flattenV4Field(f: TemplateFieldV4): FormField {
+  return {
+    id: f.id,
+    name: f.name,
+    fieldType: f.type ?? 'text',
+    value: f.value ?? '',
+    group: f.group ?? '',
+    required: f.validation?.required ?? false,
+    bakeValue: f.behavior?.bakeValue ?? true,
+    locked: f.behavior?.locked ?? false,
+    multiline: f.behavior?.multiline ?? false,
+    page: f.geometry.page,
+    x: f.geometry.x,
+    y: f.geometry.y,
+    width: f.geometry.width,
+    height: f.geometry.height,
+    fontFamily: f.style.fontFamily,
+    fontSize: f.style.fontSize,
+    ...(f.style.displayFont ? { displayFont: f.style.displayFont } : {}),
+    align: f.style.align ?? 'left',
+    autoFitFont: f.style.autoFitFont ?? false,
+    bold: f.style.bold ?? false,
+    italic: f.style.italic ?? false,
+    showBorder: f.style.showBorder ?? false,
+    strikethrough: f.style.strikethrough ?? false,
+    underline: f.style.underline ?? false,
   };
 }
 
@@ -234,6 +343,13 @@ function invalidFieldProp(f: Record<string, unknown>): string {
   if (typeof f.height !== 'number') return 'height';
   if (typeof f.fontSize !== 'number') return 'fontSize';
   return 'fontFamily';
+}
+
+function parseV4Fields(raw: unknown[]): FormField[] {
+  return raw.map((item, i) => {
+    if (!isValidFieldV4(item)) throw new TypeError(`Campo v4 [${i}] inválido`);
+    return flattenV4Field(item);
+  });
 }
 
 function parseV3Fields(raw: unknown[]): FormField[] {
@@ -280,6 +396,9 @@ export function parseTemplateFile(json: string): ParsedTemplate {
     throw new TypeError("Plantilla inválida: falta el campo 'fields'");
   }
 
+  if (d.schemaVersion === 4) {
+    return { schemaVersion: 4, name, createdAt, fields: parseV4Fields(d.fields) };
+  }
   if (d.schemaVersion === 3) {
     return { schemaVersion: 3, name, createdAt, fields: parseV3Fields(d.fields) };
   }
@@ -290,49 +409,56 @@ export function parseTemplateFile(json: string): ParsedTemplate {
   return { schemaVersion: 1, name, createdAt, fields: parseV1Fields(d.fields) };
 }
 
-// ── Serialize → v3 ─────────────────────────────────────────────────────────
+// ── Serialize → v4 ─────────────────────────────────────────────────────────
+// Within behavior/style: primary keys pinned first, rest alphabetical (stable
+// diffs). geometry stays in geometric order. Top-level identity stays flat.
 
-function toV3Field(f: FormField): TemplateFieldV3 {
+function toV4Field(f: FormField): TemplateFieldV4 {
   return {
     id: f.id,
-    general: {
-      name: f.name,
-      fieldType: f.fieldType ?? 'text',
-      group: f.group?.trim() || 'General',
-      value: f.value ?? '',
+    name: f.name,
+    type: f.fieldType ?? 'text',
+    value: f.value ?? '',
+    group: f.group?.trim() || 'General',
+    validation: {
       required: f.required ?? false,
-      multiline: f.multiline ?? false,
-      locked: f.locked ?? false,
-      bakeValue: f.bakeValue ?? true,
     },
-    position: {
+    behavior: {
+      // alphabetical
+      bakeValue: f.bakeValue ?? true,
+      locked: f.locked ?? false,
+      multiline: f.multiline ?? false,
+    },
+    geometry: {
       page: f.page,
       x: f.x,
       y: f.y,
       width: f.width,
       height: f.height,
-      showBorder: f.showBorder ?? false,
     },
-    typography: {
+    style: {
+      // pinned
       fontFamily: f.fontFamily,
       fontSize: f.fontSize,
       ...(f.displayFont ? { displayFont: f.displayFont } : {}),
+      // alphabetical
+      align: f.align ?? 'left',
       autoFitFont: f.autoFitFont ?? false,
       bold: f.bold ?? false,
       italic: f.italic ?? false,
-      underline: f.underline ?? false,
+      showBorder: f.showBorder ?? false,
       strikethrough: f.strikethrough ?? false,
-      align: f.align ?? 'left',
+      underline: f.underline ?? false,
     },
   };
 }
 
 export function serializeTemplateFile(name: string, fields: FormField[]): string {
-  const file: TemplateFileV3 = {
-    schemaVersion: 3,
+  const file: TemplateFileV4 = {
+    schemaVersion: 4,
     name,
     createdAt: new Date().toISOString(),
-    fields: fields.map(toV3Field),
+    fields: fields.map(toV4Field),
   };
   return JSON.stringify(file, null, 2);
 }
