@@ -36,3 +36,38 @@ img,
 svg {
   display: block;
 }
+
+/* ── Scrollbars ──────────────────────────────────────────────────────────────
+   App-wide custom scrollbar matching the design tokens. Adapts to light/dark
+   automatically (tokens re-resolve per [data-theme]). Firefox uses the standard
+   properties; Chromium/WebKit uses the ::-webkit-scrollbar pseudo-elements. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: var(--radius-pill);
+  /* Inset look: transparent border lets the track show through around the thumb. */
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
