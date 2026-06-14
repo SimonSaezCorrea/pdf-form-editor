@@ -395,7 +395,7 @@ export function PropertiesPanel({
             type="text"
             value={field.name}
             onChange={(e) => update('name', e.target.value)}
-            error={hasDuplicate ? '⚠ Nombre duplicado' : undefined}
+            hint={hasDuplicate ? '🔗 Mismo nombre: se rellenan juntos (mismo valor)' : undefined}
             className={styles['prop-group']}
           />
           <ToggleBadge

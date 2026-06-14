@@ -57,13 +57,24 @@ describe('generatePdf', () => {
     expect(form.getTextField('f3')).toBeDefined();
   });
 
-  test('throws on duplicate field names', async () => {
+  test('duplicate field names collapse into one shared field with multiple widgets', async () => {
     const buf = await createTestPdf();
     const fields: FormField[] = [
       { ...baseField, id: '1', name: 'dup' },
       { ...baseField, id: '2', name: 'dup', y: 600 },
     ];
-    await expect(generatePdf(buf, fields)).rejects.toThrow(/duplicate/i);
+    const result = await generatePdf(buf, fields);
+    const doc = await PDFDocument.load(result);
+    const form = doc.getForm();
+
+    // Exactly one AcroForm field named 'dup'...
+    const named = form.getFields().filter((f) => f.getName() === 'dup');
+    expect(named).toHaveLength(1);
+
+    // ...exposing both rectangles as widget annotations. Typing in one fills
+    // both because they share a single field value.
+    const field = form.getTextField('dup');
+    expect(field.acroField.getWidgets()).toHaveLength(2);
   });
 
   test('throws when page number exceeds total pages', async () => {

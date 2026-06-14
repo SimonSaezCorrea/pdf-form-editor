@@ -48,11 +48,13 @@ function buildField(a: any, pageNum: number, kind: DetectedKind): AcroFormField 
   // Strict read: /TU or 'General'. No prefix-guessing.
   const group = (a.alternativeText as string | undefined)?.trim() || 'General';
   const flags = typeof a.fieldFlags === 'number' ? (a.fieldFlags as number) : 0;
+  const rect = a.rect as [number, number, number, number];
   return {
     name: a.fieldName as string,
     type: kind.type,
     page: pageNum,
-    rect: a.rect as [number, number, number, number],
+    rect,
+    placements: [{ page: pageNum, rect }],
     fontSize,
     label: `${group} · ${a.fieldName}`,
     group,
@@ -65,8 +67,11 @@ function buildField(a: any, pageNum: number, kind: DetectedKind): AcroFormField 
 export async function detectAcroFormFields(
   pdfDoc: PDFDocumentProxy,
 ): Promise<AcroFormField[]> {
-  const seen = new Set<string>();
-  const fields: AcroFormField[] = [];
+  // Keep insertion order, but collapse same-name widgets into ONE field that
+  // accumulates every placement. A duplicated field (same name on several
+  // spots/pages) is a single shared value, shown as a single form input — yet
+  // every widget must still be drawn and clickable in the preview.
+  const byName = new Map<string, AcroFormField>();
 
   for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
     const page = await pdfDoc.getPage(pageNum);
@@ -76,13 +81,20 @@ export async function detectAcroFormFields(
       if (a.subtype !== 'Widget' || !a.fieldName) continue;
       const kind = detectKind(a);
       if (!kind) continue;
-      if (seen.has(a.fieldName)) continue;
-      seen.add(a.fieldName);
-      fields.push(buildField(a, pageNum, kind));
+
+      const existing = byName.get(a.fieldName);
+      if (existing) {
+        existing.placements.push({
+          page: pageNum,
+          rect: a.rect as [number, number, number, number],
+        });
+        continue;
+      }
+      byName.set(a.fieldName, buildField(a, pageNum, kind));
     }
   }
 
-  return fields;
+  return [...byName.values()];
 }
 
 interface UseFieldDetectionResult {

@@ -117,6 +117,15 @@ TypeScript: Follow standard conventions
 - Without this, re-exporting a previously-exported PDF duplicates all AcroForm fields (BF-005-02)
 - Pattern: `for (const f of form.getFields()) form.removeField(f);` runs before `form.createTextField()`
 
+## Key Notes (pdfService - shared fields by name)
+
+- Duplicate field names are INTENTIONAL and supported: same `name` → ONE AcroForm field with MULTIPLE widget annotations → typing in one widget fills all (shared value). Standard PDF behavior the user explicitly wants.
+- `addTextField` takes a `fieldByName: Map<string, PDFTextField>` accumulator: `form.createTextField(name)` runs ONCE per unique name (first occurrence); later same-name fields reuse the existing `PDFTextField`. `addToPage(...)` runs for EVERY FormField (adds each widget). `setText`/`setFontSize`/`updateAppearances` are idempotent for the shared field — last write wins on value.
+- Do NOT re-add a duplicate-name guard. `form.createTextField()` throws "Duplicate field" if called twice with the same name — that's why dedup via the Map is mandatory. The `'Duplicate field'` branch in route.ts is now dead (kept harmless).
+- PropertiesPanel shows an INFO hint (NOT an `error` — error renders red and reads as "blocked") for duplicate names: "🔗 Mismo nombre: se rellenan juntos". Nothing in the editor blocks duplicate names — there is no guard; the red styling was the only thing that *looked* like a block.
+- Shared default value: `useFieldStore.updateField` propagates a `value` edit to every same-name sibling, and renaming a field into an existing same-name group adopts that group's current value. So the default value stays consistent across the shared group both on canvas and on export.
+- Caveat: a field with a baked default value (`hasBakedValue`) is drawn as static text at each position and skips the widget path. With the store value-sync, all same-name copies carry the SAME value, so they bake identical text at their positions (visually shared, non-editable). Leave `value` empty if you instead want ONE interactive shared field (widgets linked, type-once-fills-all).
+
 ## Key Notes (usePdfRenderer - annotationMode)
 
 - `page.render()` must pass `annotationMode: 2` (ENABLE_FORMS) so pdfjs does NOT draw AcroForm widget boxes on the canvas
@@ -156,7 +165,8 @@ TypeScript: Follow standard conventions
 - `fillService.ts` fill order (Principle XXXI): `field.setText(value)` → `form.updateFieldAppearances(helvetica)` → `form.flatten()` → `pdfDoc.save()`. Do NOT reorder.
 - PDF validation: check first 4 bytes for `%PDF` magic (0x25 0x50 0x44 0x46) — extension/MIME type not trusted.
 - `FieldNotFoundError` in fillService — caught in route.ts to return 400 `{error:'FIELD_NOT_FOUND', field: name}` instead of 500.
-- `useFieldDetection.ts`: uses `page.getAnnotations()` from pdfjs, filters `subtype==='Widget' && fieldType==='Tx'`, deduplicates by `fieldName` across pages. Also extracts `rect: [x1,y1,x2,y2]` (PDF bottom-left coords) and `fontSize` from `defaultAppearanceData`.
+- `useFieldDetection.ts`: uses `page.getAnnotations()` from pdfjs, filters `subtype==='Widget' && fieldType==='Tx'`, collapses same-`fieldName` widgets (across pages AND same page) into ONE `AcroFormField` that accumulates `placements: {page, rect}[]` (every widget). `page`/`rect` mirror the FIRST placement for back-compat. Also extracts `fontSize` from `defaultAppearanceData`. A duplicated field (shared name) = one form input + one shared value, but EVERY placement is drawn/clickable.
+- `FillerLayout` draws the live-preview overlay and click targets PER PLACEMENT, not per field: the parent expands `fields` → `FieldPlacement[]` (`{field, rect}`) for each page via `f.placements`. Duplicated widgets all show the same typed value.
 - **pdfjs v4**: `annotation.defaultAppearance` string is `undefined` — pdfjs parses it internally and exposes `annotation.defaultAppearanceData.fontSize` (number). Use `defaultAppearanceData` first; fall back to regex on raw DA string for older PDFs.
 - **ArrayBuffer detach**: `useFillerStore.handleFileSelected` calls `pdfjs.getDocument({ data: buffer.slice(0) })` — must pass a COPY because `getDocument` transfers the buffer to the worker (detaching it). The original `buffer` is stored in `pdfBytes` state for `usePdfRenderer`.
 - **AcroFormField** (`src/features/filler/types.ts`): `{ name, type:'text', page, rect:[x1,y1,x2,y2], fontSize }`. `rect` is PDF user-space coords (bottom-left origin). `fontSize===0` means auto-size.

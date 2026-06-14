@@ -1,6 +1,6 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { PDFDocument, PDFFont, PDFName, PDFHexString, PDFString, PDFDict, PDFArray, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, PDFFont, PDFName, PDFHexString, PDFString, PDFDict, PDFArray, PDFTextField, StandardFonts, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import type { FormField, FontFamily } from '@/types/shared';
 import { FONT_CATALOG } from '@/features/pdf/config/fonts';
@@ -114,17 +114,21 @@ function addTextField(
 ): void {
   const page = pdfDoc.getPages()[fieldDef.page - 1];
   const font = resolveFont(fieldDef, embeddedFonts, ttfFonts);
-  const textField = form.createTextField(fieldDef.name);
 
-  const isNew = !fieldByName.has(acroName);
+  // Fields sharing a name collapse into a single AcroForm field with multiple
+  // widget annotations: typing in one fills all of them (shared value). The
+  // field is created once (first occurrence) and reused for every later
+  // FormField with the same name; each FormField still adds its own widget.
+  const acroName = fieldDef.name;
   let textField = fieldByName.get(acroName);
-  if (isNew) {
+  if (!textField) {
     textField = form.createTextField(acroName);
     fieldByName.set(acroName, textField);
   }
 
   // addToPage must run before setFontSize/setText — it creates the /DA entry.
-  textField!.addToPage(page, {
+  // Runs for every FormField (including reused names) to place each widget.
+  textField.addToPage(page, {
     x: fieldDef.x,
     y: fieldDef.y,
     width: fieldDef.width,
@@ -157,20 +161,19 @@ function addTextField(
     }
   }
 
-    const effectiveFontSize = fieldDef.autoFitFont && fieldDef.value
-      ? computeFitFontSize(
-          fieldDef.value,
-          fieldDef.width,
-          fieldDef.height,
-          fieldDef.fontSize,
-          font,
-          fieldDef.multiline ?? false,
-        )
-      : fieldDef.fontSize;
-    textField!.setFontSize(effectiveFontSize);
+  const effectiveFontSize = fieldDef.autoFitFont && fieldDef.value
+    ? computeFitFontSize(
+        fieldDef.value,
+        fieldDef.width,
+        fieldDef.height,
+        fieldDef.fontSize,
+        font,
+        fieldDef.multiline ?? false,
+      )
+    : fieldDef.fontSize;
+  textField.setFontSize(effectiveFontSize);
 
-    if (fieldDef.value) textField!.setText(fieldDef.value);
-  }
+  if (fieldDef.value) textField.setText(fieldDef.value);
 
   // updateAppearances is mandatory — omitting it leaves fields invisible in most readers
   textField.updateAppearances(font);
@@ -464,7 +467,7 @@ export async function generatePdf(
       case 'number': {
         // Text field + numeric keystroke action: restricts input to numbers in
         // readers that run AcroForm JS, and marks the field for round-trip detection.
-        addTextField(pdfDoc, form, fieldDef, embeddedFonts, ttfFonts);
+        addTextField(pdfDoc, form, fieldDef, embeddedFonts, ttfFonts, fieldByName);
         setFieldJsActions(pdfDoc, form.getField(fieldDef.name), {
           K: 'AFNumber_Keystroke(0, 0, 0, 0, "", true);',
         });
@@ -473,7 +476,7 @@ export async function generatePdf(
       case 'date': {
         // Text field + ISO date keystroke/format actions. Matches the HTML
         // <input type="date"> value (yyyy-mm-dd) used in the editor and filler.
-        addTextField(pdfDoc, form, fieldDef, embeddedFonts, ttfFonts);
+        addTextField(pdfDoc, form, fieldDef, embeddedFonts, ttfFonts, fieldByName);
         setFieldJsActions(pdfDoc, form.getField(fieldDef.name), {
           K: 'AFDate_KeystrokeEx("yyyy-mm-dd");',
           F: 'AFDate_FormatEx("yyyy-mm-dd");',
@@ -482,7 +485,7 @@ export async function generatePdf(
       }
       case 'text':
       default:
-        addTextField(pdfDoc, form, fieldDef, embeddedFonts, ttfFonts);
+        addTextField(pdfDoc, form, fieldDef, embeddedFonts, ttfFonts, fieldByName);
         break;
     }
   }

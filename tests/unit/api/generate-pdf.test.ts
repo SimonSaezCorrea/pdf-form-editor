@@ -69,16 +69,21 @@ describe('POST /api/generate-pdf', () => {
     expect(res.status).toBe(400);
   });
 
-  test('returns 400 when field names are duplicated', async () => {
+  test('returns 200 and shares one field across duplicated names', async () => {
     const pdf = await createTestPdfBuffer();
     const fields = [
       { ...validField, id: '1', name: 'dup' },
       { ...validField, id: '2', name: 'dup', y: 640 },
     ];
     const res = await makeRequest(pdf, fields);
-    expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.error).toMatch(/duplicate/i);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('application/pdf');
+
+    // The output has a single 'dup' field exposing both widgets (shared value).
+    const out = await PDFDocument.load(await res.arrayBuffer());
+    const named = out.getForm().getFields().filter((f) => f.getName() === 'dup');
+    expect(named).toHaveLength(1);
+    expect(named[0].acroField.getWidgets()).toHaveLength(2);
   });
 
   test('returns 200 with application/pdf for empty fields array', async () => {

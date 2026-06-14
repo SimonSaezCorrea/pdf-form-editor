@@ -84,12 +84,15 @@ function layoutOverlayText(
 // FillerPageSection — one PDF page + live-preview overlay + click targets
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** One widget placement of a field on a given page (same field may appear N times). */
+type FieldPlacement = { field: AcroFormField; rect: [number, number, number, number] };
+
 interface FillerPageSectionProps {
   pageNum: number;
   pdfDoc: PDFDocumentProxy;
   pageDimensions: PageDimensions;
   renderScale: number;
-  fields: AcroFormField[];
+  placements: FieldPlacement[];
   values: Record<string, string>;
   jumpedId: string | null;
   onFocusField: (name: string) => void;
@@ -100,7 +103,7 @@ function FillerPageSection({
   pdfDoc,
   pageDimensions,
   renderScale,
-  fields,
+  placements,
   values,
   jumpedId,
   onFocusField,
@@ -158,10 +161,10 @@ function FillerPageSection({
     // Async signature image draws must not paint onto a later (re-run) frame.
     let cancelled = false;
 
-    for (const field of fields) {
+    for (const { field, rect } of placements) {
       const value = values[field.name];
 
-      const [x1, y1pdf, x2, y2] = field.rect;
+      const [x1, y1pdf, x2, y2] = rect;
       const cx = x1 * s;
       const cy = (ph - y2) * s;
       const cw = (x2 - x1) * s;
@@ -238,16 +241,16 @@ function FillerPageSection({
     return () => {
       cancelled = true;
     };
-  }, [values, fields, renderScale, pageDimensions]);
+  }, [values, placements, renderScale, pageDimensions]);
 
   return (
     <div id={`filler-page-${pageNum}`} className={styles['page-section']}>
       <div className={styles['canvas-wrapper']}>
         <canvas ref={canvasRef} className={styles['pdf-canvas']} />
         <canvas ref={overlayRef} className={styles['field-overlay']} />
-        {/* Click targets: transparent buttons over each field rect */}
-        {fields.map((field) => {
-          const [x1, y1pdf, x2, y2] = field.rect;
+        {/* Click targets: transparent buttons over each widget placement */}
+        {placements.map(({ field, rect }, i) => {
+          const [x1, y1pdf, x2, y2] = rect;
           const s  = renderScale;
           const ph = pageDimensions.height;
           const left   = x1 * s;
@@ -257,7 +260,7 @@ function FillerPageSection({
           const isJumped = field.name === jumpedId;
           return (
             <button
-              key={field.name}
+              key={`${field.name}-${i}`}
               type="button"
               data-field={field.name}
               className={[
@@ -440,6 +443,13 @@ export function FillerLayout({
           {pdfDoc && dimensionsReady && pageNums.map((pageNum) => {
             const pageDimensions = pageDimensionsMap[pageNum];
             if (!pageDimensions) return null;
+            // One field can have several widgets (shared name) on this page or
+            // across pages — expand to per-placement entries for this page.
+            const placements: FieldPlacement[] = fields.flatMap((f) =>
+              (f.placements ?? [{ page: f.page, rect: f.rect }])
+                .filter((p) => p.page === pageNum)
+                .map((p) => ({ field: f, rect: p.rect })),
+            );
             return (
               <FillerPageSection
                 key={pageNum}
@@ -447,7 +457,7 @@ export function FillerLayout({
                 pdfDoc={pdfDoc}
                 pageDimensions={pageDimensions}
                 renderScale={renderScale}
-                fields={fields.filter((f) => f.page === pageNum)}
+                placements={placements}
                 values={values}
                 jumpedId={jumpedId}
                 onFocusField={onFocusField}

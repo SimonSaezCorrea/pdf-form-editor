@@ -157,7 +157,32 @@ export function useFieldStore(): FieldStore {
   const updateField = useCallback(
     (id: string, partial: Partial<Omit<FormField, 'id'>>) => {
       maybeRecord(fieldsRef.current);
-      const next = fieldsRef.current.map((f) => (f.id === id ? { ...f, ...partial } : f));
+      const target = fieldsRef.current.find((f) => f.id === id);
+
+      // Same-name fields collapse into one shared AcroForm field on export, so
+      // they must share the default value too:
+      //  - editing `value` propagates it to every sibling with the same name;
+      //  - renaming into an existing group adopts that group's current value.
+      const groupName = typeof partial.name === 'string' ? partial.name : target?.name;
+      const shareValue = target !== undefined && partial.value !== undefined;
+      const adoptedValue =
+        typeof partial.name === 'string' && partial.value === undefined
+          ? fieldsRef.current.find(
+              (f) => f.id !== id && f.name === partial.name && f.value !== undefined && f.value !== '',
+            )?.value
+          : undefined;
+
+      const next = fieldsRef.current.map((f) => {
+        if (f.id === id) {
+          const merged = { ...f, ...partial };
+          if (adoptedValue !== undefined) merged.value = adoptedValue;
+          return merged;
+        }
+        if (shareValue && f.name === groupName) {
+          return { ...f, value: partial.value };
+        }
+        return f;
+      });
       syncFields(next);
       setIsDirty(true);
     },

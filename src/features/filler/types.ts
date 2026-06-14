@@ -7,6 +7,13 @@ export interface AcroFormField {
   /** Field bounding box in PDF user-space coords [x1, y1, x2, y2], bottom-left origin */
   rect: [number, number, number, number];
   /**
+   * Every widget placement of this field. Fields sharing a name (duplicated in
+   * the editor) collapse into ONE AcroForm field with MULTIPLE widgets and a
+   * single shared value — each placement must be drawn/clickable in the filler.
+   * `page`/`rect` above mirror the first placement for back-compat.
+   */
+  placements: { page: number; rect: [number, number, number, number] }[];
+  /**
    * Font size in PDF points from the field's Default Appearance (DA) string.
    * 0 means auto-size (fill field height). Match what pdf-lib uses when filling.
    */

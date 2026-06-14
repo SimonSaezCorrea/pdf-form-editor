@@ -41,7 +41,7 @@ describe('detectAcroFormFields', () => {
     expect(fields).toHaveLength(0);
   });
 
-  test('deduplicates field appearing on multiple pages — keeps first page', async () => {
+  test('collapses field appearing on multiple pages into one, keeping all placements', async () => {
     const doc = mockPdfDoc({
       1: [makeAnnotation('signature', 'Tx')],
       2: [makeAnnotation('signature', 'Tx'), makeAnnotation('date', 'Tx')],
@@ -49,9 +49,25 @@ describe('detectAcroFormFields', () => {
     const fields = await detectAcroFormFields(doc);
     expect(fields).toHaveLength(2);
     const sig = fields.find((f) => f.name === 'signature');
-    expect(sig?.page).toBe(1);
+    expect(sig?.page).toBe(1); // first placement mirrors page/rect
+    expect(sig?.placements.map((p) => p.page)).toEqual([1, 2]);
     const date = fields.find((f) => f.name === 'date');
     expect(date?.page).toBe(2);
+    expect(date?.placements).toHaveLength(1);
+  });
+
+  test('duplicated name on the same page → one field with two placements (shared value)', async () => {
+    const doc = mockPdfDoc({
+      1: [
+        { ...makeAnnotation('fullname', 'Tx'), rect: [10, 10, 110, 30] },
+        { ...makeAnnotation('fullname', 'Tx'), rect: [10, 50, 110, 70] },
+      ],
+    });
+    const fields = await detectAcroFormFields(doc);
+    expect(fields).toHaveLength(1);
+    expect(fields[0].name).toBe('fullname');
+    expect(fields[0].placements).toHaveLength(2);
+    expect(fields[0].placements.every((p) => p.page === 1)).toBe(true);
   });
 
   test('ignores non-Widget annotations', async () => {
