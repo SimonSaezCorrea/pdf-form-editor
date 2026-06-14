@@ -4,9 +4,14 @@
   box-sizing: border-box;
   cursor: move;
   border-radius: 2px;
-  background: rgba(79, 70, 229, 0.05);
-  z-index: var(--z-field-overlay);
+  background: rgba(102, 165, 173, 0.05);
+  z-index: var(--z-field);
   overflow: visible;
+}
+
+.locked {
+  cursor: default;
+  opacity: 0.75;
 }
 
 /* White fill so dark-mode tokens never bleed into PDF canvas field fills (FR-008) */
@@ -19,9 +24,14 @@
 }
 
 .selected {
-  border-color: var(--color-danger);
-  background: rgba(220, 38, 38, 0.07);
-  z-index: calc(var(--z-field-overlay) + 1);
+  border-color: var(--color-primary);
+  background: rgba(102, 165, 173, 0.10);
+  z-index: calc(var(--z-field) + 1);
+}
+
+.conflict {
+  border-color: var(--color-danger) !important;
+  background: rgba(220, 38, 38, 0.07) !important;
 }
 
 .dragging {
@@ -47,12 +57,69 @@
   align-items: flex-start;
 }
 
+.field-label--locked {
+  color: #9ca3af !important;
+}
+
 .field-label--multiline {
   white-space: pre-wrap;
   word-break: break-word;
   overflow: hidden;
   text-overflow: clip;
   display: block;
+}
+
+/* Required fields: red text to match the red border (wins over has-value/locked) */
+.field-label--required {
+  color: var(--color-danger) !important;
+}
+
+/* Checkbox field: centered square box instead of a text input zone */
+.checkbox-glyph {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.checkbox-box {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--color-primary);
+  border-radius: 2px;
+  background-color: #fff;
+}
+
+/* Signature field: name label above a baseline */
+.signature-glyph {
+  position: absolute;
+  inset: 1px 3px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.signature-name {
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.signature-line {
+  border-bottom: 1px solid var(--color-primary);
+  margin-bottom: 2px;
+  height: 0;
 }
 
 .field-delete-btn {
@@ -78,6 +145,40 @@
   display: flex;
 }
 
+.lock-badge {
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  font-size: 8px;
+  line-height: 1;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.field-rename-input {
+  position: absolute;
+  inset: 1px 3px;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: var(--font-size-xs);
+  font-family: var(--font-family);
+  color: var(--color-primary);
+  width: calc(100% - 6px);
+  padding: 0;
+  line-height: 1.3;
+}
+
+.context-menu-sep {
+  margin: 2px 0;
+  border: none;
+  border-top: 1px solid var(--border-color);
+}
+
+.context-menu-item--danger {
+  color: var(--color-danger) !important;
+}
+
 .context-menu {
   position: fixed;
   background: var(--color-panel-bg);
@@ -99,8 +200,8 @@
   cursor: pointer;
   font-size: var(--font-size-sm);
   color: var(--color-text);
-  font-family: var(--font-family-base);
+  font-family: var(--font-family);
 }
 .context-menu-item:hover {
-  background: var(--color-neutral-100);
+  background: rgba(102, 165, 173, 0.08);
 }

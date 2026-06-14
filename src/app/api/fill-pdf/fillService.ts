@@ -1,4 +1,59 @@
-import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { PDFDocument, PDFButton, PDFCheckBox, PDFTextField, StandardFonts, rgb } from 'pdf-lib';
+
+// Values that mark a checkbox as checked.
+const CHECKBOX_TRUTHY = new Set(['true', '1', 'x', '✓', 'si', 'sí', 'yes', 'on', 'checked']);
+
+/** Decode a `data:image/(png|jpeg);base64,…` URL into raw bytes + format. */
+function decodeImageDataUrl(value: string): { bytes: Uint8Array; png: boolean } | null {
+  const match = /^data:image\/(png|jpe?g);base64,(.+)$/i.exec(value);
+  if (!match) return null;
+  return { bytes: Buffer.from(match[2], 'base64'), png: /png/i.test(match[1]) };
+}
+
+/**
+ * Stamp a signature image onto the page region of a push-button (signature zone)
+ * field, fitting it inside the widget rect while preserving aspect ratio. Returns
+ * true when the image was drawn (so the field can be removed before flattening).
+ */
+async function stampSignature(
+  pdfDoc: PDFDocument,
+  field: PDFButton,
+  value: string,
+): Promise<boolean> {
+  const decoded = decodeImageDataUrl(value);
+  const widget = field.acroField.getWidgets()[0];
+  if (!decoded || !widget) return false;
+
+  const image = decoded.png
+    ? await pdfDoc.embedPng(decoded.bytes)
+    : await pdfDoc.embedJpg(decoded.bytes);
+
+  const rect = widget.getRectangle();
+  const pageRef = widget.P();
+  const page =
+    (pageRef && pdfDoc.getPages().find((p) => p.ref === pageRef)) || pdfDoc.getPages()[0];
+
+  const scale = Math.min(rect.width / image.width, rect.height / image.height);
+  const drawW = image.width * scale;
+  const drawH = image.height * scale;
+  page.drawImage(image, {
+    x: rect.x + (rect.width - drawW) / 2,
+    y: rect.y + (rect.height - drawH) / 2,
+    width: drawW,
+    height: drawH,
+  });
+
+  // Signature baseline, anchored to the field rect (drawn at fill time, not in
+  // the editor) — matches the guide shown in the filler preview.
+  const lineY = rect.y + rect.height * 0.2;
+  page.drawLine({
+    start: { x: rect.x + rect.width * 0.06, y: lineY },
+    end: { x: rect.x + rect.width * 0.94, y: lineY },
+    thickness: 0.75,
+    color: rgb(0.35, 0.35, 0.35),
+  });
+  return true;
+}
 
 export class FieldNotFoundError extends Error {
   constructor(public readonly field: string) {
@@ -15,12 +70,16 @@ export function isPdf(bytes: Uint8Array): boolean {
     bytes[3] === 0x46;
 }
 
+type FieldMeta = { fontSize: number; multiline: boolean };
+
 export async function fillPdf(
   fileBytes: Uint8Array,
   fields: Record<string, string>,
+  metadata: Record<string, FieldMeta> = {},
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(fileBytes);
   const form = pdfDoc.getForm();
+  const helvetica = pdfDoc.embedStandardFont(StandardFonts.Helvetica);
 
   // Build set of available field names for O(1) lookup
   const availableNames = new Set(form.getFields().map((f) => f.getName()));
@@ -32,15 +91,41 @@ export async function fillPdf(
     }
   }
 
-  // Write values
+  // Write values with per-field metadata. Branch on the ACTUAL PDF field type
+  // (not client metadata) so checkboxes and signature/push-button widgets do not
+  // crash getTextField.
+  const stampedSignatures: PDFButton[] = [];
   for (const [name, value] of Object.entries(fields)) {
-    form.getTextField(name).setText(value);
+    const field = form.getField(name);
+
+    if (field instanceof PDFCheckBox) {
+      if (CHECKBOX_TRUTHY.has(value.trim().toLowerCase())) field.check();
+      else field.uncheck();
+      continue;
+    }
+
+    if (field instanceof PDFTextField) {
+      const meta = metadata[name];
+      if (meta?.multiline) field.enableMultiline();
+      field.setText(value);
+      // 0 = auto-size (preserve original field sizing)
+      field.setFontSize(meta?.fontSize ?? 0);
+      field.updateAppearances(helvetica);
+      continue;
+    }
+
+    // Push button = signature zone: stamp the drawn image onto the page.
+    if (field instanceof PDFButton && (await stampSignature(pdfDoc, field, value))) {
+      stampedSignatures.push(field);
+    }
   }
 
-  // Principle XXXI: updateFieldAppearances → flatten → save
-  const helvetica = await pdfDoc.embedStandardFont(StandardFonts.Helvetica);
-  form.updateFieldAppearances(helvetica);
-  form.flatten();
+  // Remove stamped signature buttons before flattening so the empty button border
+  // does not paint over the drawn image.
+  for (const field of stampedSignatures) {
+    form.removeField(field);
+  }
 
+  form.flatten();
   return pdfDoc.save();
 }

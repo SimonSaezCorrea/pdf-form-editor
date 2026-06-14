@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8" />
+<title>Select</title>
+<link rel="stylesheet" href="_base.css" />
+<style>
+  .card { padding: 22px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px 22px; align-items: start; }
+  .group { display: flex; flex-direction: column; gap: 4px; }
+  .select-wrap { position: relative; }
+  .arrow { position:absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--fg-3); pointer-events:none; font-size: 10px; }
+  .menu {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--bg-panel); border: 1px solid var(--border-color);
+    border-radius: var(--radius-md); box-shadow: var(--shadow-md);
+    padding: 4px; z-index: 10;
+  }
+  .menu .group-title { padding: 6px 8px 2px; font-size: 11px; color: var(--fg-3); text-transform: uppercase; letter-spacing:.05em; font-weight: 600; }
+  .menu .opt { padding: 6px 8px; font-size: 13px; color: var(--fg-1); border-radius: 4px; cursor: default; }
+  .menu .opt:hover, .menu .opt.active { background: rgba(102,165,173,0.14); color: var(--color-primary); }
+</style></head>
+<body>
+<div class="card">
+  <div class="group">
+    <span class="field-label">Fuente</span>
+    <div class="select-wrap">
+      <select class="field-input">
+        <option>Helvetica</option>
+        <option>Times Roman</option>
+        <option>Courier</option>
+      </select>
+      <span class="arrow">▾</span>
+    </div>
+  </div>
+  <div class="group">
+    <span class="field-label">Fuente · abierto</span>
+    <div class="select-wrap">
+      <input class="field-input field-input--focus" value="Helvetica" readonly />
+      <span class="arrow">▾</span>
+      <div class="menu">
+        <div class="group-title">Sans-serif</div>
+        <div class="opt active">Helvetica</div>
+        <div class="opt">Inter</div>
+        <div class="group-title">Serif</div>
+        <div class="opt">Times Roman</div>
+        <div class="opt">Source Serif</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

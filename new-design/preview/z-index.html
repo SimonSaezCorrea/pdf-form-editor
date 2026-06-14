@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8" />
+<title>Z-index Layers</title>
+<link rel="stylesheet" href="_base.css" />
+<style>
+  .card { padding: 22px 26px; flex-direction: column; gap: 8px; }
+  .row-item { display: grid; grid-template-columns: 180px 1fr 60px; align-items: center; gap: 12px; font-family: var(--font-family-mono); font-size: 11px; }
+  .row-item .name { color: var(--fg-1); font-weight: 600; }
+  .row-item .px   { color: var(--fg-3); text-align: right; font-variant-numeric: tabular-nums; }
+  .bar { height: 8px; background: linear-gradient(90deg, var(--color-primary), var(--color-accent)); border-radius: 999px; }
+</style></head>
+<body>
+<div class="card">
+  <div class="row-item"><span class="name">--z-canvas</span><div class="bar" style="width:2%"></div><span class="px">0</span></div>
+  <div class="row-item"><span class="name">--z-field-overlay</span><div class="bar" style="width:5%"></div><span class="px">10</span></div>
+  <div class="row-item"><span class="name">--z-resize-handle</span><div class="bar" style="width:8%"></div><span class="px">20</span></div>
+  <div class="row-item"><span class="name">--z-context-menu</span><div class="bar" style="width:18%"></div><span class="px">50</span></div>
+  <div class="row-item"><span class="name">--z-toolbar</span><div class="bar" style="width:35%"></div><span class="px">100</span></div>
+  <div class="row-item"><span class="name">--z-modal</span><div class="bar" style="width:65%"></div><span class="px">200</span></div>
+  <div class="row-item"><span class="name">--z-tooltip</span><div class="bar" style="width:100%"></div><span class="px">300</span></div>
+</div>
+</body></html>

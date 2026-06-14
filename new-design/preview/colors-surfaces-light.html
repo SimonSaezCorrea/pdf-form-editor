@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8" />
+<title>Semantic Surfaces — Light</title>
+<link rel="stylesheet" href="_base.css" />
+<style>
+  .card { padding: 18px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 10px; }
+  .surf {
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 12px; border-radius: var(--radius-md); border: 1px solid #8ec4cc;
+    font-size: 11px;
+  }
+  .surf .label { color: #151E20; font-weight: 600; font-size: 12px; }
+  .surf .hex   { color: #3d7280; font-family: var(--font-family-mono); }
+  .surf--inv .label { color: #F4F7F8; }
+  .surf--inv .hex   { color: #b2d7de; }
+</style></head>
+<body>
+<div class="card">
+  <div class="surf" style="background:#F4F7F8"><span class="label">surface · app</span><span class="hex">#F4F7F8</span></div>
+  <div class="surf surf--inv" style="background:#07575B;border-color:#07575B"><span class="label">navbar</span><span class="hex">#07575B</span></div>
+  <div class="surf" style="background:#C4DFE6"><span class="label">panel</span><span class="hex">#C4DFE6</span></div>
+  <div class="surf" style="background:#ffffff"><span class="label">input</span><span class="hex">#FFFFFF</span></div>
+  <div class="surf" style="background:#dce8eb"><span class="label">viewer / canvas bg</span><span class="hex">#DCE8EB</span></div>
+  <div class="surf" style="background:#d6eef2"><span class="label">neutral-100</span><span class="hex">#D6EEF2</span></div>
+</div>
+</body></html>

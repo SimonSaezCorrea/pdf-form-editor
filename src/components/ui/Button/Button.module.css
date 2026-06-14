@@ -2,7 +2,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  font-family: var(--font-family-base);
+  font-family: var(--font-family);
   font-weight: var(--font-weight-medium);
   border-radius: var(--radius-md);
   border: 1px solid transparent;
@@ -23,21 +23,22 @@
 }
 
 .secondary {
-  background: var(--color-white);
-  color: var(--color-dark-800);
+  background: var(--color-input-bg);
+  color: var(--color-text);
   border-color: var(--border-color);
 }
 .secondary:hover:not(:disabled) {
-  background: var(--color-neutral-100);
+  background: var(--color-panel-bg);
 }
 
 .ghost {
   background: transparent;
-  color: var(--color-dark-700);
+  color: var(--color-text-muted);
   border-color: transparent;
 }
 .ghost:hover:not(:disabled) {
-  background: var(--color-neutral-100);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text);
 }
 
 .navbar {
@@ -48,6 +49,17 @@
 .navbar:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.12);
   border-color: transparent;
+}
+
+/* CTA primario dentro del navbar — siempre visible sobre fondo teal */
+.navbar-cta {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--color-navbar-text);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+.navbar-cta:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.65);
 }
 
 .danger {
@@ -67,7 +79,7 @@
 }
 
 .md {
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-1) var(--space-3);
   font-size: var(--font-size-base);
 }
 

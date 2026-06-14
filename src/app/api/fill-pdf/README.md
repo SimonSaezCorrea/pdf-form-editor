@@ -1,6 +1,12 @@
 # POST /api/fill-pdf
 
-Fills AcroForm text fields in an uploaded PDF and returns a flattened (non-editable) PDF.
+Fills AcroForm fields in an uploaded PDF and returns a flattened (non-editable) PDF.
+
+Field type is read from the **actual PDF widget**, not the request:
+
+- **Text fields** (`PDFTextField`) — value is written with `setText` + per-field font metadata.
+- **Checkboxes** (`PDFCheckBox`) — checked when the value is truthy (`true`, `1`, `x`, `✓`, `si`, `sí`, `yes`, `on`, `checked`, case-insensitive), unchecked otherwise.
+- **Push buttons / signature zones** (`PDFButton`) — when the value is an image data URL (`data:image/png;base64,…`), the image is stamped into the widget rect (aspect preserved) and the button is removed before flattening. Non-image values are ignored.
 
 ## Request
 
@@ -80,7 +86,7 @@ URL.revokeObjectURL(url);
 
 ## Notes
 
-- Only AcroForm **text fields** (`TextField`) are supported in v1.
+- Text fields and checkboxes are filled; push-button/signature widgets are skipped.
 - Maximum PDF size: 4 MB (Next.js Route Handler default).
 - The endpoint is stateless and requires no authentication.
 - Encrypted PDFs return `500 PROCESSING_ERROR`.

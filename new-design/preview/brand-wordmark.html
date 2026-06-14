@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8" />
+<title>Wordmark</title>
+<link rel="stylesheet" href="_base.css" />
+<style>
+  .card { padding: 0; background: var(--bg-app); }
+  .stage { flex: 1; display: grid; grid-template-rows: 1fr 1fr; }
+  .row { display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .row.dark  { background: var(--bg-navbar); color: var(--color-navbar-text); }
+  .row.light { background: #07575B; color: #F4F7F8; }
+  .logo {
+    font-family: var(--font-family-base);
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: -0.005em;
+  }
+</style></head>
+<body>
+<div class="card">
+  <div class="stage">
+    <div class="row dark"><span class="logo">PDF Form Editor</span></div>
+    <div class="row light"><span class="logo">PDF Form Editor</span></div>
+  </div>
+</div>
+</body></html>

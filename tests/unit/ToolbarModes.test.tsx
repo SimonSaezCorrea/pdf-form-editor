@@ -1,21 +1,21 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import { ToolbarModes } from '@/features/toolbar/components/ToolbarModes/ToolbarModes';
-import type { InteractionMode } from '@/hooks/useInteractionMode';
 
 describe('ToolbarModes', () => {
-  it('renders three mode buttons', () => {
-    const { getAllByRole } = render(
+  it('renders two mode buttons (Seleccionar, Mover)', () => {
+    const { getByText } = render(
       <ToolbarModes mode="select" onModeChange={vi.fn()} />,
     );
-    expect(getAllByRole('button')).toHaveLength(3);
+    expect(getByText('Seleccionar')).toBeTruthy();
+    expect(getByText('Mover')).toBeTruthy();
   });
 
   it('marks the active mode button with the active class', () => {
     const { getByText } = render(
-      <ToolbarModes mode="insert" onModeChange={vi.fn()} />,
+      <ToolbarModes mode="move" onModeChange={vi.fn()} />,
     );
-    expect(getByText('Insertar')).toHaveClass('active');
+    expect(getByText('Mover')).toHaveClass('active');
     expect(getByText('Seleccionar')).not.toHaveClass('active');
   });
 
@@ -28,19 +28,19 @@ describe('ToolbarModes', () => {
     expect(onModeChange).toHaveBeenCalledWith('move');
   });
 
-  it('calls onModeChange for each button with its correct mode', () => {
+  it('clicking a type chip enters insert mode with that type', () => {
     const onModeChange = vi.fn();
+    const onInsertTypeChange = vi.fn();
     const { getByText } = render(
-      <ToolbarModes mode="select" onModeChange={onModeChange} />,
+      <ToolbarModes
+        mode="select"
+        onModeChange={onModeChange}
+        insertType="text"
+        onInsertTypeChange={onInsertTypeChange}
+      />,
     );
-    const cases: Array<[string, InteractionMode]> = [
-      ['Seleccionar', 'select'],
-      ['Insertar', 'insert'],
-      ['Mover', 'move'],
-    ];
-    for (const [label, expectedMode] of cases) {
-      fireEvent.click(getByText(label));
-      expect(onModeChange).toHaveBeenCalledWith(expectedMode);
-    }
+    fireEvent.click(getByText('Número'));
+    expect(onInsertTypeChange).toHaveBeenCalledWith('number');
+    expect(onModeChange).toHaveBeenCalledWith('insert');
   });
 });

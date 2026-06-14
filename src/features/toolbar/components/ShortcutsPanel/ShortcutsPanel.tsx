@@ -1,7 +1,10 @@
 'use client';
 
-import { IconButton } from '@/components/ui';
+import { IconButton, Kbd } from '@/components/ui';
+import { modKey } from '@/hooks/useModKey';
 import styles from './ShortcutsPanel.module.css';
+
+const MOD = modKey();
 
 interface ShortcutGroup {
   title: string;
@@ -21,7 +24,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
   {
     title: 'Selección',
     shortcuts: [
-      { keys: ['Ctrl', 'A'], description: 'Seleccionar todos' },
+      { keys: [MOD, 'A'], description: 'Seleccionar todos' },
       { keys: ['Shift', 'Clic'], description: 'Agregar/quitar de selección' },
       { keys: ['Esc'], description: 'Deseleccionar todo' },
     ],
@@ -29,9 +32,9 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
   {
     title: 'Campos',
     shortcuts: [
-      { keys: ['Ctrl', 'D'], description: 'Duplicar campo seleccionado' },
-      { keys: ['Ctrl', 'C'], description: 'Copiar campo(s)' },
-      { keys: ['Ctrl', 'V'], description: 'Pegar campo(s)' },
+      { keys: [MOD, 'D'], description: 'Duplicar campo seleccionado' },
+      { keys: [MOD, 'C'], description: 'Copiar campo(s)' },
+      { keys: [MOD, 'V'], description: 'Pegar campo(s)' },
       { keys: ['Del'], description: 'Eliminar campo(s) seleccionados' },
     ],
   },
@@ -68,7 +71,7 @@ export function ShortcutsPanel({ visible, onClose }: ShortcutsPanelProps) {
                 <span className={styles['shortcut-keys']}>
                   {s.keys.map((k, i) => (
                     <span key={i}>
-                      <kbd className={styles['kbd']}>{k}</kbd>
+                      <Kbd>{k}</Kbd>
                       {i < s.keys.length - 1 && <span className={styles['kbd-sep']}>+</span>}
                     </span>
                   ))}

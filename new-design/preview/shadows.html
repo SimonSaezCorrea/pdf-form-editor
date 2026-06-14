@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8" />
+<title>Shadows</title>
+<link rel="stylesheet" href="_base.css" />
+<style>
+  body { background: #0f1e25; }
+  .card { padding: 30px 20px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; background: #0f1e25; border: 1px solid #1a3a45; }
+  .tile { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .surface {
+    width: 80px; height: 60px; background: var(--bg-panel);
+    border: 1px solid var(--border-color); border-radius: var(--radius-md);
+  }
+  .name { color: var(--fg-1); font-weight: 600; font-size: 12px; }
+  .val  { color: var(--fg-3); font-family: var(--font-family-mono); font-size: 10px; text-align: center; }
+</style></head>
+<body>
+<div class="card">
+  <div class="tile">
+    <div class="surface" style="box-shadow:0 1px 2px rgba(0,0,0,0.05)"></div>
+    <span class="name">shadow-sm</span><span class="val">0 1px 2px / .05</span>
+  </div>
+  <div class="tile">
+    <div class="surface" style="box-shadow:0 2px 8px rgba(0,0,0,0.10)"></div>
+    <span class="name">shadow-md</span><span class="val">0 2px 8px / .10</span>
+  </div>
+  <div class="tile">
+    <div class="surface" style="box-shadow:0 4px 16px rgba(0,0,0,0.15)"></div>
+    <span class="name">shadow-lg</span><span class="val">0 4px 16px / .15</span>
+  </div>
+  <div class="tile">
+    <div class="surface" style="box-shadow:0 8px 32px rgba(0,0,0,0.20)"></div>
+    <span class="name">shadow-xl</span><span class="val">0 8px 32px / .20</span>
+  </div>
+</div>
+</body></html>

@@ -8,25 +8,40 @@
 }
 
 .layout-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 0 var(--space-4);
+  height: 48px;
+  background: var(--color-navbar-bg);
+  color: var(--color-navbar-text);
+  box-shadow: var(--shadow-md);
+  flex-shrink: 0;
+}
+
+.header-left {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-4);
-  border-bottom: 1px solid var(--border-color);
-  background: var(--color-panel-bg);
-  flex-shrink: 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .zoom-controls {
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  margin-left: auto;
+  justify-self: center;
 }
 
 .zoom-label {
   font-size: var(--font-size-sm, 0.875rem);
-  color: var(--color-text-muted);
+  color: var(--color-navbar-text);
+  opacity: 0.75;
   min-width: 36px;
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -34,7 +49,8 @@
 
 .field-count {
   font-size: var(--font-size-sm, 0.875rem);
-  color: var(--color-text-muted);
+  color: var(--color-navbar-text);
+  opacity: 0.75;
 }
 
 .layout-body {
@@ -79,6 +95,61 @@
   pointer-events: none;
 }
 
+/* Transparent click targets over PDF fields */
+.pdf-field-target {
+  position: absolute;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: border-color 0.12s, background 0.12s;
+  padding: 0;
+}
+
+.pdf-field-target:hover {
+  border-color: rgba(102, 165, 173, 0.5);
+  background: rgba(102, 165, 173, 0.08);
+}
+
+@keyframes jump-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(102, 165, 173, 0.5); }
+  40%  { box-shadow: 0 0 0 6px rgba(102, 165, 173, 0.15); }
+  100% { box-shadow: 0 0 0 0 rgba(102, 165, 173, 0); }
+}
+
+.pdf-field-target--jumped {
+  border-color: var(--color-primary);
+  animation: jump-pulse 0.6s ease-out;
+}
+
+/* Vista final toggle pill */
+.toggle-pill {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 3px var(--space-3);
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+  white-space: nowrap;
+}
+
+.toggle-pill:hover {
+  border-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+.toggle-pill--active {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
 /* One section per page — pages stack vertically with a gap between them */
 .page-section {
   display: flex;
@@ -101,7 +172,27 @@
   width: 320px;
   flex-shrink: 0;
   border-right: 1px solid var(--border-color);
+  background: var(--color-panel-bg);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+@keyframes live-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+@keyframes jump-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(244, 162, 97, 0.45); }
+  40% { box-shadow: 0 0 0 8px rgba(244, 162, 97, 0.18); }
+  100% { box-shadow: 0 0 0 0 rgba(244, 162, 97, 0); }
+}
+
+.live-indicator {
+  animation: live-pulse 1.5s ease-in-out infinite;
+}
+
+.field-highlight {
+  animation: jump-pulse 0.6s ease-out;
 }

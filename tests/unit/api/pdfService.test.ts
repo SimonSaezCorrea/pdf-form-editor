@@ -1,4 +1,4 @@
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFDict, PDFString } from 'pdf-lib';
 import { generatePdf } from '@/app/api/generate-pdf/pdfService';
 import type { FormField } from '@/types/shared';
 
@@ -76,6 +76,94 @@ describe('generatePdf', () => {
     const buf = await createTestPdf();
     const fields: FormField[] = [{ ...baseField, page: 0 }];
     await expect(generatePdf(buf, fields)).rejects.toThrow(/page/i);
+  });
+
+  test('checkbox field exports as a real AcroForm checkbox', async () => {
+    const buf = await createTestPdf();
+    const result = await generatePdf(buf, [
+      { ...baseField, name: 'agree', fieldType: 'checkbox', value: '✓' },
+    ]);
+    const doc = await PDFDocument.load(result);
+    const checkBox = doc.getForm().getCheckBox('agree');
+    expect(checkBox).toBeDefined();
+    expect(checkBox.isChecked()).toBe(true);
+  });
+
+  test('number field bakes an AFNumber keystroke action into the PDF', async () => {
+    const buf = await createTestPdf();
+    const result = await generatePdf(buf, [
+      { ...baseField, name: 'amount', fieldType: 'number' },
+    ]);
+    const doc = await PDFDocument.load(result);
+    // Still a fillable text field.
+    const field = doc.getForm().getTextField('amount');
+    expect(field).toBeDefined();
+    // The keystroke (/AA /K) JavaScript action is present and numeric.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const aa = (field as any).acroField.dict.lookup(PDFName.of('AA'), PDFDict);
+    const k = aa.lookup(PDFName.of('K'), PDFDict);
+    const js = k.lookup(PDFName.of('JS'), PDFString);
+    expect(js.asString()).toContain('AFNumber_Keystroke');
+  });
+
+  test('date field bakes AFDate keystroke + format actions into the PDF', async () => {
+    const buf = await createTestPdf();
+    const result = await generatePdf(buf, [
+      { ...baseField, name: 'birth', fieldType: 'date' },
+    ]);
+    const doc = await PDFDocument.load(result);
+    const field = doc.getForm().getTextField('birth');
+    expect(field).toBeDefined();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const aa = (field as any).acroField.dict.lookup(PDFName.of('AA'), PDFDict);
+    const k = aa.lookup(PDFName.of('K'), PDFDict);
+    const f = aa.lookup(PDFName.of('F'), PDFDict);
+    expect(k.lookup(PDFName.of('JS'), PDFString).asString()).toContain('AFDate');
+    expect(f.lookup(PDFName.of('JS'), PDFString).asString()).toContain('AFDate');
+  });
+
+  test('text field WITH a default value is baked as static, non-editable content', async () => {
+    const buf = await createTestPdf();
+    const result = await generatePdf(buf, [
+      { ...baseField, name: 'baked', value: 'Fixed text' },
+    ]);
+    const doc = await PDFDocument.load(result);
+    // No AcroForm widget is created — the value is drawn onto the page instead.
+    expect(doc.getForm().getFields()).toHaveLength(0);
+    expect(() => doc.getForm().getTextField('baked')).toThrow();
+  });
+
+  test('field WITHOUT a value stays a fillable AcroForm field; valued sibling is baked', async () => {
+    const buf = await createTestPdf();
+    const result = await generatePdf(buf, [
+      { ...baseField, name: 'empty', value: '' },
+      { ...baseField, name: 'filled', y: 600, value: 'X' },
+    ]);
+    const doc = await PDFDocument.load(result);
+    expect(doc.getForm().getTextField('empty')).toBeDefined();
+    expect(doc.getForm().getFields()).toHaveLength(1); // only 'empty'
+  });
+
+  test('value with bakeValue:false stays a fillable input pre-filled with the value', async () => {
+    const buf = await createTestPdf();
+    const result = await generatePdf(buf, [
+      { ...baseField, name: 'editable', value: 'Hello', bakeValue: false },
+    ]);
+    const doc = await PDFDocument.load(result);
+    const field = doc.getForm().getTextField('editable');
+    expect(field).toBeDefined();
+    expect(field.getText()).toBe('Hello');
+  });
+
+  test('bold + italic styling embeds the matching standard-font variant without error', async () => {
+    const buf = await createTestPdf();
+    const result = await generatePdf(buf, [
+      { ...baseField, name: 'styled', value: 'Texto', bold: true, italic: true, underline: true },
+    ]);
+    // Baked (no AcroForm field) and produces valid bytes.
+    const doc = await PDFDocument.load(result);
+    expect(doc.getForm().getFields()).toHaveLength(0);
+    expect(result.length).toBeGreaterThan(0);
   });
 
   test('works with multi-page PDF and fields on different pages', async () => {

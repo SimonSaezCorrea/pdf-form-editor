@@ -1,0 +1,257 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   PDF Form Editor — Colors & Type
+   Single source of truth for foundations. Mirrors src/styles/tokens.css
+   from the codebase, plus semantic role tokens (h1, body, code, fg1…).
+
+   Dark mode is the default in product. We expose:
+     :root            → dark defaults (matches product UX)
+     [data-theme=light] → light overrides (rare, opt-in)
+   ───────────────────────────────────────────────────────────────────────── */
+
+@font-face {
+  font-family: 'Geist';
+  src: url('../../fonts/Geist_wght_.woff2') format('woff2-variations'),
+       url('../../fonts/Geist_wght_.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* ── Brand palette (fixed, theme-independent) ── */
+  --color-primary-brand:   #07575B;   /* "wave" teal — navbar, focused brand */
+  --color-primary-hover-brand: #004d52;
+  --color-accent-brand:    #E76F51;   /* warm clay orange — accent */
+  --color-accent-hover-brand: #d4593d;
+
+  --color-danger:        #ef4444;   /* dark-mode default — brighter red for vibrancy on dark surfaces */
+  --color-danger-hover:  #f87171;
+
+  /* ── Dark scale (intentionally-dark surfaces: shortcuts panel, FABs) ── */
+  --color-dark-900: #003B46;
+  --color-dark-800: #07575B;
+  --color-dark-700: #0d6e75;
+
+  /* ── Teal-tinted neutral scale ── */
+  --color-neutral-600: #2a5a65;
+  --color-neutral-500: #3d7280;
+  --color-neutral-400: #66A5AD;
+  --color-neutral-300: #8ec4cc;
+  --color-neutral-200: #b2d7de;
+  --color-neutral-100: #d6eef2;
+
+  --color-white: #ffffff;
+
+  /* ── Dark-mode SEMANTIC defaults (the product's primary theme) ── */
+  --color-surface:      #091214;   /* app background — near-black, teal-tinted */
+  --color-panel-bg:     #0d2028;   /* sidebars + properties panel              */
+  --color-input-bg:     #132c38;   /* inputs, selects, kbd                     */
+  --color-viewer-bg:    #0f1e25;   /* canvas viewport background               */
+  --color-navbar-bg:    #051519;   /* darkest layer — top app bar              */
+  --color-navbar-text:  #E8EDEF;
+  --color-text:         #E8EDEF;   /* body text — soft off-white               */
+  --color-text-muted:   #7ab5bd;   /* muted — readable teal-grey               */
+  --color-primary:      #66A5AD;   /* dark-mode primary — readable on dark     */
+  --color-primary-hover:#7bbdc5;
+  --color-accent:       #F4A261;   /* dark-mode accent — warmer orange         */
+  --color-accent-hover: #e8904c;
+  --border-color:       #1a3a45;
+  --color-danger-bg:     #3b0f0f;
+  --color-danger-border: #7f1d1d;
+
+  /* ── Semantic foreground roles ── */
+  --fg-1: var(--color-text);          /* primary body text */
+  --fg-2: var(--color-text-muted);    /* secondary / labels */
+  --fg-3: var(--color-neutral-500);   /* tertiary / disabled hints */
+  --fg-accent: var(--color-accent);
+  --fg-brand:  var(--color-primary);
+  --fg-danger: #f87171;
+  --fg-on-brand: var(--color-white);  /* text on teal navbar / primary buttons */
+
+  /* ── Semantic background roles ── */
+  --bg-app:    var(--color-surface);
+  --bg-panel:  var(--color-panel-bg);
+  --bg-input:  var(--color-input-bg);
+  --bg-canvas: var(--color-viewer-bg);
+  --bg-navbar: var(--color-navbar-bg);
+
+  /* ── Typography (Geist variable, with system fallback) ── */
+  --font-family-base:
+    'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --font-family-mono:
+    ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --font-size-xs:   11px;
+  --font-size-sm:   12px;
+  --font-size-base: 13px;   /* canonical UI size — tight, utilitarian */
+  --font-size-md:   14px;
+  --font-size-lg:   16px;
+  --font-size-xl:   18px;
+  --font-size-2xl:  22px;
+  --font-size-3xl:  28px;
+
+  --font-weight-normal:   400;
+  --font-weight-medium:   500;
+  --font-weight-semibold: 600;
+  --font-weight-bold:     700;
+
+  --line-height-tight:  1.2;
+  --line-height-base:   1.5;
+  --line-height-loose:  1.6;
+
+  /* ── Spacing (4px scale) ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ── Radii — tight, utilitarian ── */
+  --radius-sm: 4px;
+  --radius-md: 5px;   /* default control radius */
+  --radius-lg: 8px;   /* cards, modals */
+  --radius-xl: 12px;
+  --radius-pill: 999px;
+
+  /* ── Shadows ── */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.10);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
+  --shadow-xl: 0 8px 32px rgba(0, 0, 0, 0.20);
+
+  /* ── Z-index layers ── */
+  --z-canvas:        0;
+  --z-field-overlay: 10;
+  --z-resize-handle: 20;
+  --z-context-menu:  50;
+  --z-toolbar:       100;
+  --z-modal:         200;
+  --z-tooltip:       300;
+}
+
+/* ── Light mode (opt-in via [data-theme="light"]) ──────────────────────── */
+[data-theme="light"] {
+  --color-surface:     #F4F7F8;
+  --color-panel-bg:    #C4DFE6;
+  --color-input-bg:    #ffffff;
+  --color-viewer-bg:   #dce8eb;
+  --color-navbar-bg:   #07575B;
+  --color-navbar-text: #F4F7F8;
+  --color-text:        #151E20;
+  --color-text-muted:  #003B46;
+  --color-primary:     #07575B;
+  --color-primary-hover:#004d52;
+  --color-accent:      #E76F51;
+  --color-accent-hover:#d4593d;
+  --border-color:      #8ec4cc;
+  --color-danger:      #dc2626;
+  --color-danger-hover:#b91c1c;
+  --color-danger-bg:     #fee2e2;
+  --color-danger-border: #fca5a5;
+  --fg-1: var(--color-text);
+  --fg-2: var(--color-text-muted);
+  --fg-3: #3d7280;
+  --bg-app:    var(--color-surface);
+  --bg-panel:  var(--color-panel-bg);
+  --bg-input:  var(--color-input-bg);
+  --bg-canvas: var(--color-viewer-bg);
+  --bg-navbar: var(--color-navbar-bg);
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+   Semantic type roles. Use these instead of raw font-size vars when
+   composing screens.
+   ──────────────────────────────────────────────────────────────────────── */
+
+.t-display {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  letter-spacing: -0.01em;
+  color: var(--fg-1);
+}
+
+.t-h1 {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--fg-1);
+}
+
+.t-h2 {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--fg-1);
+}
+
+.t-h3 {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.35;
+  color: var(--fg-1);
+}
+
+.t-body {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-base);
+  color: var(--fg-1);
+}
+
+.t-body-sm {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-base);
+  color: var(--fg-2);
+}
+
+.t-label {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--fg-2);
+}
+
+.t-eyebrow {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--fg-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.t-caption {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-normal);
+  color: var(--fg-3);
+  line-height: var(--line-height-base);
+}
+
+.t-code {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  color: var(--fg-1);
+}
+
+/* Mini-utilities frequently composed in UI */
+.t-tabular { font-variant-numeric: tabular-nums; }
+.t-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

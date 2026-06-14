@@ -1,6 +1,6 @@
 'use client';
 
-import { useTheme } from '@/hooks/useTheme';
+import type { Theme } from '@/hooks/useTheme';
 import { IconButton } from '@/components/ui';
 
 const SunIcon = () => (
@@ -23,15 +23,20 @@ const MoonIcon = () => (
   </svg>
 );
 
-export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-  const isDark = theme === 'dark';
+interface ThemeToggleProps {
+  theme: Theme | null;
+  onToggleTheme: () => void;
+}
+
+export function ThemeToggle({ theme, onToggleTheme }: Readonly<ThemeToggleProps>) {
+  const isDark = theme !== 'light';
 
   return (
     <IconButton
       icon={isDark ? <SunIcon /> : <MoonIcon />}
       label={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-      onClick={() => setTheme(isDark ? 'light' : 'dark')}
+      variant="navbar"
+      onClick={onToggleTheme}
       size="md"
     />
   );

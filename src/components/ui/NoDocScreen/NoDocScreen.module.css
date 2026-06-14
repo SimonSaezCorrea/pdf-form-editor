@@ -1,0 +1,155 @@
+.no-doc-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-4);
+  /* Top-anchored so the card lands at the same height as the main view's
+     dropzone (which sits below its hero) — avoids a vertical jump on switch. */
+  padding: 11rem var(--space-6) var(--space-12);
+  overflow: auto;
+  /* Haz de luz: same layered glow as the main upload view (dark-first). */
+  background:
+    radial-gradient(circle 360px at 50% 280px, rgba(244, 162, 97, 0.09), transparent 100%),
+    radial-gradient(ellipse 55% 40% at 50% 34%, rgba(102, 165, 173, 0.10), transparent 70%),
+    var(--color-surface);
+}
+
+[data-theme="light"] .no-doc-screen {
+  background:
+    radial-gradient(circle 360px at 50% 280px, rgba(231, 111, 81, 0.09), transparent 100%),
+    radial-gradient(ellipse 55% 40% at 50% 34%, rgba(7, 87, 91, 0.10), transparent 70%),
+    var(--color-surface);
+}
+
+/* Status pill: amber "sin documento" badge above the card. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  color: var(--color-accent);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.02em;
+}
+
+.pill-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  animation: pill-dot-pulse 1.6s ease-in-out infinite;
+}
+
+/* Warning-style blink: amber glow ring expands and fades. */
+@keyframes pill-dot-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 75%, transparent);
+    opacity: 1;
+  }
+  70% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-accent) 0%, transparent);
+    opacity: 0.55;
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 0%, transparent);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pill-dot {
+    animation: none;
+    box-shadow: 0 0 6px color-mix(in srgb, var(--color-accent) 70%, transparent);
+  }
+}
+
+/* Dashed dropzone card (also a button → opens the file picker). */
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 560px;
+  padding: var(--space-8) var(--space-6);
+  text-align: center;
+  background: var(--color-panel-bg);
+  border: 1.5px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.card:hover,
+.card--over {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 6%, var(--color-panel-bg));
+}
+
+.icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  color: var(--color-primary);
+  margin-bottom: var(--space-2);
+}
+
+.icon-wrap svg {
+  width: 34px;
+  height: 34px;
+}
+
+.title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  max-width: 420px;
+  line-height: 1.5;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.drag-hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.error {
+  margin-top: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+}
+
+.meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  opacity: 0.8;
+}
+
+.meta-sep {
+  opacity: 0.6;
+}

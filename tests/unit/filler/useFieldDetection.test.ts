@@ -1,7 +1,11 @@
 import { detectAcroFormFields } from '@/features/filler/hooks/useFieldDetection';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 
-function makeAnnotation(fieldName: string, fieldType: string, subtype = 'Widget') {
+function makeAnnotation(
+  fieldName: string,
+  fieldType: string,
+  subtype = 'Widget',
+): Record<string, unknown> {
   return { subtype, fieldType, fieldName };
 }
 
@@ -72,5 +76,36 @@ describe('detectAcroFormFields', () => {
     const fields = await detectAcroFormFields(doc);
     expect(fields).toHaveLength(1);
     expect(fields[0].name).toBe('textField');
+  });
+
+  // Regression: pdfjs maps /TU to `alternativeText`, NOT `tooltip`.
+  // Reading `tooltip` (the old code) always yielded undefined → everything fell to 'General'.
+  test('reads group from /TU via alternativeText', async () => {
+    const doc = mockPdfDoc({
+      1: [
+        { ...makeAnnotation('fullname', 'Tx'), alternativeText: 'user' },
+        { ...makeAnnotation('petname', 'Tx'), alternativeText: 'pet' },
+      ],
+    });
+    const fields = await detectAcroFormFields(doc);
+    expect(fields.find((f) => f.name === 'fullname')?.group).toBe('user');
+    expect(fields.find((f) => f.name === 'petname')?.group).toBe('pet');
+  });
+
+  test('falls back to General when /TU is absent (no prefix-guessing)', async () => {
+    const doc = mockPdfDoc({
+      1: [makeAnnotation('contacto_email', 'Tx')],
+    });
+    const fields = await detectAcroFormFields(doc);
+    // old deriveGroup would have produced 'Contacto' — now strict 'General'
+    expect(fields[0].group).toBe('General');
+  });
+
+  test('ignores a `tooltip` property (not where pdfjs puts /TU)', async () => {
+    const doc = mockPdfDoc({
+      1: [{ ...makeAnnotation('fullname', 'Tx'), tooltip: 'user' }],
+    });
+    const fields = await detectAcroFormFields(doc);
+    expect(fields[0].group).toBe('General');
   });
 });

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8" />
+<title>Icon Button</title>
+<link rel="stylesheet" href="_base.css" />
+<style>
+  .card { padding: 24px; display: grid; grid-template-columns: 110px 1fr; gap: 16px; align-items: center; }
+  .lbl { font-size: 11px; color: var(--fg-3); font-family: var(--font-family-mono); }
+  .row { display: flex; gap: 6px; align-items: center; }
+  .icon-btn.sm { width: 20px; height: 20px; font-size: 12px; }
+  .icon-btn.danger-hover { background: rgba(220,38,38,0.18); color: #f87171; }
+  .zoom-bar {
+    display: flex; align-items: center; gap: 4px;
+    padding: 4px 6px; border-radius: var(--radius-md);
+    background: var(--bg-navbar); border: 1px solid var(--border-color);
+  }
+  .zoom-label { color: var(--fg-2); font-size: 12px; font-variant-numeric: tabular-nums; min-width: 36px; text-align:center; }
+</style></head>
+<body>
+<div class="card">
+  <span class="lbl">default · md</span>
+  <div class="row">
+    <button class="icon-btn">−</button>
+    <button class="icon-btn">+</button>
+    <button class="icon-btn">?</button>
+    <button class="icon-btn">✕</button>
+  </div>
+  <span class="lbl">active</span>
+  <div class="row">
+    <button class="icon-btn icon-btn--active">−</button>
+    <button class="icon-btn icon-btn--active">+</button>
+  </div>
+  <span class="lbl">danger hover</span>
+  <div class="row">
+    <button class="icon-btn danger-hover">✕</button>
+  </div>
+  <span class="lbl">sm · in row</span>
+  <div class="row">
+    <button class="icon-btn sm">−</button>
+    <button class="icon-btn sm">+</button>
+    <button class="icon-btn sm">✕</button>
+  </div>
+  <span class="lbl">in toolbar</span>
+  <div class="row">
+    <div class="zoom-bar">
+      <button class="icon-btn">−</button>
+      <span class="zoom-label">100%</span>
+      <button class="icon-btn">+</button>
+    </div>
+  </div>
+</div>
+</body></html>

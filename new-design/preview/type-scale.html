@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8" />
+<title>Type Scale</title>
+<link rel="stylesheet" href="_base.css" />
+<style>
+  .card { padding: 24px 28px; flex-direction: column; gap: 12px; }
+  .row-item { display: grid; grid-template-columns: 64px 1fr 90px; align-items: baseline; gap: 16px; }
+  .row-item .label { color: var(--fg-3); font-family: var(--font-family-mono); font-size: 11px; }
+  .row-item .meta  { color: var(--fg-3); font-family: var(--font-family-mono); font-size: 11px; text-align: right; }
+  .row-item .demo  { color: var(--fg-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+</style></head>
+<body>
+<div class="card">
+  <div class="row-item"><span class="label">3xl</span><span class="demo" style="font-size:28px;font-weight:600;letter-spacing:-.01em;">Subir un PDF</span><span class="meta">28 / 600</span></div>
+  <div class="row-item"><span class="label">2xl</span><span class="demo" style="font-size:22px;font-weight:600;">Editor de plantilla</span><span class="meta">22 / 600</span></div>
+  <div class="row-item"><span class="label">xl</span><span class="demo" style="font-size:18px;font-weight:600;">PDF Form Editor</span><span class="meta">18 / 600</span></div>
+  <div class="row-item"><span class="label">lg</span><span class="demo" style="font-size:16px;">Propiedades del campo</span><span class="meta">16 / 400</span></div>
+  <div class="row-item"><span class="label">md</span><span class="demo" style="font-size:14px;">Mostrar borde en PDF</span><span class="meta">14 / 400</span></div>
+  <div class="row-item"><span class="label">base</span><span class="demo" style="font-size:13px;">Haz clic en el PDF para añadir un campo.</span><span class="meta">13 / 400</span></div>
+  <div class="row-item"><span class="label">sm</span><span class="demo" style="font-size:12px;color:var(--fg-2);">3 campos detectados</span><span class="meta">12 / 400</span></div>
+  <div class="row-item"><span class="label">xs</span><span class="demo" style="font-size:11px;color:var(--fg-3);text-transform:uppercase;letter-spacing:.05em;">Atajos de teclado</span><span class="meta">11 / 600</span></div>
+</div>
+</body></html>

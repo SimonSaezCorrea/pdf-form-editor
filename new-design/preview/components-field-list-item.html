@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8" />
+<title>Field List Item</title>
+<link rel="stylesheet" href="_base.css" />
+<style>
+  .card { padding: 20px; flex-direction: column; gap: 4px; background: var(--bg-panel); }
+  .card h3 { font-size: 13px; font-weight: 600; color: var(--fg-1); margin-bottom: 8px; padding: 0 4px; }
+  .item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px; border-radius: var(--radius-sm);
+    cursor: pointer; font-size: 12px;
+    border: 1px solid transparent; color: var(--fg-1);
+  }
+  .item:hover { background: rgba(102,165,173,0.08); }
+  .item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item .page { font-size: 11px; color: var(--fg-3); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .item.selected {
+    background: rgba(102,165,173,0.12);
+    border-color: var(--color-primary);
+  }
+</style></head>
+<body>
+<div class="card">
+  <h3>Fields (5)</h3>
+  <div class="item"><span class="name">customer_name</span><span class="page">p.1</span></div>
+  <div class="item selected"><span class="name">customer_email</span><span class="page">p.1</span></div>
+  <div class="item"><span class="name">customer_address_line_1</span><span class="page">p.1</span></div>
+  <div class="item"><span class="name">signature_date</span><span class="page">p.2</span></div>
+  <div class="item"><span class="name">terms_agreed</span><span class="page">p.2</span></div>
+</div>
+</body></html>

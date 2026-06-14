@@ -3,7 +3,7 @@ import React from 'react';
 import styles from './IconButton.module.css';
 
 type Size = 'sm' | 'md';
-type Variant = 'default' | 'active' | 'danger';
+type Variant = 'default' | 'active' | 'danger' | 'navbar';
 
 interface IconButtonProps {
   icon: React.ReactNode;

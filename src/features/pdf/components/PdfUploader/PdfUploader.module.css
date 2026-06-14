@@ -1,50 +1,135 @@
-.uploader {
+.upload-screen {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: var(--space-4);
-  padding: var(--space-12);
+  justify-content: flex-start;
+  gap: var(--space-10);
+  padding: var(--space-12) var(--space-6);
+  overflow: auto;
+  background:
+    radial-gradient(circle 480px at 50% -60px, rgba(244, 162, 97, 0.09), transparent 100%),
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(102, 165, 173, 0.10), transparent 70%),
+    var(--color-surface);
+}
+
+[data-theme="light"] .upload-screen {
+  background:
+    radial-gradient(circle 480px at 50% -60px, rgba(231, 111, 81, 0.09), transparent 100%),
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(7, 87, 91, 0.10), transparent 70%),
+    var(--color-surface);
+}
+
+/* ── Hero: above the dropzone ── */
+.menu-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+  max-width: 540px;
+}
+
+.menu-eyebrow {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.menu-headline {
+  font-size: 30px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.015em;
+  color: var(--color-text);
+  margin: 0;
+  line-height: 1.2;
+  text-align: center;
+  max-width: 560px;
+}
+
+.menu-subhead {
+  font-size: var(--font-size-md);
+  color: var(--color-text-muted);
+  margin: 0;
+  max-width: 480px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* ── Dropzone card ── */
+.drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-12) var(--space-16);
   border: 2px dashed var(--border-color);
   border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  background: var(--color-panel-bg);
   text-align: center;
-  cursor: pointer;
+  width: 100%;
+  max-width: 640px;
   transition: border-color 0.15s, background 0.15s;
 }
-.uploader:hover,
-.uploader:focus-within {
+
+.drop-zone--over {
   border-color: var(--color-primary);
-  background: var(--color-panel-bg);
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-panel-bg));
 }
 
-.uploader-icon {
-  width: 48px;
-  height: 48px;
+.zone-icon {
+  width: 56px;
+  height: 56px;
   color: var(--color-primary);
-  opacity: 0.7;
+  opacity: 0.85;
 }
 
-.uploader h2 {
-  color: var(--color-text);
-  font-size: var(--font-size-xl);
+.zone-title {
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
   margin: 0;
 }
 
-.uploader p {
+.zone-desc {
+  font-size: var(--font-size-sm);
   color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
   margin: 0;
+  max-width: 380px;
 }
 
-.uploader-hint {
+/* ── CTA row: button + hint side by side ── */
+.dropzone-cta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+.drag-hint {
   font-size: var(--font-size-sm);
-  color: var(--color-primary);
-  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  white-space: nowrap;
 }
 
-.uploader-error {
+/* ── Quick-row ── */
+.quick-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  opacity: 0.55;
+}
+
+.quick-sep {
+  opacity: 0.5;
+}
+
+.upload-error {
   color: var(--color-danger);
   font-size: var(--font-size-sm);
+  margin: 0;
 }

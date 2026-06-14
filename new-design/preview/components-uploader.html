@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8" />
+<title>PDF Uploader</title>
+<link rel="stylesheet" href="_base.css" />
+<style>
+  .card { padding: 24px; background: var(--bg-app); display: flex; align-items: center; justify-content: center; }
+  .uploader {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 12px; padding: 36px 48px;
+    border: 2px dashed var(--border-color);
+    border-radius: var(--radius-lg);
+    background: var(--bg-app);
+    text-align: center; cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .uploader:hover { border-color: var(--color-primary); background: var(--bg-panel); }
+  .uploader__icon { width: 40px; height: 40px; color: var(--color-primary); opacity: .7; }
+  .uploader h2 { font-size: 16px; font-weight: 600; color: var(--fg-1); }
+  .uploader p { font-size: 12px; color: var(--fg-2); max-width: 280px; }
+  .uploader__hint { font-size: 12px; color: var(--color-primary); font-weight: 500; }
+</style></head>
+<body>
+<div class="card">
+  <label class="uploader">
+    <svg class="uploader__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="12" y1="18" x2="12" y2="12"/>
+      <line x1="9" y1="15" x2="15" y2="15"/>
+    </svg>
+    <h2>Rellenar PDF</h2>
+    <p>Sube un PDF con campos AcroForm para rellenarlos de forma interactiva.</p>
+    <span class="uploader__hint">Haz clic para seleccionar un archivo PDF</span>
+  </label>
+</div>
+</body></html>

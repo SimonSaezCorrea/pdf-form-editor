@@ -1,6 +1,6 @@
 # pdf-form-editor Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-05-26
+Auto-generated from all feature plans. Last updated: 2026-05-27
 
 ## Active Technologies
 
@@ -14,6 +14,7 @@ Auto-generated from all feature plans. Last updated: 2026-05-26
 - No new dependencies; CSS custom properties dark mode + useTheme hook + inline anti-FOUC script (008-dark-mode-toggle)
 - No new npm dependencies; Google Fonts API via dynamic `<link>` injection (CDN only) (009-precision-ux-fixes)
 - No new npm dependencies; pdfjs-dist (already present) for client field detection; pdf-lib (already present) for server-side fill + flatten (010-pdf-filler-mode)
+- No new npm dependencies; Geist variable font via local `public/fonts/Geist_wght_.woff2`; new `Kbd` primitive in `src/components/ui/Kbd/` (011-new-design-integration)
 
 ## Project Structure
 
@@ -144,6 +145,7 @@ TypeScript: Follow standard conventions
 - 008-dark-mode-toggle: useTheme hook (src/hooks/useTheme.ts); ThemeToggle in toolbar; dark-mode CSS blocks in tokens.css; inline anti-FOUC script in layout.tsx <head>; DraggableField field-bg white !important
 - 009-precision-ux-fixes: overflow:visible on .draggable-field; decimal coords in PropertiesPanel (step 0.5, no Math.round); displayFont?: string in FormField; src/features/pdf/config/fonts.ts with 20 Google Fonts + lazy link injection; viewerAreaRef in App.tsx for scroll-page-nav + Ctrl+Scroll non-passive wheel zoom
 - 010-pdf-filler-mode: Filler mode under src/features/filler/ (own store, no cross-imports with fields/templates); POST /api/fill-pdf (multipart, fill+flatten); useFieldDetection hook (pdfjs getAnnotations); mode: AppMode state in App.tsx; navbar mode selector
+- 011-new-design-integration: tokens.css full replacement (dark-first, Geist font, complete teal ramp); new Kbd primitive; primitives restyle; App.tsx showEditorToolbar wiring; all feature component CSS Modules restyled; zero logic changes
 
 ## Key Notes (010-pdf-filler-mode)
 
@@ -178,6 +180,19 @@ TypeScript: Follow standard conventions
 - Ctrl+Scroll `useEffect` uses `{ passive: false }` — MUST use native `addEventListener`, NOT `onWheel` JSX (React makes wheel passive in React 17+, preventing `preventDefault`)
 - Scroll-page-nav: `requestAnimationFrame(() => { el.scrollTop = ... })` needed after `setCurrentPage` because setState is async; direct `el.scrollTop` assignment before re-render has no effect
 - `zoomIn`/`zoomOut` in Ctrl+Scroll `useEffect` deps array — wrap with `useCallback` if they cause infinite re-registration
+
+## Key Notes (011-new-design-integration)
+
+- `tokens.css` strategy: dark-first — `:root` defines dark-mode values; `[data-theme="light"]` block overrides to light. Remove `@media (prefers-color-scheme: dark)` block.
+- Anti-FOUC inline script in `layout.tsx` MUST NOT change — it already writes `[data-theme]` attribute which is the hook for both old and new token strategy.
+- Geist font: `@font-face` in `tokens.css`, file at `public/fonts/Geist_wght_.woff2`. NOT loaded via next/font/local. Fallback: system UI stack.
+- `--color-primary` dark value = `#66A5AD` (was `#07575B`). Intentional — legibility. Constitution Principle XII already documents this.
+- `DraggableField .field-bg`: `background-color: #fff !important` MUST survive token migration — no dark token bleeds into PDF field fill.
+- `showEditorToolbar` in App.tsx: derived boolean (`!!pdfBytes && appMode === 'editor'`). NOT new state — derivation only.
+- Filler CSS: ONLY `--space-N` tokens (not `--spacing-N`) and `--border-color` (not `--color-border`). Both defined in new tokens.css.
+- `Kbd` primitive at `src/components/ui/Kbd/` — one call-site (ShortcutsPanel). Justified as design-system primitive per Principle XIII.
+- `enhancements.css` keyframes go into specific feature `.module.css` files — NOT a new global CSS file (Principle XI).
+- All feature component logic (hooks, stores, API routes) MUST NOT be modified — CSS Modules only.
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

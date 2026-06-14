@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8" />
+<title>Field Overlay</title>
+<link rel="stylesheet" href="_base.css" />
+<style>
+  .card { padding: 24px; background: var(--bg-canvas); gap: 20px; align-items: center; justify-content: center; }
+  .canvas-stage {
+    position: relative;
+    width: 280px; height: 200px;
+    background: #ffffff;
+    box-shadow: var(--shadow-lg);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .canvas-stage::before {
+    content: "Sample form text";
+    position: absolute; top: 18px; left: 18px;
+    font-size: 11px; color: #6b7280; font-family: var(--font-family-base);
+  }
+  .field {
+    position: absolute; box-sizing: border-box;
+    border: 1.5px solid #66A5AD;
+    background: rgba(102, 165, 173, 0.08);
+    border-radius: 2px; cursor: move;
+  }
+  .field--selected { border-color: #dc2626; background: rgba(220,38,38,0.07); }
+  .field__label {
+    position: absolute; inset: 1px 4px;
+    font-size: 10px; color: #66A5AD;
+    display: flex; align-items: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    pointer-events: none;
+  }
+  .field--selected .field__label { color: #dc2626; }
+  .handle { position: absolute; width: 7px; height: 7px; background: #fff; border: 1.5px solid #dc2626; border-radius: 1px; }
+  .h-nw{ top:-4px; left:-4px } .h-ne{ top:-4px; right:-4px }
+  .h-sw{ bottom:-4px; left:-4px } .h-se{ bottom:-4px; right:-4px }
+  .h-n { top:-4px; left:50%; transform:translateX(-50%) } .h-s{ bottom:-4px; left:50%; transform:translateX(-50%) }
+  .h-w { top:50%; left:-4px; transform:translateY(-50%) } .h-e{ top:50%; right:-4px; transform:translateY(-50%) }
+</style></head>
+<body>
+<div class="card">
+  <div class="canvas-stage">
+    <div class="field" style="top:46px;left:20px;width:130px;height:24px"><span class="field__label">name</span></div>
+    <div class="field field--selected" style="top:82px;left:20px;width:230px;height:24px">
+      <span class="field__label">email</span>
+      <span class="handle h-nw"></span><span class="handle h-n"></span><span class="handle h-ne"></span>
+      <span class="handle h-e"></span><span class="handle h-se"></span><span class="handle h-s"></span>
+      <span class="handle h-sw"></span><span class="handle h-w"></span>
+    </div>
+    <div class="field" style="top:118px;left:20px;width:90px;height:24px"><span class="field__label">date</span></div>
+  </div>
+</div>
+</body></html>

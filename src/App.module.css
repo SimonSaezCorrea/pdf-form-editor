@@ -50,11 +50,18 @@
 .filename {
   font-size: var(--font-size-sm);
   color: var(--color-neutral-400);
-  max-width: 200px;
+  max-width: 360px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   flex-shrink: 1;
+}
+
+.page-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
 }
 
 .header-top-actions {
@@ -65,7 +72,7 @@
   flex-shrink: 0;
 }
 
-/* Row 2: canvas toolbar — 3-column grid so center is always truly centered */
+/* Row 2: canvas toolbar — 3-column grid: left=modes, center=zoom, right=actions */
 .header-toolbar {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -74,11 +81,9 @@
   height: 48px;
 }
 
-.header-toolbar-center {
+.header-toolbar-left {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  justify-content: center;
 }
 
 .header-toolbar-actions {
@@ -105,6 +110,74 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ── Insert banner ── */
+@keyframes insertBannerIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.insert-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-4);
+  background: color-mix(in srgb, var(--color-primary) 15%, var(--color-navbar-bg));
+  border-bottom: 1px solid var(--color-primary);
+  font-size: var(--font-size-sm);
+  color: var(--color-navbar-text);
+  animation: insertBannerIn 0.15s ease;
+  flex-shrink: 0;
+}
+.insert-banner strong { color: var(--color-primary); }
+.insert-banner-esc {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  opacity: 0.7;
+}
+
+/* ── Canvas empty state ── */
+.canvas-empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--color-panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6) var(--space-8);
+  text-align: center;
+  pointer-events: none;
+  z-index: 5;
+}
+.canvas-empty h3 {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-2);
+  color: var(--color-text);
+}
+.canvas-empty p {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  justify-content: center;
+}
+
+/* ── Dirty pill ── */
+.dirty-pill {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-navbar-text);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.10);
+  border-radius: 999px;
+  padding: 1px var(--space-2);
+  white-space: nowrap;
+}
+
 /* ── Error banner ── */
 .error-banner {
   background: var(--color-danger-bg);
@@ -119,10 +192,7 @@
 .upload-area {
   flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-8);
-  overflow: auto;
+  overflow: hidden;
 }
 
 /* ── Editor layout ── */
@@ -158,6 +228,7 @@
   overflow: auto;
   padding: var(--space-4);
   background: var(--color-viewer-bg);
+  position: relative;
 }
 
 .error-msg {
@@ -178,12 +249,12 @@
 
 .mode-btn {
   padding: var(--space-1) var(--space-3);
-  border-radius: var(--border-radius-md, 6px);
+  border-radius: var(--radius-md);
   border: 1px solid transparent;
   background: transparent;
   color: var(--color-navbar-text);
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium, 500);
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
   opacity: 0.7;
   transition: opacity 0.15s, background 0.15s;
@@ -206,12 +277,12 @@
   align-items: center;
   gap: var(--space-1);
   padding: var(--space-1) var(--space-3);
-  border-radius: var(--border-radius-md, 6px);
+  border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.25);
   background: rgba(255, 255, 255, 0.10);
   color: var(--color-navbar-text);
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium, 500);
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.15s, border-color 0.15s;
@@ -230,9 +301,9 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: var(--color-dark-800);
-  color: var(--color-white);
-  border: none;
+  background: var(--color-panel-bg);
+  color: var(--color-text);
+  border: 1px solid var(--border-color);
   cursor: pointer;
   font-size: var(--font-size-md);
   display: flex;
@@ -242,5 +313,5 @@
   z-index: var(--z-toolbar);
 }
 .shortcuts-fab:hover {
-  background: var(--color-dark-700);
+  background: var(--color-input-bg);
 }

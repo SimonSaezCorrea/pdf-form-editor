@@ -39,11 +39,11 @@ export function ExportModal({ fields, onClose }: ExportModalProps) {
       isOpen={true}
       onClose={onClose}
       title="Exportar plantilla"
+      size="lg"
       footer={
         <>
-          <Button variant="primary" onClick={handleDownload}>Descargar JSON</Button>
+          <Button variant="primary" onClick={handleDownload}>↓ Descargar JSON</Button>
           <Button variant="secondary" onClick={handleCopy}>{copied ? '¡Copiado!' : 'Copiar'}</Button>
-          <Button variant="secondary" onClick={onClose}>Cerrar</Button>
         </>
       }
     >

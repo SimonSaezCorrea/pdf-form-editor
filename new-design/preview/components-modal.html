@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8" />
+<title>Modal</title>
+<link rel="stylesheet" href="_base.css" />
+<style>
+  .card { padding: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); position: relative; }
+  .card::before { content:""; position:absolute; inset:0; background: var(--bg-app); z-index:-1; }
+  .dialog {
+    background: var(--bg-panel); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg); width: 90%; max-width: 460px;
+    overflow: hidden; display: flex; flex-direction: column;
+    border: 1px solid var(--border-color);
+  }
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px; border-bottom: 1px solid var(--border-color);
+  }
+  .title { font-size: 14px; font-weight: 600; color: var(--fg-1); }
+  .close-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--fg-3); font-size: 14px; padding: 4px;
+    border-radius: 4px; line-height: 1;
+  }
+  .body { padding: 16px; font-size: 13px; color: var(--fg-1); }
+  pre {
+    background: var(--bg-input); border-radius: 4px; padding: 10px;
+    font-family: var(--font-family-mono); font-size: 12px; color: var(--fg-1);
+    margin: 0; overflow: auto;
+  }
+  .footer {
+    padding: 12px 16px; border-top: 1px solid var(--border-color);
+    display: flex; justify-content: flex-end; gap: 8px;
+  }
+</style></head>
+<body>
+<div class="card">
+  <div class="dialog">
+    <div class="header">
+      <span class="title">Exportar plantilla</span>
+      <button class="close-btn">✕</button>
+    </div>
+    <div class="body">
+<pre>{
+  "name": "plantilla",
+  "fields": [ … 3 campos ]
+}</pre>
+    </div>
+    <div class="footer">
+      <button class="btn btn--secondary btn--sm">Cerrar</button>
+      <button class="btn btn--secondary btn--sm">Copiar</button>
+      <button class="btn btn--primary btn--sm">Descargar JSON</button>
+    </div>
+  </div>
+</div>
+</body></html>
