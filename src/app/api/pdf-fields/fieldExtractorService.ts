@@ -1,13 +1,9 @@
 import { PDFDocument, PDFTextField, PDFName, PDFRef, PDFArray, PDFString, PDFHexString } from 'pdf-lib';
 import type { FormField, FontFamily } from '@/types/shared';
+import { buildTemplateFileV4, type TemplateFileV4 } from '@/features/pdf/utils/templateSchema';
 
-// Re-export the TemplateFile shape so route.ts can type the response
-export interface TemplateFile {
-  schemaVersion: 1;
-  name: string;
-  createdAt: string;
-  fields: FormField[];
-}
+// The API emits the current template schema (v4), identical to the editor export.
+export type TemplateFile = TemplateFileV4;
 
 /** Validate PDF magic bytes — same check used in fillService.ts */
 export function isPdf(bytes: Uint8Array): boolean {
@@ -123,10 +119,5 @@ export async function extractPdfTemplate(
     });
   }
 
-  return {
-    schemaVersion: 1,
-    name,
-    createdAt: new Date().toISOString(),
-    fields,
-  };
+  return buildTemplateFileV4(name, fields, new Date().toISOString());
 }

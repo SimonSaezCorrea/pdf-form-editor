@@ -376,12 +376,16 @@ function parseV1Fields(raw: unknown[]): FormField[] {
   });
 }
 
-export function parseTemplateFile(json: string): ParsedTemplate {
-  let data: unknown;
-  try {
-    data = JSON.parse(json);
-  } catch (err) {
-    throw new TypeError(`Error de sintaxis JSON: ${(err as Error).message}`);
+/**
+ * Version-aware flatten of an already-parsed template payload into FormField[].
+ * Accepts any schema version (4/3/2/1) OR a bare FormField[] array (legacy, no
+ * wrapper). Shared by the editor (`parseTemplateFile`) and the API routes so
+ * there is ONE source of truth for the template contract.
+ */
+export function parseTemplateData(data: unknown): ParsedTemplate {
+  // Bare array → flat FormField[] (legacy v1 shape, no wrapper object).
+  if (Array.isArray(data)) {
+    return { schemaVersion: 1, name: 'plantilla', createdAt: '', fields: parseV1Fields(data) };
   }
 
   if (typeof data !== 'object' || data === null) {
@@ -407,6 +411,16 @@ export function parseTemplateFile(json: string): ParsedTemplate {
   }
 
   return { schemaVersion: 1, name, createdAt, fields: parseV1Fields(d.fields) };
+}
+
+export function parseTemplateFile(json: string): ParsedTemplate {
+  let data: unknown;
+  try {
+    data = JSON.parse(json);
+  } catch (err) {
+    throw new TypeError(`Error de sintaxis JSON: ${(err as Error).message}`);
+  }
+  return parseTemplateData(data);
 }
 
 // ── Serialize → v4 ─────────────────────────────────────────────────────────
@@ -453,12 +467,23 @@ function toV4Field(f: FormField): TemplateFieldV4 {
   };
 }
 
-export function serializeTemplateFile(name: string, fields: FormField[]): string {
-  const file: TemplateFileV4 = {
+/**
+ * Build the current (v4) TemplateFile object from flat FormField[]. Used by both
+ * the editor export and the API (`/api/pdf-fields`) so both emit identical JSON.
+ */
+export function buildTemplateFileV4(
+  name: string,
+  fields: FormField[],
+  createdAt: string,
+): TemplateFileV4 {
+  return {
     schemaVersion: 4,
     name,
-    createdAt: new Date().toISOString(),
+    createdAt,
     fields: fields.map(toV4Field),
   };
-  return JSON.stringify(file, null, 2);
+}
+
+export function serializeTemplateFile(name: string, fields: FormField[]): string {
+  return JSON.stringify(buildTemplateFileV4(name, fields, new Date().toISOString()), null, 2);
 }

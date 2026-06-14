@@ -1,39 +1,9 @@
-import type { FormField, FontFamily } from '@/types/shared';
+import type { FormField } from '@/types/shared';
+import { parseTemplateData } from '@/features/pdf/utils/templateSchema';
 import { generatePdf } from './pdfService';
 
 // pdf-lib requires Node.js runtime (crypto, Buffer) — not compatible with Edge runtime
 export const runtime = 'nodejs';
-
-const VALID_FONT_FAMILIES: FontFamily[] = ['Helvetica', 'TimesRoman', 'Courier'];
-
-function isValidField(f: unknown): f is FormField {
-  if (typeof f !== 'object' || f === null) return false;
-  const field = f as Record<string, unknown>;
-  return (
-    typeof field.id === 'string' &&
-    typeof field.name === 'string' &&
-    field.name.length > 0 &&
-    field.name.length <= 128 &&
-    typeof field.page === 'number' &&
-    Number.isInteger(field.page) &&
-    field.page >= 1 &&
-    typeof field.x === 'number' &&
-    field.x >= 0 &&
-    typeof field.y === 'number' &&
-    field.y >= 0 &&
-    typeof field.width === 'number' &&
-    field.width > 0 &&
-    typeof field.height === 'number' &&
-    field.height > 0 &&
-    typeof field.fontSize === 'number' &&
-    Number.isInteger(field.fontSize) &&
-    field.fontSize >= 6 &&
-    field.fontSize <= 72 &&
-    VALID_FONT_FAMILIES.includes(field.fontFamily as FontFamily) &&
-    (field.value === undefined || typeof field.value === 'string') &&
-    (field.displayFont === undefined || typeof field.displayFont === 'string')
-  );
-}
 
 export async function POST(request: Request): Promise<Response> {
   let form: FormData;
@@ -74,40 +44,22 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  // Accept either a bare FormField[] array OR a TemplateFile object
-  // (the shape returned by POST /api/pdf-fields), extracting its fields array.
-  let fields: unknown[];
-  if (Array.isArray(parsed)) {
-    fields = parsed;
-  } else if (
-    typeof parsed === 'object' &&
-    parsed !== null &&
-    'fields' in parsed &&
-    Array.isArray((parsed as Record<string, unknown>).fields)
-  ) {
-    fields = (parsed as Record<string, unknown>).fields as unknown[];
-  } else {
+  // Accept a TemplateFile of ANY schema version (v4/v3/v2/v1) OR a bare
+  // FormField[] array, flattening to FormField[] via the shared schema logic —
+  // one source of truth shared with the editor and /api/pdf-fields.
+  let fields: FormField[];
+  try {
+    fields = parseTemplateData(parsed).fields;
+  } catch (err) {
     return Response.json(
-      { error: 'fields must be a JSON array or a TemplateFile object with a fields array.' },
+      { error: err instanceof Error ? err.message : 'Invalid fields payload.' },
       { status: 400 },
     );
   }
 
-  // Validate each field object
-  for (let i = 0; i < fields.length; i++) {
-    if (!isValidField(fields[i])) {
-      return Response.json(
-        {
-          error: `Field at index ${i} is invalid. Required: id, name, page≥1, x≥0, y≥0, width>0, height>0, fontSize(6–72), fontFamily(Helvetica|TimesRoman|Courier).`,
-        },
-        { status: 400 },
-      );
-    }
-  }
-
   try {
     const pdfBuffer = Buffer.from(await pdfFile.arrayBuffer());
-    const pdfBytes = await generatePdf(pdfBuffer, fields as FormField[]);
+    const pdfBytes = await generatePdf(pdfBuffer, fields);
 
     return new Response(Buffer.from(pdfBytes), {
       status: 200,

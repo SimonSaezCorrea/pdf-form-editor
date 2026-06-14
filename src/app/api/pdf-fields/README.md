@@ -25,33 +25,30 @@ Returns a `TemplateFile` object directly importable into the editor.
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 4,
   "name": "contrato",
   "createdAt": "2026-05-26T12:00:00.000Z",
   "fields": [
     {
       "id": "field-1748260800000-1",
       "name": "fullname",
-      "page": 1,
-      "x": 71.0,
-      "y": 634.5,
-      "width": 241.0,
-      "height": 15.0,
-      "fontSize": 10,
-      "fontFamily": "Helvetica",
-      "value": ""
-    },
-    {
-      "id": "field-1748260800000-2",
-      "name": "startDate",
-      "page": 1,
-      "x": 71.0,
-      "y": 580.0,
-      "width": 129.0,
-      "height": 15.0,
-      "fontSize": 12,
-      "fontFamily": "Helvetica",
-      "value": ""
+      "type": "text",
+      "value": "",
+      "group": "General",
+      "validation": { "required": false },
+      "behavior": { "bakeValue": true, "locked": false, "multiline": false },
+      "geometry": { "page": 1, "x": 71.0, "y": 634.5, "width": 241.0, "height": 15.0 },
+      "style": {
+        "fontFamily": "Helvetica",
+        "fontSize": 10,
+        "align": "left",
+        "autoFitFont": false,
+        "bold": false,
+        "italic": false,
+        "showBorder": false,
+        "strikethrough": false,
+        "underline": false
+      }
     }
   ]
 }
@@ -59,21 +56,22 @@ Returns a `TemplateFile` object directly importable into the editor.
 
 | Field | Description |
 |-------|-------------|
-| `schemaVersion` | Always `1` |
+| `schemaVersion` | Current template schema version (`4`) |
 | `name` | Template name (from `name` form field or PDF filename) |
 | `createdAt` | ISO 8601 timestamp of extraction |
 | `fields[].id` | Client-side ID (`field-{timestamp}-{index}`) for React keying |
 | `fields[].name` | AcroForm field name (unique within the document) |
-| `fields[].page` | 1-indexed page number where the field appears |
-| `fields[].x` | X position in PDF points from bottom-left of the page |
-| `fields[].y` | Y position in PDF points from bottom-left of the page |
-| `fields[].width` | Field width in PDF points |
-| `fields[].height` | Field height in PDF points |
-| `fields[].fontSize` | Font size in points (6–72). Fields with auto-size (DA=0) default to `12` |
-| `fields[].fontFamily` | `"Helvetica"` \| `"TimesRoman"` \| `"Courier"`. Unknown/embedded fonts → `"Helvetica"` |
+| `fields[].type` | Field type (`text` \| `number` \| `date` \| `checkbox` \| `signature`) |
 | `fields[].value` | Always `""` (fields are empty on extraction) |
+| `fields[].group` | Category label; `"General"` by default |
+| `fields[].validation` | Input constraints (`required`; extensible) |
+| `fields[].behavior` | Field mechanics (`bakeValue`, `locked`, `multiline`) |
+| `fields[].geometry` | `page` (1-indexed) + box in PDF points (`x`, `y`, `width`, `height`) from bottom-left |
+| `fields[].style` | `fontFamily` (`"Helvetica"`\|`"TimesRoman"`\|`"Courier"`), `fontSize` (6–72; DA=0 → `12`), `align`, plus text styles + `showBorder` |
 
 Returns `fields: []` if the PDF has no AcroForm text fields.
+
+> The structure is identical to the editor's "Exportar JSON" output and is accepted as-is by `POST /api/generate-pdf` (which also accepts any older schema version v1–v3 or a bare `FormField[]` array).
 
 ### Error responses
 
@@ -104,7 +102,8 @@ const res = await fetch('/api/pdf-fields', { method: 'POST', body: formData });
 if (!res.ok) throw new Error((await res.json()).error);
 
 const template = await res.json();
-// template: { schemaVersion: 1, name, createdAt, fields: FormField[] }
+// template: { schemaVersion: 4, name, createdAt, fields: TemplateFieldV4[] }
+// (field name is top-level: template.fields[i].name)
 
 // Option A — import directly into editor via "Importar plantilla"
 const blob = new Blob([JSON.stringify(template)], { type: 'application/json' });
@@ -139,7 +138,7 @@ const filledPdf = await filledRes.blob();
 ## Notes
 
 - Only AcroForm **text fields** (`TextField`) are returned. Checkboxes, radio buttons and
-  select fields are excluded (out of scope for v1).
+  select fields are excluded (out of scope for extraction).
 - Fields are deduplicated by name — if a field spans multiple pages via multiple widgets,
   only the first widget is returned.
 - Coordinates (`x`, `y`) use PDF user-space (bottom-left origin), matching the editor's

@@ -110,4 +110,30 @@ describe('POST /api/generate-pdf', () => {
     const field = resultDoc.getForm().getTextField('test_field');
     expect(field).toBeDefined();
   });
+
+  test('accepts a v4 TemplateFile and flattens its nested groups', async () => {
+    const pdf = await createTestPdfBuffer();
+    const v4Template = {
+      schemaVersion: 4,
+      name: 'tpl',
+      createdAt: '2026-01-01',
+      fields: [{
+        id: 'f1',
+        name: 'aligned',
+        type: 'text',
+        value: '',
+        group: 'General',
+        validation: { required: true },
+        behavior: { bakeValue: true, locked: false, multiline: false },
+        geometry: { page: 1, x: 72, y: 680, width: 200, height: 24 },
+        style: { fontFamily: 'Helvetica', fontSize: 12, align: 'right', autoFitFont: false, bold: false, italic: false, showBorder: false, strikethrough: false, underline: false },
+      }],
+    };
+    const res = await makeRequest(pdf, v4Template);
+    expect(res.status).toBe(200);
+    const out = await PDFDocument.load(await res.arrayBuffer());
+    const field = out.getForm().getTextField('aligned');
+    expect(field).toBeDefined();
+    expect(field.getAlignment()).toBe(2); // align:'right' survived the v4 → FormField flatten
+  });
 });
