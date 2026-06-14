@@ -1,6 +1,6 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { PDFDocument, PDFFont, PDFName, PDFHexString, PDFString, PDFDict, PDFArray, PDFTextField, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, PDFFont, PDFName, PDFHexString, PDFString, PDFDict, PDFArray, PDFTextField, StandardFonts, TextAlignment, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import type { FormField, FontFamily } from '@/types/shared';
 import { FONT_CATALOG } from '@/features/pdf/config/fonts';
@@ -27,6 +27,12 @@ const STANDARD_FONT_VARIANTS: Record<FontFamily, [StandardFontName, StandardFont
     StandardFonts.CourierOblique,
     StandardFonts.CourierBoldOblique,
   ],
+};
+
+const ALIGNMENT_MAP: Record<NonNullable<FormField['align']>, TextAlignment> = {
+  left: TextAlignment.Left,
+  center: TextAlignment.Center,
+  right: TextAlignment.Right,
 };
 
 /** Pick the standard-font variant matching the field's bold/italic flags. */
@@ -138,6 +144,8 @@ function addTextField(
     backgroundColor: rgb(1, 1, 1),
   });
 
+  textField.setAlignment(ALIGNMENT_MAP[fieldDef.align ?? 'left']);
+
   if (fieldDef.multiline) {
     textField.enableMultiline();
   }
@@ -245,7 +253,13 @@ function drawStaticText(
     // Single line: vertically centered baseline within the field box.
     const maxWidth = fieldDef.width - PADDING * 2;
     const baselineY = fieldDef.y + (fieldDef.height - size) / 2 + size * 0.22;
-    const startX = fieldDef.x + PADDING;
+    // Horizontal alignment: clamp glyph run to the field width, then offset the
+    // start X for center / right (left keeps the leading padding).
+    const align = fieldDef.align ?? 'left';
+    const glyphWidth = Math.min(font.widthOfTextAtSize(value, size), maxWidth);
+    let startX = fieldDef.x + PADDING;
+    if (align === 'center') startX = fieldDef.x + (fieldDef.width - glyphWidth) / 2;
+    else if (align === 'right') startX = fieldDef.x + fieldDef.width - PADDING - glyphWidth;
     page.drawText(value, {
       x: startX,
       y: baselineY,

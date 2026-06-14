@@ -47,8 +47,11 @@ function buildField(a: any, pageNum: number, kind: DetectedKind): AcroFormField 
   // (see pdf.worker: `data.alternativeText = stringToPDFString(dict.get("TU"))`).
   // Strict read: /TU or 'General'. No prefix-guessing.
   const group = (a.alternativeText as string | undefined)?.trim() || 'General';
-  const flags = typeof a.fieldFlags === 'number' ? (a.fieldFlags as number) : 0;
   const rect = a.rect as [number, number, number, number];
+  // pdfjs maps the field's /Q quadding to `textAlignment`: 0 left, 1 center, 2 right.
+  const ALIGN_BY_Q = ['left', 'center', 'right'] as const;
+  const q = a.textAlignment as number | undefined;
+  const align = typeof q === 'number' && q >= 0 && q <= 2 ? ALIGN_BY_Q[q] : undefined;
   return {
     name: a.fieldName as string,
     type: kind.type,
@@ -58,9 +61,13 @@ function buildField(a: any, pageNum: number, kind: DetectedKind): AcroFormField 
     fontSize,
     label: `${group} · ${a.fieldName}`,
     group,
-    required: (flags & 4) !== 0,
-    multiline: (flags & 4096) !== 0,
+    // pdfjs exposes these directly (data.required / data.multiLine). The old
+    // `fieldFlags & 4` was wrong (bit 4 = NoExport; Required is bit 2) and
+    // fieldFlags is usually undefined, so required never came through.
+    required: a.required === true,
+    multiline: a.multiLine === true,
     fieldType: kind.fieldType,
+    align,
   };
 }
 

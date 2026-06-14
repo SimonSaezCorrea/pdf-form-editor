@@ -222,6 +222,13 @@ function FillerPageSection({
         autoFit,
       });
 
+      // Horizontal alignment mirrors the exported field's /Q quadding.
+      const align = field.align ?? 'left';
+      let textX = cx + 4;
+      if (align === 'center') { ctx.textAlign = 'center'; textX = cx + cw / 2; }
+      else if (align === 'right') { ctx.textAlign = 'right'; textX = cx + cw - 4; }
+      else { ctx.textAlign = 'left'; }
+
       ctx.fillStyle = '#1a1a1a';
       ctx.save();
       ctx.beginPath();
@@ -230,12 +237,13 @@ function FillerPageSection({
       if (lines.length > 1 || multiline) {
         ctx.textBaseline = 'top';
         const lineHeight = fontPx * LINE_HEIGHT_RATIO;
-        lines.forEach((line, i) => ctx.fillText(line, cx + 4, cy + 2 + i * lineHeight));
+        lines.forEach((line, i) => ctx.fillText(line, textX, cy + 2 + i * lineHeight));
       } else {
         ctx.textBaseline = 'middle';
-        ctx.fillText(lines[0], cx + 4, cy + ch / 2);
+        ctx.fillText(lines[0], textX, cy + ch / 2);
       }
       ctx.restore();
+      ctx.textAlign = 'left';
     }
 
     return () => {

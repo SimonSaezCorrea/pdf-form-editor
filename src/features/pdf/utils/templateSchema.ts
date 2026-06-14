@@ -57,11 +57,13 @@ export interface TemplateFieldV3 {
     required: boolean;
     multiline: boolean;
     locked: boolean;
+    bakeValue?: boolean;
+    /** @deprecated Legacy location — text styles now live in `typography`. Read-only fallback. */
     bold?: boolean;
     italic?: boolean;
     underline?: boolean;
     strikethrough?: boolean;
-    bakeValue?: boolean;
+    align?: 'left' | 'center' | 'right';
   };
   position: {
     page: number;
@@ -76,6 +78,11 @@ export interface TemplateFieldV3 {
     fontSize: number;
     displayFont?: string;
     autoFitFont: boolean;
+    bold?: boolean;
+    italic?: boolean;
+    underline?: boolean;
+    strikethrough?: boolean;
+    align?: 'left' | 'center' | 'right';
   };
 }
 
@@ -195,10 +202,6 @@ function flattenV3Field(f: TemplateFieldV3): FormField {
     required: f.general.required ?? false,
     multiline: f.general.multiline ?? false,
     locked: f.general.locked ?? false,
-    bold: f.general.bold ?? false,
-    italic: f.general.italic ?? false,
-    underline: f.general.underline ?? false,
-    strikethrough: f.general.strikethrough ?? false,
     bakeValue: f.general.bakeValue ?? true,
     page: f.position.page,
     x: f.position.x,
@@ -210,6 +213,12 @@ function flattenV3Field(f: TemplateFieldV3): FormField {
     fontSize: f.typography.fontSize,
     ...(f.typography.displayFont ? { displayFont: f.typography.displayFont } : {}),
     autoFitFont: f.typography.autoFitFont ?? false,
+    // Text styles now live in typography; fall back to the legacy general.* slot.
+    bold: f.typography.bold ?? f.general.bold ?? false,
+    italic: f.typography.italic ?? f.general.italic ?? false,
+    underline: f.typography.underline ?? f.general.underline ?? false,
+    strikethrough: f.typography.strikethrough ?? f.general.strikethrough ?? false,
+    align: f.typography.align ?? f.general.align ?? 'left',
   };
 }
 
@@ -294,10 +303,6 @@ function toV3Field(f: FormField): TemplateFieldV3 {
       required: f.required ?? false,
       multiline: f.multiline ?? false,
       locked: f.locked ?? false,
-      bold: f.bold ?? false,
-      italic: f.italic ?? false,
-      underline: f.underline ?? false,
-      strikethrough: f.strikethrough ?? false,
       bakeValue: f.bakeValue ?? true,
     },
     position: {
@@ -313,6 +318,11 @@ function toV3Field(f: FormField): TemplateFieldV3 {
       fontSize: f.fontSize,
       ...(f.displayFont ? { displayFont: f.displayFont } : {}),
       autoFitFont: f.autoFitFont ?? false,
+      bold: f.bold ?? false,
+      italic: f.italic ?? false,
+      underline: f.underline ?? false,
+      strikethrough: f.strikethrough ?? false,
+      align: f.align ?? 'left',
     },
   };
 }

@@ -117,6 +117,12 @@ export async function extractFieldsFromPdf(pdfDoc: PDFDocumentProxy): Promise<Fo
       // borderStyle.width > 0 ⇒ the field was exported with a visible border.
       const borderWidth = (ann['borderStyle'] as { width?: number } | undefined)?.width ?? 0;
 
+      // Horizontal alignment: pdfjs maps the field's /Q quadding to
+      // `textAlignment` (0 left, 1 center, 2 right). Absent/-1 ⇒ default left.
+      let align: FormField['align'];
+      if (ann['textAlignment'] === 1) align = 'center';
+      else if (ann['textAlignment'] === 2) align = 'right';
+
       fields.push({
         id: `field-${Date.now()}-${extractCounter}`,
         name,
@@ -136,6 +142,7 @@ export async function extractFieldsFromPdf(pdfDoc: PDFDocumentProxy): Promise<Fo
         multiline: ann['multiLine'] === true,
         locked: ann['readOnly'] === true,
         showBorder: borderWidth > 0,
+        align,
         fieldType,
       });
     }

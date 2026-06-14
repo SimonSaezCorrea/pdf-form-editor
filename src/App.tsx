@@ -403,8 +403,8 @@ export default function App() {
             {pdfBytes && view === 'editor' && (
               <>
                 <Button variant="navbar" onClick={handleNewDocument}>Cambiar PDF</Button>
-                <Button variant="navbar" onClick={() => setShowImportModal(true)}>Importar</Button>
-                <Button variant="navbar" onClick={() => setShowExportModal(true)}>Exportar</Button>
+                <Button variant="navbar" onClick={() => setShowImportModal(true)}>Importar JSON</Button>
+                <Button variant="navbar" onClick={() => setShowExportModal(true)}>Exportar JSON</Button>
                 <Button
                   variant="navbar-cta"
                   size="sm"

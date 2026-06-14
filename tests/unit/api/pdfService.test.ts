@@ -42,6 +42,20 @@ describe('generatePdf', () => {
     expect(field).toBeDefined();
   });
 
+  test('applies text alignment to the AcroForm field (default left, center, right)', async () => {
+    const buf = await createTestPdf();
+    const fields: FormField[] = [
+      { ...baseField, name: 'a_left' },                  // no align → default left (0)
+      { ...baseField, name: 'a_center', y: 640, align: 'center' },
+      { ...baseField, name: 'a_right', y: 600, align: 'right' },
+    ];
+    const result = await generatePdf(buf, fields);
+    const form = (await PDFDocument.load(result)).getForm();
+    expect(form.getTextField('a_left').getAlignment()).toBe(0);   // TextAlignment.Left
+    expect(form.getTextField('a_center').getAlignment()).toBe(1); // TextAlignment.Center
+    expect(form.getTextField('a_right').getAlignment()).toBe(2);  // TextAlignment.Right
+  });
+
   test('embeds multiple fields with different fonts', async () => {
     const buf = await createTestPdf();
     const fields: FormField[] = [

@@ -9,6 +9,21 @@ let fieldCounter = 0;
 
 const MAX_HISTORY = 50;
 
+/**
+ * Per-widget keys that are NOT shared between same-name fields. Same-name fields
+ * collapse into ONE AcroForm field on export, so all their *configuration* is
+ * shared — only `name` (the group key) and each widget's own placement
+ * (`page`/`x`/`y`/`width`/`height`) stay independent. `id` is React-only.
+ */
+const PER_WIDGET_KEYS = new Set<string>(['id', 'name', 'page', 'x', 'y', 'width', 'height']);
+
+/** The shareable configuration of a field (everything except per-widget keys). */
+function shareableConfig(f: FormField): Partial<Omit<FormField, 'id'>> {
+  return Object.fromEntries(
+    Object.entries(f).filter(([k]) => !PER_WIDGET_KEYS.has(k)),
+  ) as Partial<Omit<FormField, 'id'>>;
+}
+
 export type AlignKind = 'left' | 'right' | 'center-h' | 'top' | 'bottom' | 'center-v';
 export type DistributeAxis = 'h' | 'v';
 
@@ -160,26 +175,27 @@ export function useFieldStore(): FieldStore {
       const target = fieldsRef.current.find((f) => f.id === id);
 
       // Same-name fields collapse into one shared AcroForm field on export, so
-      // they must share the default value too:
-      //  - editing `value` propagates it to every sibling with the same name;
-      //  - renaming into an existing group adopts that group's current value.
-      const groupName = typeof partial.name === 'string' ? partial.name : target?.name;
-      const shareValue = target !== undefined && partial.value !== undefined;
-      const adoptedValue =
-        typeof partial.name === 'string' && partial.value === undefined
-          ? fieldsRef.current.find(
-              (f) => f.id !== id && f.name === partial.name && f.value !== undefined && f.value !== '',
-            )?.value
+      // ALL their configuration is shared:
+      //  - editing any non-positional prop propagates to every same-name sibling;
+      //  - renaming into an existing group adopts that group's full config.
+      const sharedPartial = Object.fromEntries(
+        Object.entries(partial).filter(([k]) => !PER_WIDGET_KEYS.has(k)),
+      ) as Partial<Omit<FormField, 'id'>>;
+      const hasShared = target !== undefined && Object.keys(sharedPartial).length > 0;
+
+      const adoptInto =
+        typeof partial.name === 'string' && partial.name !== target?.name
+          ? fieldsRef.current.find((f) => f.id !== id && f.name === partial.name)
           : undefined;
+      const adopted = adoptInto ? shareableConfig(adoptInto) : undefined;
 
       const next = fieldsRef.current.map((f) => {
         if (f.id === id) {
-          const merged = { ...f, ...partial };
-          if (adoptedValue !== undefined) merged.value = adoptedValue;
-          return merged;
+          // adopted (new group's config) first, then the explicit edit wins.
+          return { ...f, ...adopted, ...partial };
         }
-        if (shareValue && f.name === groupName) {
-          return { ...f, value: partial.value };
+        if (hasShared && f.name === target?.name) {
+          return { ...f, ...sharedPartial };
         }
         return f;
       });
@@ -193,7 +209,22 @@ export function useFieldStore(): FieldStore {
     (ids: string[], partial: Partial<Omit<FormField, 'id'>>) => {
       maybeRecord(fieldsRef.current);
       const idSet = new Set(ids);
-      const next = fieldsRef.current.map((f) => (idSet.has(f.id) ? { ...f, ...partial } : f));
+
+      // Shared config (non-positional) also flows to same-name siblings of any
+      // selected field, so duplicated fields stay in sync from multi-edits too.
+      const sharedPartial = Object.fromEntries(
+        Object.entries(partial).filter(([k]) => !PER_WIDGET_KEYS.has(k)),
+      ) as Partial<Omit<FormField, 'id'>>;
+      const selectedNames =
+        Object.keys(sharedPartial).length > 0
+          ? new Set(fieldsRef.current.filter((f) => idSet.has(f.id)).map((f) => f.name))
+          : null;
+
+      const next = fieldsRef.current.map((f) => {
+        if (idSet.has(f.id)) return { ...f, ...partial };
+        if (selectedNames?.has(f.name)) return { ...f, ...sharedPartial };
+        return f;
+      });
       syncFields(next);
       setIsDirty(true);
     },

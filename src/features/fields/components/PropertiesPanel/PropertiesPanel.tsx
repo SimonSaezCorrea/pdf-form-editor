@@ -102,6 +102,33 @@ const InputIcon = (
   </svg>
 );
 
+/** Text aligned to the left edge. */
+const AlignLeftIcon = (
+  <svg {...svgBase} strokeWidth={2} strokeLinecap="round">
+    <line x1="4" y1="7" x2="20" y2="7" />
+    <line x1="4" y1="12" x2="14" y2="12" />
+    <line x1="4" y1="17" x2="18" y2="17" />
+  </svg>
+);
+
+/** Text centered. */
+const AlignCenterIcon = (
+  <svg {...svgBase} strokeWidth={2} strokeLinecap="round">
+    <line x1="4" y1="7" x2="20" y2="7" />
+    <line x1="7" y1="12" x2="17" y2="12" />
+    <line x1="5" y1="17" x2="19" y2="17" />
+  </svg>
+);
+
+/** Text aligned to the right edge. */
+const AlignRightIcon = (
+  <svg {...svgBase} strokeWidth={2} strokeLinecap="round">
+    <line x1="4" y1="7" x2="20" y2="7" />
+    <line x1="10" y1="12" x2="20" y2="12" />
+    <line x1="6" y1="17" x2="20" y2="17" />
+  </svg>
+);
+
 interface ToggleBadgeProps {
   active: boolean;
   /** Partial state for multi-selection (some on, some off). */
@@ -387,22 +414,27 @@ export function PropertiesPanel({
       </div>
 
       <Section title="General" open={!collapsed.has('general')} onToggle={() => toggle('general')}>
-        {/* Nombre/ID + obligatorio (toggle no bloquea el campo) */}
-        <div className={styles['field-with-badge']}>
-          <Input
-            id="prop-name"
-            label="Nombre / ID"
-            type="text"
-            value={field.name}
-            onChange={(e) => update('name', e.target.value)}
-            hint={hasDuplicate ? '🔗 Mismo nombre: se rellenan juntos (mismo valor)' : undefined}
-            className={styles['prop-group']}
-          />
-          <ToggleBadge
-            active={field.required ?? false}
-            tooltip="Rellenado obligatorio"
-            onClick={() => update('required', !(field.required ?? false))}
-          >{RequiredIcon}</ToggleBadge>
+        {/* Nombre/ID + obligatorio (toggle no bloquea el campo). El hint de nombre
+            duplicado va DEBAJO de la fila para no empujar el asterisco hacia abajo. */}
+        <div className={styles['prop-group']}>
+          <div className={styles['field-with-badge']}>
+            <Input
+              id="prop-name"
+              label="Nombre / ID"
+              type="text"
+              value={field.name}
+              onChange={(e) => update('name', e.target.value)}
+              className={styles['prop-group']}
+            />
+            <ToggleBadge
+              active={field.required ?? false}
+              tooltip="Rellenado obligatorio"
+              onClick={() => update('required', !(field.required ?? false))}
+            >{RequiredIcon}</ToggleBadge>
+          </div>
+          {hasDuplicate && (
+            <p className={styles['prop-hint']}>🔗 Mismo nombre: se rellenan juntos (mismo valor)</p>
+          )}
         </div>
         <div className={styles['prop-group']}>
           <Input
@@ -440,12 +472,14 @@ export function PropertiesPanel({
             onChange={(e) => update('value', e.target.value)}
             className={styles['prop-group']}
           />
-          {(field.fieldType ?? 'text') === 'text' && (
+          {field.fieldType !== 'checkbox' && (
             <ToggleBadge
-              active={field.multiline ?? false}
-              tooltip="Texto multilínea"
-              onClick={() => update('multiline', !(field.multiline ?? false))}
-            >{MultilineIcon}</ToggleBadge>
+              active={(field.bakeValue ?? true)}
+              tooltip={(field.bakeValue ?? true)
+                ? 'Reemplaza y elimina el input: el valor queda como texto fijo no editable'
+                : 'Mantiene un input rellenable con el valor en la descarga'}
+              onClick={() => update('bakeValue', !(field.bakeValue ?? true))}
+            >{(field.bakeValue ?? true) ? BakeIcon : InputIcon}</ToggleBadge>
           )}
         </div>
         )}
@@ -467,14 +501,23 @@ export function PropertiesPanel({
               onClick={() => update('underline', !(field.underline ?? false))}>
               <span style={{ textDecoration: 'underline' }}>U</span>
             </ToggleBadge>
-            <span className={styles['badge-divider']} />
-            <ToggleBadge
-              active={(field.bakeValue ?? true)}
-              tooltip={(field.bakeValue ?? true)
-                ? 'Reemplaza y elimina el input: el valor queda como texto fijo no editable'
-                : 'Mantiene un input rellenable con el valor en la descarga'}
-              onClick={() => update('bakeValue', !(field.bakeValue ?? true))}
-            >{(field.bakeValue ?? true) ? BakeIcon : InputIcon}</ToggleBadge>
+          </div>
+        )}
+        {field.fieldType !== 'signature' && field.fieldType !== 'checkbox' && (
+          <div className={styles['badge-row']}>
+            <ToggleBadge active={(field.align ?? 'left') === 'left'} tooltip="Alinear a la izquierda"
+              onClick={() => update('align', 'left')}>{AlignLeftIcon}</ToggleBadge>
+            <ToggleBadge active={field.align === 'center'} tooltip="Centrar"
+              onClick={() => update('align', 'center')}>{AlignCenterIcon}</ToggleBadge>
+            <ToggleBadge active={field.align === 'right'} tooltip="Alinear a la derecha"
+              onClick={() => update('align', 'right')}>{AlignRightIcon}</ToggleBadge>
+            {(field.fieldType ?? 'text') === 'text' && (
+              <>
+                <span className={styles['badge-divider']} />
+                <ToggleBadge active={field.multiline ?? false} tooltip="Texto multilínea"
+                  onClick={() => update('multiline', !(field.multiline ?? false))}>{MultilineIcon}</ToggleBadge>
+              </>
+            )}
           </div>
         )}
       </Section>

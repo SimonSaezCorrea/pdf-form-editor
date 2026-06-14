@@ -28,6 +28,8 @@ export interface AcroFormField {
   multiline?: boolean;
   /** Field type derived from pdfjs annotation fieldType ('Tx' → 'text') */
   fieldType?: FieldTypeId;
+  /** Horizontal text alignment from the field's /Q quadding. Defaults to 'left'. */
+  align?: 'left' | 'center' | 'right';
 }
 
 export type FillerStatus =

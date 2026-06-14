@@ -70,6 +70,21 @@ describe('detectAcroFormFields', () => {
     expect(fields[0].placements.every((p) => p.page === 1)).toBe(true);
   });
 
+  test('reads required and multiline from pdfjs booleans (not fieldFlags)', async () => {
+    const doc = mockPdfDoc({
+      1: [
+        { ...makeAnnotation('req', 'Tx'), required: true },
+        { ...makeAnnotation('multi', 'Tx'), multiLine: true },
+        makeAnnotation('plain', 'Tx'),
+      ],
+    });
+    const fields = await detectAcroFormFields(doc);
+    expect(fields.find((f) => f.name === 'req')?.required).toBe(true);
+    expect(fields.find((f) => f.name === 'multi')?.multiline).toBe(true);
+    expect(fields.find((f) => f.name === 'plain')?.required).toBe(false);
+    expect(fields.find((f) => f.name === 'plain')?.multiline).toBe(false);
+  });
+
   test('ignores non-Widget annotations', async () => {
     const doc = mockPdfDoc({
       1: [

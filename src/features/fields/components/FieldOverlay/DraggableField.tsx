@@ -90,10 +90,13 @@ interface FieldLabelProps {
   canvasWidth: number;
   canvasHeight: number;
 }
+/** Maps text alignment to flex justification (single line) — text-align covers multiline. */
+const ALIGN_JUSTIFY = { left: 'flex-start', center: 'center', right: 'flex-end' } as const;
 function FieldLabel({ field, renderScale, canvasWidth, canvasHeight }: Readonly<FieldLabelProps>) {
   const fontSize = field.value && field.autoFitFont
     ? computeCanvasFitFontSize(field.value, canvasWidth, canvasHeight, field.fontSize * renderScale, field.multiline ?? false)
     : field.fontSize * renderScale;
+  const align = field.align ?? 'left';
   return (
     <span
       className={[
@@ -105,6 +108,8 @@ function FieldLabel({ field, renderScale, canvasWidth, canvasHeight }: Readonly<
       ].filter(Boolean).join(' ')}
       style={{
         fontSize: `${fontSize}px`,
+        justifyContent: ALIGN_JUSTIFY[align],
+        textAlign: align,
         ...(field.displayFont ? { fontFamily: field.displayFont } : {}),
         ...(field.value && field.bold ? { fontWeight: 700 } : {}),
         ...(field.value && field.italic ? { fontStyle: 'italic' } : {}),

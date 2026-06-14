@@ -30,6 +30,8 @@ export interface FormField {
   underline?: boolean;
   /** Strikethrough (line-through) style for the default value text. */
   strikethrough?: boolean;
+  /** Horizontal text alignment inside the field. Defaults to 'left'. */
+  align?: 'left' | 'center' | 'right';
   /**
    * How a field with a default `value` is exported:
    * - `true` (default): bake the value as fixed, non-editable text and remove the input.
